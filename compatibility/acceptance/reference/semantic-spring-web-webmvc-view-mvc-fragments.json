@@ -1,0 +1,467 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Reactive stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux-view.html#webflux-view-fragments"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HTMX"
+              }
+            ],
+            "kind": "link",
+            "target": "https://htmx.org/"
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Hotwire Turbo"
+              }
+            ],
+            "kind": "link",
+            "target": "https://turbo.hotwired.dev/"
+          },
+          {
+            "kind": "text",
+            "value": " emphasize an HTML-over-the-wire approach where clients receive server updates in HTML rather than in JSON. This allows the benefits of an SPA (single page app) without having to write much or even any JavaScript. For a good overview and to learn more, please visit their respective websites."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In Spring MVC, view rendering typically involves specifying one view and one model. However, in HTML-over-the-wire a common capability is to send multiple HTML fragments that the browser can use to update different parts of the page. For this, controller methods can return "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Collection<ModelAndView>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". For example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nList<ModelAndView> handle() {\n\treturn List.of(new ModelAndView(\"posts\"), new ModelAndView(\"comments\"));\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nfun handle(): List<ModelAndView> {\n\treturn listOf(ModelAndView(\"posts\"), ModelAndView(\"comments\"))\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The same can be done also by returning the dedicated type "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FragmentsRendering"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nFragmentsRendering handle() {\n\treturn FragmentsRendering.with(\"posts\").fragment(\"comments\").build();\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nfun handle(): FragmentsRendering {\n\treturn FragmentsRendering.with(\"posts\").fragment(\"comments\").build()\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Each fragment can have an independent model, and that model inherits attributes from the shared model for the request."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "HTMX and Hotwire Turbo support streaming updates over SSE (server-sent events). A controller can use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SseEmitter"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to send "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ModelAndView"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to render a fragment per event:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nSseEmitter handle() {\n\tSseEmitter emitter = new SseEmitter();\n\tstartWorkerThread(() -> {\n\t\ttry {\n\t\t\temitter.send(SseEmitter.event().data(new ModelAndView(\"posts\")));\n\t\t\temitter.send(SseEmitter.event().data(new ModelAndView(\"comments\")));\n\t\t\t// ...\n\t\t}\n\t\tcatch (IOException ex) {\n\t\t\t// Cancel sending\n\t\t}\n\t});\n\treturn emitter;\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping\nfun handle(): SseEmitter {\n\tval emitter = SseEmitter()\n\tstartWorkerThread{\n\t\ttry {\n\t\t\temitter.send(SseEmitter.event().data(ModelAndView(\"posts\")))\n\t\t\temitter.send(SseEmitter.event().data(ModelAndView(\"comments\")))\n\t\t\t// ...\n\t\t}\n\t\tcatch (ex: IOException) {\n\t\t\t// Cancel sending\n\t\t}\n\t}\n\treturn emitter\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The same can also be done by returning "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Flux<ModelAndView>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", or any other type adaptable to a Reactive Streams "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Publisher"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " through the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ReactiveAdapterRegistry"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "HTML Fragments"
+      }
+    ]
+  }
+}

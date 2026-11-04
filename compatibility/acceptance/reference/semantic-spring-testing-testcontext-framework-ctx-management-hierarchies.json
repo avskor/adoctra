@@ -1,0 +1,1319 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When writing integration tests that rely on a loaded Spring "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", it is often sufficient to test against a single context. However, there are times when it is beneficial or even necessary to test against a hierarchy of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instances. For example, if you are developing a Spring MVC web application, you typically have a root "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " loaded by Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ContextLoaderListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and a child "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " loaded by Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". This results in a parent-child context hierarchy where shared components and infrastructure configuration are declared in the root context and consumed in the child context by web-specific components. Another use case can be found in Spring Batch applications, where you often have a parent context that provides configuration for shared batch infrastructure and a child context for the configuration of a specific batch job."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can write integration tests that use context hierarchies by declaring context configuration with the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ContextHierarchy"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation, either on an individual test class or within a test class hierarchy. If a context hierarchy is declared on multiple classes within a test class hierarchy, you can also merge or override the context configuration for a specific, named level in the context hierarchy. When merging configuration for a given level in the hierarchy, the configuration resource type (that is, XML configuration files or component classes) must be consistent. Otherwise, it is perfectly acceptable to have different levels in a context hierarchy configured using different resource types."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The remaining JUnit Jupiter based examples in this section show common configuration scenarios for integration tests that require the use of context hierarchies."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Single test class with context hierarchy"
+              }
+            ],
+            "kind": "strong",
+            "roles": []
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ControllerIntegrationTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " represents a typical integration testing scenario for a Spring MVC web application by declaring a context hierarchy that consists of two levels, one for the root "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (loaded by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestAppConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Configuration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class) and one for the dispatcher servlet "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (loaded by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Configuration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class). The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is autowired into the test instance is the one for the child context (that is, the lowest context in the hierarchy). The following listing shows this configuration scenario:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension.class)\n@WebAppConfiguration\n@ContextHierarchy({\n\t@ContextConfiguration(classes = TestAppConfig.class),\n\t@ContextConfiguration(classes = WebConfig.class)\n})\nclass ControllerIntegrationTests {\n\n\t@Autowired\n\tWebApplicationContext wac;\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension::class)\n@WebAppConfiguration\n@ContextHierarchy(\n\tContextConfiguration(classes = [TestAppConfig::class]),\n\tContextConfiguration(classes = [WebConfig::class]))\nclass ControllerIntegrationTests {\n\n\t@Autowired\n\tlateinit var wac: WebApplicationContext\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Class hierarchy with implicit parent context"
+              }
+            ],
+            "kind": "strong",
+            "roles": []
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The test classes in this example define a context hierarchy within a test class hierarchy. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractWebTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " declares the configuration for a root "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a Spring-powered web application. Note, however, that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractWebTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " does not declare "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextHierarchy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Consequently, subclasses of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractWebTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can optionally participate in a context hierarchy or follow the standard semantics for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SoapWebServiceTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RestWebServiceTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " both extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractWebTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and define a context hierarchy by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextHierarchy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The result is that three application contexts are loaded (one for each declaration of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), and the application context loaded based on the configuration in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractWebTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set as the parent context for each of the contexts loaded for the concrete subclasses. The following listing shows this configuration scenario:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension.class)\n@WebAppConfiguration\n@ContextConfiguration(\"file:src/main/webapp/WEB-INF/applicationContext.xml\")\npublic abstract class AbstractWebTests {}\n\n@ContextHierarchy(@ContextConfiguration(\"/spring/soap-ws-config.xml\"))\npublic class SoapWebServiceTests extends AbstractWebTests {}\n\n@ContextHierarchy(@ContextConfiguration(\"/spring/rest-ws-config.xml\"))\npublic class RestWebServiceTests extends AbstractWebTests {}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension::class)\n@WebAppConfiguration\n@ContextConfiguration(\"file:src/main/webapp/WEB-INF/applicationContext.xml\")\nabstract class AbstractWebTests\n\n@ContextHierarchy(ContextConfiguration(\"/spring/soap-ws-config.xml\"))\nclass SoapWebServiceTests : AbstractWebTests()\n\n@ContextHierarchy(ContextConfiguration(\"/spring/rest-ws-config.xml\"))\nclass RestWebServiceTests : AbstractWebTests()"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Class hierarchy with merged context hierarchy configuration"
+              }
+            ],
+            "kind": "strong",
+            "roles": []
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The classes in this example show the use of named hierarchy levels in order to merge the configuration for specific levels in a context hierarchy. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BaseTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " defines two levels in the hierarchy, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "parent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "child"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtendedTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extends "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BaseTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and instructs the Spring TestContext Framework to merge the context configuration for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "child"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " hierarchy level, by ensuring that the names declared in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are both "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "child"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The result is that three application contexts are loaded: one for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/app-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", one for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/user-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and one for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{\"/user-config.xml\", \"/order-config.xml\"}"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". As with the previous example, the application context loaded from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/app-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set as the parent context for the contexts loaded from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/user-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{\"/user-config.xml\", \"/order-config.xml\"}"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following listing shows this configuration scenario:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension.class)\n@ContextHierarchy({\n\t@ContextConfiguration(name = \"parent\", locations = \"/app-config.xml\"),\n\t@ContextConfiguration(name = \"child\", locations = \"/user-config.xml\")\n})\nclass BaseTests {}\n\n@ContextHierarchy(\n\t@ContextConfiguration(name = \"child\", locations = \"/order-config.xml\")\n)\nclass ExtendedTests extends BaseTests {}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension::class)\n@ContextHierarchy(\n\tContextConfiguration(name = \"parent\", locations = [\"/app-config.xml\"]),\n\tContextConfiguration(name = \"child\", locations = [\"/user-config.xml\"]))\nopen class BaseTests {}\n\n@ContextHierarchy(\n\tContextConfiguration(name = \"child\", locations = [\"/order-config.xml\"])\n)\nclass ExtendedTests : BaseTests() {}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Class hierarchy with overridden context hierarchy configuration"
+              }
+            ],
+            "kind": "strong",
+            "roles": []
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In contrast to the previous example, this example demonstrates how to override the configuration for a given named level in a context hierarchy by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inheritLocations"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " flag in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Consequently, the application context for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtendedTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is loaded only from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/test-user-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and has its parent set to the context loaded from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/app-config.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following listing shows this configuration scenario:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension.class)\n@ContextHierarchy({\n\t@ContextConfiguration(name = \"parent\", locations = \"/app-config.xml\"),\n\t@ContextConfiguration(name = \"child\", locations = \"/user-config.xml\")\n})\nclass BaseTests {}\n\n@ContextHierarchy(\n\t@ContextConfiguration(\n\t\tname = \"child\",\n\t\tlocations = \"/test-user-config.xml\",\n\t\tinheritLocations = false\n))\nclass ExtendedTests extends BaseTests {}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(SpringExtension::class)\n@ContextHierarchy(\n\tContextConfiguration(name = \"parent\", locations = [\"/app-config.xml\"]),\n\tContextConfiguration(name = \"child\", locations = [\"/user-config.xml\"]))\nopen class BaseTests {}\n\n@ContextHierarchy(\n\t\tContextConfiguration(\n\t\t\t\tname = \"child\",\n\t\t\t\tlocations = [\"/test-user-config.xml\"],\n\t\t\t\tinheritLocations = false\n\t\t))\nclass ExtendedTests : BaseTests() {}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DirtiesContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a test whose context is configured as part of a context hierarchy, you can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "hierarchyMode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " flag to control how the context cache is cleared. For further details, see the discussion of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DirtiesContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring Testing Annotations"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/annotations/integration-spring/annotation-dirtiescontext.html"
+              },
+              {
+                "kind": "text",
+                "value": " and the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DirtiesContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/annotation/DirtiesContext.html"
+              },
+              {
+                "kind": "text",
+                "value": " javadoc."
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Dirtying a context within a context hierarchy"
+              }
+            ],
+            "type": "note"
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Context Hierarchies"
+      }
+    ]
+  }
+}

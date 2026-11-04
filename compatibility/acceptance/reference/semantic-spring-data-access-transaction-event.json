@@ -1,0 +1,388 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As of Spring 4.2, the listener of an event can be bound to a phase of the transaction. The typical example is to handle the event when the transaction has completed successfully. Doing so lets events be used with more flexibility when the outcome of the current transaction actually matters to the listener."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can register a regular event listener by using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@EventListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation. If you need to bind it to the transaction, use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TransactionalEventListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". When you do so, the listener is bound to the commit phase of the transaction by default."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The next example shows this concept. Assume that a component publishes an order-created event and that we want to define a listener that should only handle that event once the transaction in which it has been published has committed successfully. The following example sets up such an event listener:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Component\npublic class MyComponent {\n\n\t@TransactionalEventListener\n\tpublic void handleOrderCreatedEvent(CreationEvent<Order> creationEvent) {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Component\nclass MyComponent {\n\n\t@TransactionalEventListener\n\tfun handleOrderCreatedEvent(creationEvent: CreationEvent<Order>) {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TransactionalEventListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation exposes a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "phase"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute that lets you customize the phase of the transaction to which the listener should be bound. The valid phases are "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BEFORE_COMMIT"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AFTER_COMMIT"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (default), "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AFTER_ROLLBACK"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as well as "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AFTER_COMPLETION"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " which aggregates the transaction completion (be it a commit or a rollback)."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If no transaction is running, the listener is not invoked at all, since we cannot honor the required semantics. You can, however, override that behavior by setting the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fallbackExecution"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute of the annotation to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "true"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As of 6.1, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@TransactionalEventListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can work with thread-bound transactions managed by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PlatformTransactionManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as well as reactive transactions managed by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ReactiveTransactionManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For the former, listeners are guaranteed to see the current thread-bound transaction. Since the latter uses the Reactor context instead of thread-local variables, the transaction context needs to be included in the published event instance as the event source. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TransactionalEventPublisher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/transaction/reactive/TransactionalEventPublisher.html"
+              },
+              {
+                "kind": "text",
+                "value": " javadoc for details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Transaction-bound Events"
+      }
+    ]
+  }
+}

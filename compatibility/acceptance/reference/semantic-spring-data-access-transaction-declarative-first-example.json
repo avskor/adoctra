@@ -1,0 +1,1339 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Consider the following interface and its attendant implementation. This example uses "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Foo"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Bar"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " classes as placeholders so that you can concentrate on the transaction usage without focusing on a particular domain model. For the purposes of this example, the fact that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DefaultFooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " class throws "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UnsupportedOperationException"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instances in the body of each implemented method is good. That behavior lets you see transactions being created and then rolled back in response to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UnsupportedOperationException"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instance. The following listing shows the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " interface:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// the service interface that we want to make transactional\n\npackage x.y.service;\n\npublic interface FooService {\n\n\tFoo getFoo(String fooName);\n\n\tFoo getFoo(String fooName, String barName);\n\n\tvoid insertFoo(Foo foo);\n\n\tvoid updateFoo(Foo foo);\n\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// the service interface that we want to make transactional\n\npackage x.y.service\n\ninterface FooService {\n\n\tfun getFoo(fooName: String): Foo\n\n\tfun getFoo(fooName: String, barName: String): Foo\n\n\tfun insertFoo(foo: Foo)\n\n\tfun updateFoo(foo: Foo)\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows an implementation of the preceding interface:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y.service;\n\npublic class DefaultFooService implements FooService {\n\n\t@Override\n\tpublic Foo getFoo(String fooName) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic Foo getFoo(String fooName, String barName) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic void insertFoo(Foo foo) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic void updateFoo(Foo foo) {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y.service\n\nclass DefaultFooService : FooService {\n\n\toverride fun getFoo(fooName: String): Foo {\n\t\t// ...\n\t}\n\n\toverride fun getFoo(fooName: String, barName: String): Foo {\n\t\t// ...\n\t}\n\n\toverride fun insertFoo(foo: Foo) {\n\t\t// ...\n\t}\n\n\toverride fun updateFoo(foo: Foo) {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Assume that the first two methods of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " interface, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "getFoo(String)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "getFoo(String, String)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", must run in the context of a transaction with read-only semantics and that the other methods, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "insertFoo(Foo)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "updateFoo(Foo)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", must run in the context of a transaction with read-write semantics. The following configuration is explained in detail in the next few paragraphs:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<!-- from the file 'context.xml' -->\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txmlns:tx=\"http://www.springframework.org/schema/tx\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/tx\n\t\thttps://www.springframework.org/schema/tx/spring-tx.xsd\n\t\thttp://www.springframework.org/schema/aop\n\t\thttps://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<!-- this is the service object that we want to make transactional -->\n\t<bean id=\"fooService\" class=\"x.y.service.DefaultFooService\"/>\n\n\t<!-- the transactional advice (what 'happens'; see the <aop:advisor/> bean below) -->\n\t<tx:advice id=\"txAdvice\" transaction-manager=\"txManager\">\n\t\t<!-- the transactional semantics... -->\n\t\t<tx:attributes>\n\t\t\t<!-- all methods starting with 'get' are read-only -->\n\t\t\t<tx:method name=\"get*\" read-only=\"true\"/>\n\t\t\t<!-- other methods use the default transaction settings (see below) -->\n\t\t\t<tx:method name=\"*\"/>\n\t\t</tx:attributes>\n\t</tx:advice>\n\n\t<!-- ensure that the above transactional advice runs for any execution\n\t\tof an operation defined by the FooService interface -->\n\t<aop:config>\n\t\t<aop:pointcut id=\"fooServiceOperation\" expression=\"execution(* x.y.service.FooService.*(..))\"/>\n\t\t<aop:advisor advice-ref=\"txAdvice\" pointcut-ref=\"fooServiceOperation\"/>\n\t</aop:config>\n\n\t<!-- don't forget the DataSource -->\n\t<bean id=\"dataSource\" class=\"org.apache.commons.dbcp.BasicDataSource\" destroy-method=\"close\">\n\t\t<property name=\"driverClassName\" value=\"oracle.jdbc.driver.OracleDriver\"/>\n\t\t<property name=\"url\" value=\"jdbc:oracle:thin:@rj-t42:1521:elvis\"/>\n\t\t<property name=\"username\" value=\"scott\"/>\n\t\t<property name=\"password\" value=\"tiger\"/>\n\t</bean>\n\n\t<!-- similarly, don't forget the TransactionManager -->\n\t<bean id=\"txManager\" class=\"org.springframework.jdbc.datasource.DataSourceTransactionManager\">\n\t\t<property name=\"dataSource\" ref=\"dataSource\"/>\n\t</bean>\n\n\t<!-- other <bean/> definitions here -->\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Examine the preceding configuration. It assumes that you want to make a service object, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean, transactional. The transaction semantics to apply are encapsulated in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<tx:advice/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " definition. The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<tx:advice/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " definition reads as \"all methods starting with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "get"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " are to run in the context of a read-only transaction, and all other methods are to run with the default transaction semantics\". The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transaction-manager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<tx:advice/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " tag is set to the name of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransactionManager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean that is going to drive the transactions (in this case, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "txManager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean)."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can omit the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transaction-manager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute in the transactional advice ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<tx:advice/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ") if the bean name of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransactionManager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " that you want to wire in has the name "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transactionManager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". If the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransactionManager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean that you want to wire in has any other name, you must use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transaction-manager"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute explicitly, as in the preceding example."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<aop:config/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " definition ensures that the transactional advice defined by the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "txAdvice"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean runs at the appropriate points in the program. First, you define a pointcut that matches the execution of any operation defined in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " interface ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooServiceOperation"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). Then you associate the pointcut with the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "txAdvice"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " by using an advisor. The result indicates that, at the execution of a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooServiceOperation"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", the advice defined by "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "txAdvice"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is run."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The expression defined within the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<aop:pointcut/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " element is an AspectJ pointcut expression. See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "the AOP section"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/aop.html"
+          },
+          {
+            "kind": "text",
+            "value": " for more details on pointcut expressions in Spring."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A common requirement is to make an entire service layer transactional. The best way to do this is to change the pointcut expression to match any operation in your service layer. The following example shows how to do so:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<aop:config>\n\t<aop:pointcut id=\"fooServiceMethods\" expression=\"execution(* x.y.service.*.*(..))\"/>\n\t<aop:advisor advice-ref=\"txAdvice\" pointcut-ref=\"fooServiceMethods\"/>\n</aop:config>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In the preceding example, it is assumed that all your service interfaces are defined in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "x.y.service"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " package. See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "the AOP section"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/aop.html"
+          },
+          {
+            "kind": "text",
+            "value": " for more details."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Now that we have analyzed the configuration, you may be asking yourself, \"What does all this configuration actually do?\""
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The configuration shown earlier is used to create a transactional proxy around the object that is created from the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean definition. The proxy is configured with the transactional advice so that, when an appropriate method is invoked on the proxy, a transaction is started, suspended, marked as read-only, and so on, depending on the transaction configuration associated with that method. Consider the following program that test drives the configuration shown earlier:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public final class Boot {\n\n\tpublic static void main(final String[] args) throws Exception {\n\t\tApplicationContext ctx = new ClassPathXmlApplicationContext(\"context.xml\");\n\t\tFooService fooService = ctx.getBean(FooService.class);\n\t\tfooService.insertFoo(new Foo());\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "import org.springframework.beans.factory.getBean\n\nfun main() {\n\tval ctx = ClassPathXmlApplicationContext(\"context.xml\")\n\tval fooService = ctx.getBean<FooService>(\"fooService\")\n\tfooService.insertFoo(Foo())\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The output from running the preceding program should resemble the following (the Log4J output and the stack trace from the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UnsupportedOperationException"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " thrown by the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "insertFoo(..)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DefaultFooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " class have been truncated for clarity):"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<!-- the Spring container is starting up... -->\n[AspectJInvocationContextExposingAdvisorAutoProxyCreator] - Creating implicit proxy for bean 'fooService' with 0 common interceptors and 1 specific interceptors\n\n<!-- the DefaultFooService is actually proxied -->\n[JdkDynamicAopProxy] - Creating JDK dynamic proxy for [x.y.service.DefaultFooService]\n\n<!-- ... the insertFoo(..) method is now being invoked on the proxy -->\n[TransactionInterceptor] - Getting transaction for x.y.service.FooService.insertFoo\n\n<!-- the transactional advice kicks in here... -->\n[DataSourceTransactionManager] - Creating new transaction with name [x.y.service.FooService.insertFoo]\n[DataSourceTransactionManager] - Acquired Connection [org.apache.commons.dbcp.PoolableConnection@a53de4] for JDBC transaction\n\n<!-- the insertFoo(..) method from DefaultFooService throws an exception... -->\n[RuleBasedTransactionAttribute] - Applying rules to determine whether transaction should rollback on java.lang.UnsupportedOperationException\n[TransactionInterceptor] - Invoking rollback for transaction on x.y.service.FooService.insertFoo due to throwable [java.lang.UnsupportedOperationException]\n\n<!-- and the transaction is rolled back (by default, RuntimeException instances cause rollback) -->\n[DataSourceTransactionManager] - Rolling back JDBC transaction on Connection [org.apache.commons.dbcp.PoolableConnection@a53de4]\n[DataSourceTransactionManager] - Releasing JDBC Connection after transaction\n[DataSourceUtils] - Returning JDBC Connection to DataSource\n\nException in thread \"main\" java.lang.UnsupportedOperationException at x.y.service.DefaultFooService.insertFoo(DefaultFooService.java:14)\n<!-- AOP infrastructure stack trace elements removed for clarity -->\nat $Proxy0.insertFoo(Unknown Source)\nat Boot.main(Boot.java:11)"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To use reactive transaction management the code has to use reactive types."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring Framework uses the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ReactiveAdapterRegistry"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to determine whether a method return type is reactive."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following listing shows a modified version of the previously used "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", but this time the code uses reactive types:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// the reactive service interface that we want to make transactional\n\npackage x.y.service;\n\npublic interface FooService {\n\n\tFlux<Foo> getFoo(String fooName);\n\n\tPublisher<Foo> getFoo(String fooName, String barName);\n\n\tMono<Void> insertFoo(Foo foo);\n\n\tMono<Void> updateFoo(Foo foo);\n\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// the reactive service interface that we want to make transactional\n\npackage x.y.service\n\ninterface FooService {\n\n\tfun getFoo(fooName: String): Flow<Foo>\n\n\tfun getFoo(fooName: String, barName: String): Publisher<Foo>\n\n\tfun insertFoo(foo: Foo) : Mono<Void>\n\n\tfun updateFoo(foo: Foo) : Mono<Void>\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows an implementation of the preceding interface:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y.service;\n\npublic class DefaultFooService implements FooService {\n\n\t@Override\n\tpublic Flux<Foo> getFoo(String fooName) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic Publisher<Foo> getFoo(String fooName, String barName) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic Mono<Void> insertFoo(Foo foo) {\n\t\t// ...\n\t}\n\n\t@Override\n\tpublic Mono<Void> updateFoo(Foo foo) {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y.service\n\nclass DefaultFooService : FooService {\n\n\toverride fun getFoo(fooName: String): Flow<Foo> {\n\t\t// ...\n\t}\n\n\toverride fun getFoo(fooName: String, barName: String): Publisher<Foo> {\n\t\t// ...\n\t}\n\n\toverride fun insertFoo(foo: Foo): Mono<Void> {\n\t\t// ...\n\t}\n\n\toverride fun updateFoo(foo: Foo): Mono<Void> {\n\t\t// ...\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Imperative and reactive transaction management share the same semantics for transaction boundary and transaction attribute definitions. The main difference between imperative and reactive transactions is the deferred nature of the latter. "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransactionInterceptor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " decorates the returned reactive type with a transactional operator to begin and clean up the transaction. Therefore, calling a transactional reactive method defers the actual transaction management to a subscription type that activates processing of the reactive type."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Another aspect of reactive transaction management relates to data escaping which is a natural consequence of the programming model."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Method return values of imperative transactions are returned from transactional methods upon successful termination of a method so that partially computed results do not escape the method closure."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Reactive transaction methods return a reactive wrapper type which represents a computation sequence along with a promise to begin and complete the computation."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Publisher"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can emit data while a transaction is ongoing but not necessarily completed. Therefore, methods that depend upon successful completion of an entire transaction need to ensure completion and buffer results in the calling code."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Example of Declarative Transaction Implementation"
+      }
+    ]
+  }
+}

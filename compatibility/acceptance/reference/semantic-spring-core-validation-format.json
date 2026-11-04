@@ -1,0 +1,2513 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As discussed in the previous section, "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "core.convert"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/validation/convert.html"
+              },
+              {
+                "kind": "text",
+                "value": " is a general-purpose type conversion system. It provides a unified "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConversionService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API as well as a strongly typed "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI for implementing conversion logic from one type to another. A Spring container uses this system to bind bean property values. In addition, both the Spring Expression Language (SpEL) and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " use this system to bind field values. For example, when SpEL needs to coerce a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Short"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Long"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to complete an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "expression.setValue(Object bean, Object value)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attempt, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "core.convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " system performs the coercion."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now consider the type conversion requirements of a typical client environment, such as a web or desktop application. In such environments, you typically convert from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to support the client postback process, as well as back to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to support the view rendering process. In addition, you often need to localize "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " values. The more general "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "core.convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI does not address such formatting requirements directly. To directly address them, Spring provides a convenient "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI that provides a simple and robust alternative to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations for client environments."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In general, you can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Converter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI when you need to implement general-purpose type conversion logic — for example, for converting between a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.util.Date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Long"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". You can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI when you work in a client environment (such as a web application) and need to parse and print localized field values. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConversionService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides a unified type conversion API for both SPIs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI to implement field formatting logic is simple and strongly typed. The following listing shows the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface definition:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.format;\n\npublic interface Formatter<T> extends Printer<T>, Parser<T> {\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extends from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Printer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " building-block interfaces. The following listing shows the definitions of those two interfaces:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public interface Printer<T> {\n\n\tString print(T fieldValue, Locale locale);\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import java.text.ParseException;\n\npublic interface Parser<T> {\n\n\tT parse(String clientValue, Locale locale) throws ParseException;\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create your own "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", implement the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface shown earlier. Parameterize "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "T"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to be the type of object you wish to format — for example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.util.Date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Implement the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "print()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " operation to print an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "T"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for display in the client locale. Implement the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "parse()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " operation to parse an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "T"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " from the formatted representation returned from the client locale. Your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " should throw a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ParseException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IllegalArgumentException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if a parse attempt fails. Take care to ensure that your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation is thread-safe."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "format"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " subpackages provide several "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations as a convenience. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "number"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package provides "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NumberStyleFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CurrencyStyleFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PercentStyleFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to format "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Number"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects that use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.text.NumberFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "datetime"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package provides a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DateFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to format "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.util.Date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.text.DateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as well as a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DurationFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to format "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Duration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects in different styles defined in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DurationFormat.Style"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " enum (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Format Annotation API"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#format-annotations-api"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DateFormatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an example "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "package org.springframework.format.datetime;\n\npublic final class DateFormatter implements Formatter<Date> {\n\n\tprivate String pattern;\n\n\tpublic DateFormatter(String pattern) {\n\t\tthis.pattern = pattern;\n\t}\n\n\tpublic String print(Date date, Locale locale) {\n\t\tif (date == null) {\n\t\t\treturn \"\";\n\t\t}\n\t\treturn getDateFormat(locale).format(date);\n\t}\n\n\tpublic Date parse(String formatted, Locale locale) throws ParseException {\n\t\tif (formatted.length() == 0) {\n\t\t\treturn null;\n\t\t}\n\t\treturn getDateFormat(locale).parse(formatted);\n\t}\n\n\tprotected DateFormat getDateFormat(Locale locale) {\n\t\tDateFormat dateFormat = new SimpleDateFormat(this.pattern, locale);\n\t\tdateFormat.setLenient(false);\n\t\treturn dateFormat;\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class DateFormatter(private val pattern: String) : Formatter<Date> {\n\n\toverride fun print(date: Date, locale: Locale)\n\t\t\t= getDateFormat(locale).format(date)\n\n\t@Throws(ParseException::class)\n\toverride fun parse(formatted: String, locale: Locale)\n\t\t\t= getDateFormat(locale).parse(formatted)\n\n\tprotected fun getDateFormat(locale: Locale): DateFormat {\n\t\tval dateFormat = SimpleDateFormat(this.pattern, locale)\n\t\tdateFormat.isLenient = false\n\t\treturn dateFormat\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring team welcomes community-driven "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " contributions. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GitHub Issues"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/spring-projects/spring-framework/issues"
+              },
+              {
+                "kind": "text",
+                "value": " to contribute."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "format-Formatter-SPI",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Formatter"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SPI"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Field formatting can be configured by field type or annotation. To bind an annotation to a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Formatter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", implement "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationFormatterFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following listing shows the definition of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationFormatterFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.format;\n\npublic interface AnnotationFormatterFactory<A extends Annotation> {\n\n\tSet<Class<?>> getFieldTypes();\n\n\tPrinter<?> getPrinter(A annotation, Class<?> fieldType);\n\n\tParser<?> getParser(A annotation, Class<?> fieldType);\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create an implementation:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parameterize "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "A"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to be the field "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "annotationType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with which you wish to associate formatting logic — for example "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.format.annotation.DateTimeFormat"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Have "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "getFieldTypes()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " return the types of fields on which the annotation can be used."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Have "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "getPrinter()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " return a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Printer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to print the value of an annotated field."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Have "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "getParser()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " return a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Parser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to parse a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "clientValue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for an annotated field."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationFormatterFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation binds the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@NumberFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation to a formatter to let a number style or pattern be specified:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public final class NumberFormatAnnotationFormatterFactory\n\t\timplements AnnotationFormatterFactory<NumberFormat> {\n\n\tprivate static final Set<Class<?>> FIELD_TYPES = Set.of(Short.class,\n\t\t\tInteger.class, Long.class, Float.class, Double.class,\n\t\t\tBigDecimal.class, BigInteger.class);\n\n\tpublic Set<Class<?>> getFieldTypes() {\n\t\treturn FIELD_TYPES;\n\t}\n\n\tpublic Printer<Number> getPrinter(NumberFormat annotation, Class<?> fieldType) {\n\t\treturn configureFormatterFrom(annotation, fieldType);\n\t}\n\n\tpublic Parser<Number> getParser(NumberFormat annotation, Class<?> fieldType) {\n\t\treturn configureFormatterFrom(annotation, fieldType);\n\t}\n\n\tprivate Formatter<Number> configureFormatterFrom(NumberFormat annotation, Class<?> fieldType) {\n\t\tif (!annotation.pattern().isEmpty()) {\n\t\t\treturn new NumberStyleFormatter(annotation.pattern());\n\t\t}\n\t\t// else\n\t\treturn switch(annotation.style()) {\n\t\t\tcase Style.PERCENT -> new PercentStyleFormatter();\n\t\t\tcase Style.CURRENCY -> new CurrencyStyleFormatter();\n\t\t\tdefault -> new NumberStyleFormatter();\n\t\t};\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class NumberFormatAnnotationFormatterFactory : AnnotationFormatterFactory<NumberFormat> {\n\n\toverride fun getFieldTypes(): Set<Class<*>> {\n\t\treturn setOf(Short::class.java, Int::class.java, Long::class.java, Float::class.java, Double::class.java, BigDecimal::class.java, BigInteger::class.java)\n\t}\n\n\toverride fun getPrinter(annotation: NumberFormat, fieldType: Class<*>): Printer<Number> {\n\t\treturn configureFormatterFrom(annotation, fieldType)\n\t}\n\n\toverride fun getParser(annotation: NumberFormat, fieldType: Class<*>): Parser<Number> {\n\t\treturn configureFormatterFrom(annotation, fieldType)\n\t}\n\n\tprivate fun configureFormatterFrom(annotation: NumberFormat, fieldType: Class<*>): Formatter<Number> {\n\t\treturn if (annotation.pattern.isNotEmpty()) {\n\t\t\tNumberStyleFormatter(annotation.pattern)\n\t\t} else {\n\t\t\tval style = annotation.style\n\t\t\twhen {\n\t\t\t\tstyle === NumberFormat.Style.PERCENT -> PercentStyleFormatter()\n\t\t\t\tstyle === NumberFormat.Style.CURRENCY -> CurrencyStyleFormatter()\n\t\t\t\telse -> NumberStyleFormatter()\n\t\t\t}\n\t\t}\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To trigger formatting, you can annotate fields with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@NumberFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MyModel {\n\n\t@NumberFormat(style=Style.CURRENCY)\n\tprivate BigDecimal decimal;\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MyModel(\n\t@field:NumberFormat(style = Style.CURRENCY) private val decimal: BigDecimal\n)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A portable format annotation API exists in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.format.annotation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package. You can use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@NumberFormat"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to format "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Number"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " fields such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Double"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Long"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DurationFormat"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to format "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Duration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " fields in ISO-8601 and simplified styles, and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DateTimeFormat"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to format fields such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Date"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Calendar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Long"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (for millisecond timestamps) as well as JSR-310 "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.time"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " types."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DateTimeFormat"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to format a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Date"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as an ISO date (yyyy-MM-dd):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public class MyModel {\n\n\t@DateTimeFormat(iso=ISO.DATE)\n\tprivate Date date;\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class MyModel(\n\t@DateTimeFormat(iso=ISO.DATE) private val date: Date\n)"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For further details, see the javadoc for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DateTimeFormat"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/format/annotation/DateTimeFormat.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DurationFormat"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/format/annotation/DurationFormat.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@NumberFormat"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/format/annotation/NumberFormat.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Style-based formatting and parsing rely on locale-sensitive patterns which may change depending on the Java runtime. Specifically, applications that rely on date, time, or number parsing and formatting may encounter incompatible changes in behavior when running on JDK 20 or higher."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Using an ISO standardized format or a concrete pattern that you control allows for reliable system-independent and locale-independent parsing and formatting of date, time, and number values."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DateTimeFormat"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", the use of fallback patterns can also help to address compatibility issues."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For further details, see the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Date and Time Formatting with JDK 20 and higher"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/spring-projects/spring-framework/wiki/Date-and-Time-Formatting-with-JDK-20-and-higher"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " page in the Spring Framework wiki."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              }
+            ],
+            "context": "section",
+            "id": "format-annotations-api",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Format Annotation API"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "format-CustomFormatAnnotations",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Annotation-driven Formatting"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an SPI for registering formatters and converters. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormattingConversionService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an implementation of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " suitable for most environments. You can programmatically or declaratively configure this variant as a Spring bean, for example, by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormattingConversionServiceFactoryBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Because this implementation also implements "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConversionService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can directly configure it for use with Spring’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and the Spring Expression Language (SpEL)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following listing shows the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.format;\n\npublic interface FormatterRegistry extends ConverterRegistry {\n\n\tvoid addPrinter(Printer<?> printer);\n\n\tvoid addParser(Parser<?> parser);\n\n\tvoid addFormatter(Formatter<?> formatter);\n\n\tvoid addFormatterForFieldType(Class<?> fieldType, Formatter<?> formatter);\n\n\tvoid addFormatterForFieldType(Class<?> fieldType, Printer<?> printer, Parser<?> parser);\n\n\tvoid addFormatterForFieldAnnotation(AnnotationFormatterFactory<? extends Annotation> annotationFormatterFactory);\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As shown in the preceding listing, you can register formatters by field type or by annotation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SPI lets you configure formatting rules centrally, instead of duplicating such configuration across your controllers. For example, you might want to enforce that all date fields are formatted a certain way or that fields with a specific annotation are formatted in a certain way. With a shared "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you define these rules once, and they are applied whenever formatting is needed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "format-FormatterRegistry-SPI",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FormatterRegistry"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SPI"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an SPI for registering formatters and converters through the FormatterRegistry. The following listing shows its interface definition:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.format;\n\npublic interface FormatterRegistrar {\n\n\tvoid registerFormatters(FormatterRegistry registry);\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FormatterRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is useful when registering multiple related converters and formatters for a given formatting category, such as date formatting. It can also be useful where declarative registration is insufficient — for example, when a formatter needs to be indexed under a specific field type different from its own "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<T>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or when registering a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Printer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "/"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " pair. The next section provides more information on converter and formatter registration."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "format-FormatterRegistrar-SPI",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FormatterRegistrar"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SPI"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Conversion and Formatting"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-config/conversion.html"
+              },
+              {
+                "kind": "text",
+                "value": " in the Spring MVC chapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "format-configuring-formatting-mvc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuring Formatting in Spring MVC"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Spring Field Formatting"
+      }
+    ]
+  }
+}

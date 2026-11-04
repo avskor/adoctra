@@ -1,0 +1,4196 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section describes the various classes that support the Spring TestContext Framework."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring TestContext Framework offers full integration with JUnit 4 through a custom runner (supported on JUnit 4.12 or higher). By annotating test classes with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunWith(SpringJUnit4ClassRunner.class)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or the shorter "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunWith(SpringRunner.class)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " variant, developers can implement standard JUnit 4-based unit and integration tests and simultaneously reap the benefits of the TestContext framework, such as support for loading application contexts, dependency injection of test instances, transactional test method execution, and so on. If you want to use the Spring TestContext Framework with an alternative runner (such as JUnit 4’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parameterized"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " runner) or third-party runners (such as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockitoJUnitRunner"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), you can, optionally, use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring’s support for JUnit rules"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/support-classes.html#testcontext-junit4-rules"
+              },
+              {
+                "kind": "text",
+                "value": " instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following code listing shows the minimal requirements for configuring a test class to run with the custom Spring "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Runner"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@RunWith(SpringRunner.class)\n@TestExecutionListeners({})\npublic class SimpleTest {\n\n\t@Test\n\tpublic void testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@RunWith(SpringRunner::class)\n@TestExecutionListeners\nclass SimpleTest {\n\n\t@Test\n\tfun testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@TestExecutionListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is configured with an empty list, to disable the default listeners, which otherwise would require an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to be configured through "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-junit4-runner",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Spring JUnit 4 Runner"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.test.context.junit4.rules"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package provides the following JUnit 4 rules (supported on JUnit 4.12 or higher):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SpringClassRule"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SpringMethodRule"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringClassRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is a JUnit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that supports class-level features of the Spring TestContext Framework, whereas "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringMethodRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is a JUnit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MethodRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that supports instance-level and method-level features of the Spring TestContext Framework."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In contrast to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringRunner"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", Spring’s rule-based JUnit support has the advantage of being independent of any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.junit.runner.Runner"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation and can, therefore, be combined with existing alternative runners (such as JUnit 4’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parameterized"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or third-party runners (such as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockitoJUnitRunner"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To support the full functionality of the TestContext framework, you must combine a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringClassRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringMethodRule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following example shows the proper way to declare these rules in an integration test:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Optionally specify a non-Spring Runner via @RunWith(...)\n@ContextConfiguration\npublic class IntegrationTest {\n\n\t@ClassRule\n\tpublic static final SpringClassRule springClassRule = new SpringClassRule();\n\n\t@Rule\n\tpublic final SpringMethodRule springMethodRule = new SpringMethodRule();\n\n\t@Test\n\tpublic void testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Optionally specify a non-Spring Runner via @RunWith(...)\n@ContextConfiguration\nclass IntegrationTest {\n\n\t@Rule\n\tval springMethodRule = SpringMethodRule()\n\n\t@Test\n\tfun testMethod() {\n\t\t// test logic...\n\t}\n\n\tcompanion object {\n\t\t@ClassRule\n\t\tval springClassRule = SpringClassRule()\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-junit4-rules",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Spring JUnit 4 Rules"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.test.context.junit4"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package provides the following support classes for JUnit 4-based test cases (supported on JUnit 4.12 or higher):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractJUnit4SpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractTransactionalJUnit4SpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an abstract base test class that integrates the Spring TestContext Framework with explicit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " testing support in a JUnit 4 environment. When you extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can access a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "protected"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "applicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance variable that you can use to perform explicit bean lookups or to test the state of the context as a whole."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an abstract transactional extension of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that adds some convenience functionality for JDBC access. This class expects a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javax.sql.DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean and a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PlatformTransactionManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean to be defined in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". When you extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can access a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "protected"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance variable that you can use to run SQL statements to query the database. You can use such queries to confirm database state both before and after running database-related application code, and Spring ensures that such queries run in the scope of the same transaction as the application code. When used in conjunction with an ORM tool, be sure to avoid "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false positives"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/tx.html#testcontext-tx-false-positives"
+              },
+              {
+                "kind": "text",
+                "value": ". As mentioned in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JDBC Testing Support"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/support-jdbc.html"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also provides convenience methods that delegate to methods in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JdbcTestUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " by using the aforementioned "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Furthermore, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalJUnit4SpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeSqlScript(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method for running SQL scripts against the configured "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "These classes are a convenience for extension. If you do not want your test classes to be tied to a Spring-specific class hierarchy, you can configure your own custom test classes by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@RunWith(SpringRunner.class)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring’s JUnit rules"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/support-classes.html#testcontext-junit4-rules"
+              },
+              {
+                "kind": "text",
+                "value": " ."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-support-classes-junit4",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "JUnit 4 Support Classes"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring TestContext Framework offers full integration with the JUnit Jupiter testing framework, introduced in JUnit 5. By annotating test classes with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExtendWith(SpringExtension.class)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can implement standard JUnit Jupiter-based unit and integration tests and simultaneously reap the benefits of the TestContext framework, such as support for loading application contexts, dependency injection of test instances, transactional test method execution, and so on."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Furthermore, thanks to the rich extension API in JUnit Jupiter, Spring provides the following features above and beyond the feature set that Spring supports for JUnit 4 and TestNG:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Dependency injection for test constructors, test methods, and test lifecycle callback methods. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Dependency Injection with the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SpringExtension"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/testcontext-framework/support-classes.html#testcontext-junit-jupiter-di"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for further details."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Powerful support for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "conditional test execution"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://junit.org/junit5/docs/current/user-guide/#extensions-conditions"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " based on SpEL expressions, environment variables, system properties, and so on. See the documentation for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledIf"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledIf"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring JUnit Jupiter Testing Annotations"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/annotations/integration-junit-jupiter.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for further details and examples."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Custom composed annotations that combine annotations from Spring and JUnit Jupiter. See the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@TransactionalDevTestConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@TransactionalIntegrationTest"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " examples in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Meta-Annotation Support for Testing"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/annotations/integration-meta.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for further details."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following code listing shows how to configure a test class to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringExtension"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in conjunction with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs JUnit Jupiter to extend the test with Spring support.\n@ExtendWith(SpringExtension.class)\n// Instructs Spring to load an ApplicationContext from TestConfig.class\n@ContextConfiguration(classes = TestConfig.class)\nclass SimpleTests {\n\n\t@Test\n\tvoid testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs JUnit Jupiter to extend the test with Spring support.\n@ExtendWith(SpringExtension::class)\n// Instructs Spring to load an ApplicationContext from TestConfig::class\n@ContextConfiguration(classes = [TestConfig::class])\nclass SimpleTests {\n\n\t@Test\n\tfun testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since you can also use annotations in JUnit 5 as meta-annotations, Spring provides the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitWebConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " composed annotations to simplify the configuration of the test "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and JUnit Jupiter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example uses "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to reduce the amount of configuration used in the previous example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs Spring to register the SpringExtension with JUnit\n// Jupiter and load an ApplicationContext from TestConfig.class\n@SpringJUnitConfig(TestConfig.class)\nclass SimpleTests {\n\n\t@Test\n\tvoid testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs Spring to register the SpringExtension with JUnit\n// Jupiter and load an ApplicationContext from TestConfig.class\n@SpringJUnitConfig(TestConfig::class)\nclass SimpleTests {\n\n\t@Test\n\tfun testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Similarly, the following example uses "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitWebConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to create a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for use with JUnit Jupiter:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs Spring to register the SpringExtension with JUnit\n// Jupiter and load a WebApplicationContext from TestWebConfig.class\n@SpringJUnitWebConfig(TestWebConfig.class)\nclass SimpleWebTests {\n\n\t@Test\n\tvoid testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Instructs Spring to register the SpringExtension with JUnit\n// Jupiter and load a WebApplicationContext from TestWebConfig::class\n@SpringJUnitWebConfig(TestWebConfig::class)\nclass SimpleWebTests {\n\n\t@Test\n\tfun testMethod() {\n\t\t// test logic...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See the documentation for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SpringJUnitWebConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring JUnit Jupiter Testing Annotations"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/annotations/integration-junit-jupiter.html"
+              },
+              {
+                "kind": "text",
+                "value": " for further details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SpringExtension"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implements the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ParameterResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://junit.org/junit5/docs/current/user-guide/#extensions-parameter-resolution"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " extension API from JUnit Jupiter, which lets Spring provide dependency injection for test constructors, test methods, and test lifecycle callback methods."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Specifically, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SpringExtension"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can inject dependencies from the test’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " into test constructors and methods that are annotated with Spring’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BeforeTransaction"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@AfterTransaction"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or JUnit’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BeforeAll"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@AfterAll"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@BeforeEach"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@AfterEach"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RepeatedTest"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ParameterizedTest"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and others."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If a specific parameter in a constructor for a JUnit Jupiter test class is of type "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (or a sub-type thereof) or is annotated or meta-annotated with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Autowired"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Qualifier"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Value"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", Spring injects the value for that specific parameter with the corresponding bean or value from the test’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring can also be configured to autowire all arguments for a test class constructor if the constructor is considered to be "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "autowirable"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". A constructor is considered to be autowirable if one of the following conditions is met (in order of precedence)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The constructor is annotated with "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Autowired"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestConstructor"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is present or meta-present on the test class with the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "autowireMode"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " attribute set to "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ALL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The default "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "test constructor autowire mode"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " has been changed to "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ALL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestConstructor"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "testing/annotations/integration-junit-jupiter.html#integration-testing-annotations-testconstructor"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for details on the use of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@TestConstructor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and how to change the global "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "test constructor autowire mode"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If the constructor for a test class is considered to be "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "autowirable"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", Spring assumes the responsibility for resolving arguments for all parameters in the constructor. Consequently, no other "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ParameterResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " registered with JUnit Jupiter can resolve parameters for such a constructor."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "warning"
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Constructor injection for test classes must not be used in conjunction with JUnit Jupiter’s "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestInstance(PER_CLASS)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " support if "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@DirtiesContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is used to close the test’s "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ApplicationContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " before or after test methods."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The reason is that "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestInstance(PER_CLASS)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " instructs JUnit Jupiter to cache the test instance between test method invocations. Consequently, the test instance will retain references to beans that were originally injected from an "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ApplicationContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that has been subsequently closed. Since the constructor for the test class will only be invoked once in such scenarios, dependency injection will not occur again, and subsequent tests will interact with beans from the closed "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "ApplicationContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " which may result in errors."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "To use "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@DirtiesContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " with \"before test method\" or \"after test method\" modes in conjunction with "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestInstance(PER_CLASS)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", one must configure dependencies from Spring to be supplied via field or setter injection so that they can be re-injected between test method invocations."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "warning"
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In the following example, Spring injects the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OrderService"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " bean from the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " loaded from "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestConfig.class"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " into the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OrderServiceIntegrationTests"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " constructor."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig.class)\nclass OrderServiceIntegrationTests {\n\n\tprivate final OrderService orderService;\n\n\t@Autowired\n\tOrderServiceIntegrationTests(OrderService orderService) {\n\t\tthis.orderService = orderService;\n\t}\n\n\t// tests that use the injected OrderService\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig::class)\nclass OrderServiceIntegrationTests @Autowired constructor(private val orderService: OrderService){\n\t// tests that use the injected OrderService\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Note that this feature lets test dependencies be "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "final"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and therefore immutable."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "spring.test.constructor.autowire.mode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property is to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "all"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@TestConstructor"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "testing/annotations/integration-junit-jupiter.html#integration-testing-annotations-testconstructor"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "), we can omit the declaration of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Autowired"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " on the constructor in the previous example, resulting in the following."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig.class)\nclass OrderServiceIntegrationTests {\n\n\tprivate final OrderService orderService;\n\n\tOrderServiceIntegrationTests(OrderService orderService) {\n\t\tthis.orderService = orderService;\n\t}\n\n\t// tests that use the injected OrderService\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig::class)\nclass OrderServiceIntegrationTests(val orderService:OrderService) {\n\t// tests that use the injected OrderService\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "testcontext-junit-jupiter-di-constructor",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Constructor Injection"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If a parameter in a JUnit Jupiter test method or test lifecycle callback method is of type "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (or a sub-type thereof) or is annotated or meta-annotated with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Autowired"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Qualifier"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Value"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", Spring injects the value for that specific parameter with the corresponding bean from the test’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In the following example, Spring injects the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OrderService"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " from the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " loaded from "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestConfig.class"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " into the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "deleteOrder()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " test method:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig.class)\nclass OrderServiceIntegrationTests {\n\n\t@Test\n\tvoid deleteOrder(@Autowired OrderService orderService) {\n\t\t// use orderService from the test's ApplicationContext\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig::class)\nclass OrderServiceIntegrationTests {\n\n\t@Test\n\tfun deleteOrder(@Autowired orderService: OrderService) {\n\t\t// use orderService from the test's ApplicationContext\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Due to the robustness of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ParameterResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " support in JUnit Jupiter, you can also have multiple dependencies injected into a single method, not only from Spring but also from JUnit Jupiter itself or other third-party extensions."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to have both Spring and JUnit Jupiter inject dependencies into the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "placeOrderRepeatedly()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " test method simultaneously."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig.class)\nclass OrderServiceIntegrationTests {\n\n\t@RepeatedTest(10)\n\tvoid placeOrderRepeatedly(RepetitionInfo repetitionInfo,\n\t\t\t@Autowired OrderService orderService) {\n\n\t\t// use orderService from the test's ApplicationContext\n\t\t// and repetitionInfo from JUnit Jupiter\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestConfig::class)\nclass OrderServiceIntegrationTests {\n\n\t@RepeatedTest(10)\n\tfun placeOrderRepeatedly(repetitionInfo:RepetitionInfo, @Autowired orderService:OrderService) {\n\n\t\t// use orderService from the test's ApplicationContext\n\t\t// and repetitionInfo from JUnit Jupiter\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Note that the use of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@RepeatedTest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " from JUnit Jupiter lets the test method gain access to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RepetitionInfo"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "testcontext-junit-jupiter-di-method",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Method Injection"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-junit-jupiter-di",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Dependency Injection with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringExtension"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring TestContext Framework"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " supports the use of test-related annotations on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Nested"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " test classes in JUnit Jupiter, including first-class support for inheriting test class configuration from enclosing classes, and such configuration will be inherited by default. To change from the default "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "INHERIT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mode to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OVERRIDE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mode, you may annotate an individual "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Nested"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " test class with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@NestedTestConfiguration(EnclosingConfiguration.OVERRIDE)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". An explicit "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@NestedTestConfiguration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declaration will apply to the annotated test class as well as any of its subclasses and nested classes. Thus, you may annotate a top-level test class with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@NestedTestConfiguration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and that will apply to all of its nested test classes recursively."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you are developing a component that integrates with the Spring TestContext Framework and needs to support annotation inheritance within enclosing class hierarchies, you must use the annotation search utilities provided in "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestContextAnnotationUtils"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " in order to honor "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@NestedTestConfiguration"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " semantics."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In order to allow development teams to change the default to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OVERRIDE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " – for example, for compatibility with Spring Framework 5.0 through 5.2 – the default mode can be changed globally via a JVM system property or a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file in the root of the classpath. See the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"Changing the default enclosing configuration inheritance mode\""
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/annotations/integration-junit-jupiter.html#integration-testing-annotations-nestedtestconfiguration"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " note for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Although the following \"Hello World\" example is very simplistic, it shows how to declare common configuration on a top-level class that is inherited by its "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Nested"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " test classes. In this particular example, only the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration class is inherited. Each nested test class provides its own set of active profiles, resulting in a distinct "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for each nested test class (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Context Caching"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/testcontext-framework/ctx-management/caching.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details). Consult the list of "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "supported annotations"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/annotations/integration-junit-jupiter.html#integration-testing-annotations-nestedtestconfiguration"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to see which annotations can be inherited in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Nested"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " test classes."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig(TestConfig.class)\nclass GreetingServiceTests {\n\n\t@Nested\n\t@ActiveProfiles(\"lang_en\")\n\tclass EnglishGreetings {\n\n\t\t@Test\n\t\tvoid hello(@Autowired GreetingService service) {\n\t\t\tassertThat(service.greetWorld()).isEqualTo(\"Hello World\");\n\t\t}\n\t}\n\n\t@Nested\n\t@ActiveProfiles(\"lang_de\")\n\tclass GermanGreetings {\n\n\t\t@Test\n\t\tvoid hello(@Autowired GreetingService service) {\n\t\t\tassertThat(service.greetWorld()).isEqualTo(\"Hallo Welt\");\n\t\t}\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig(TestConfig::class)\nclass GreetingServiceTests {\n\n\t@Nested\n\t@ActiveProfiles(\"lang_en\")\n\tinner class EnglishGreetings {\n\n\t\t@Test\n\t\tfun hello(@Autowired service:GreetingService) {\n\t\t\tassertThat(service.greetWorld()).isEqualTo(\"Hello World\")\n\t\t}\n\t}\n\n\t@Nested\n\t@ActiveProfiles(\"lang_de\")\n\tinner class GermanGreetings {\n\n\t\t@Test\n\t\tfun hello(@Autowired service:GreetingService) {\n\t\t\tassertThat(service.greetWorld()).isEqualTo(\"Hallo Welt\")\n\t\t}\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-junit-jupiter-nested-test-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " test class configuration"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-junit-jupiter-extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "SpringExtension for JUnit Jupiter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.test.context.testng"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package provides the following support classes for TestNG based test cases:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractTestNGSpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractTransactionalTestNGSpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an abstract base test class that integrates the Spring TestContext Framework with explicit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " testing support in a TestNG environment. When you extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can access a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "protected"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "applicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance variable that you can use to perform explicit bean lookups or to test the state of the context as a whole."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is an abstract transactional extension of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that adds some convenience functionality for JDBC access. This class expects a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javax.sql.DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean and a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PlatformTransactionManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean to be defined in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". When you extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can access a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "protected"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance variable that you can use to run SQL statements to query the database. You can use such queries to confirm database state both before and after running database-related application code, and Spring ensures that such queries run in the scope of the same transaction as the application code. When used in conjunction with an ORM tool, be sure to avoid "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false positives"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/tx.html#testcontext-tx-false-positives"
+              },
+              {
+                "kind": "text",
+                "value": ". As mentioned in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JDBC Testing Support"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/support-jdbc.html"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also provides convenience methods that delegate to methods in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JdbcTestUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " by using the aforementioned "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Furthermore, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTransactionalTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeSqlScript(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method for running SQL scripts against the configured "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "These classes are a convenience for extension. If you do not want your test classes to be tied to a Spring-specific class hierarchy, you can configure your own custom test classes by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@TestExecutionListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and so on and by manually instrumenting your test class with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestContextManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". See the source code of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractTestNGSpringContextTests"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for an example of how to instrument your test class."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-support-classes-testng",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "TestNG Support Classes"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "TestContext Framework Support Classes"
+      }
+    ]
+  }
+}

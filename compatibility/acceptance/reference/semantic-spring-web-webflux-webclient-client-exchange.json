@@ -1,0 +1,205 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "exchangeToMono()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "exchangeToFlux()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " methods (or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "awaitExchange { }"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "exchangeToFlow { }"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in Kotlin) are useful for more advanced cases that require more control, such as to decode the response differently depending on the response status:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Mono<Person> entityMono = client.get()\n\t\t.uri(\"/persons/1\")\n\t\t.accept(MediaType.APPLICATION_JSON)\n\t\t.exchangeToMono(response -> {\n\t\t\tif (response.statusCode().equals(HttpStatus.OK)) {\n\t\t\t\treturn response.bodyToMono(Person.class);\n\t\t\t}\n\t\t\telse {\n\t\t\t\t// Turn to error\n\t\t\t\treturn response.createError();\n\t\t\t}\n\t\t});"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "val entity = client.get()\n  .uri(\"/persons/1\")\n  .accept(MediaType.APPLICATION_JSON)\n  .awaitExchange {\n\t\tif (response.statusCode() == HttpStatus.OK) {\n\t\t\t return response.awaitBody<Person>()\n\t\t}\n\t\telse {\n\t\t\t throw response.createExceptionAndAwait()\n\t\t}\n  }"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When using the above, after the returned "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Mono"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Flux"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " completes, the response body is checked and if not consumed it is released to prevent memory and connection leaks. Therefore the response cannot be decoded further downstream. It is up to the provided function to declare how to decode the response if needed."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Exchange"
+      }
+    ]
+  }
+}

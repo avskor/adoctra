@@ -1,0 +1,3251 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " classes provide a simplified configuration by taking advantage of database metadata that can be retrieved through the JDBC driver. This means that you have less to configure up front, although you can override or turn off the metadata processing if you prefer to provide all the details in your code."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We start by looking at the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class with the minimal amount of configuration options. You should instantiate the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the data access layer’s initialization method. For this example, the initializing method is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "setDataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. You do not need to subclass the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class. Instead, you can create a new instance and set the table name by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "withTableName"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. Configuration methods for this class follow the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fluid"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " style that returns the instance of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which lets you chain all configuration methods. The following example uses only one configuration method (we show examples of multiple methods later):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcInsert insertActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.insertActor = new SimpleJdbcInsert(dataSource).withTableName(\"t_actor\");\n\t}\n\n\tpublic void add(Actor actor) {\n\t\tMap<String, Object> parameters = new HashMap<>(3);\n\t\tparameters.put(\"id\", actor.getId());\n\t\tparameters.put(\"first_name\", actor.getFirstName());\n\t\tparameters.put(\"last_name\", actor.getLastName());\n\t\tinsertActor.execute(parameters);\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val insertActor = SimpleJdbcInsert(dataSource).withTableName(\"t_actor\")\n\n\tfun add(actor: Actor) {\n\t\tval parameters = mutableMapOf<String, Any>()\n\t\tparameters[\"id\"] = actor.id\n\t\tparameters[\"first_name\"] = actor.firstName\n\t\tparameters[\"last_name\"] = actor.lastName\n\t\tinsertActor.execute(parameters)\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method used here takes a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.util.Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as its only parameter. The important thing to note here is that the keys used for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " must match the column names of the table, as defined in the database. This is because we read the metadata to construct the actual insert statement."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-insert-1",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Inserting Data by Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcInsert"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The next example uses the same insert as the preceding example, but, instead of passing in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it retrieves the auto-generated key and sets it on the new "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Actor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object. When it creates the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", in addition to specifying the table name, it specifies the name of the generated key column with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "usingGeneratedKeyColumns"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. The following listing shows how it works:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcInsert insertActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.insertActor = new SimpleJdbcInsert(dataSource)\n\t\t\t\t.withTableName(\"t_actor\")\n\t\t\t\t.usingGeneratedKeyColumns(\"id\");\n\t}\n\n\tpublic void add(Actor actor) {\n\t\tMap<String, Object> parameters = new HashMap<>(2);\n\t\tparameters.put(\"first_name\", actor.getFirstName());\n\t\tparameters.put(\"last_name\", actor.getLastName());\n\t\tNumber newId = insertActor.executeAndReturnKey(parameters);\n\t\tactor.setId(newId.longValue());\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val insertActor = SimpleJdbcInsert(dataSource)\n\t\t\t.withTableName(\"t_actor\").usingGeneratedKeyColumns(\"id\")\n\n\tfun add(actor: Actor): Actor {\n\t\tval parameters = mapOf(\n\t\t\t\t\"first_name\" to actor.firstName,\n\t\t\t\t\"last_name\" to actor.lastName)\n\t\tval newId = insertActor.executeAndReturnKey(parameters);\n\t\treturn actor.copy(id = newId.toLong())\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The main difference when you run the insert by using this second approach is that you do not add the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and you call the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeAndReturnKey"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. This returns a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.lang.Number"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object with which you can create an instance of the numerical type that is used in your domain class. You cannot rely on all databases to return a specific Java class here. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.lang.Number"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is the base class that you can rely on. If you have multiple auto-generated columns or the generated values are non-numeric, you can use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "KeyHolder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is returned from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeAndReturnKeyHolder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-insert-2",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Retrieving Auto-generated Keys by Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcInsert"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can limit the columns for an insert by specifying a list of column names with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "usingColumns"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcInsert insertActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.insertActor = new SimpleJdbcInsert(dataSource)\n\t\t\t\t.withTableName(\"t_actor\")\n\t\t\t\t.usingColumns(\"first_name\", \"last_name\")\n\t\t\t\t.usingGeneratedKeyColumns(\"id\");\n\t}\n\n\tpublic void add(Actor actor) {\n\t\tMap<String, Object> parameters = new HashMap<>(2);\n\t\tparameters.put(\"first_name\", actor.getFirstName());\n\t\tparameters.put(\"last_name\", actor.getLastName());\n\t\tNumber newId = insertActor.executeAndReturnKey(parameters);\n\t\tactor.setId(newId.longValue());\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val insertActor = SimpleJdbcInsert(dataSource)\n\t\t\t.withTableName(\"t_actor\")\n\t\t\t.usingColumns(\"first_name\", \"last_name\")\n\t\t\t.usingGeneratedKeyColumns(\"id\")\n\n\tfun add(actor: Actor): Actor {\n\t\tval parameters = mapOf(\n\t\t\t\t\"first_name\" to actor.firstName,\n\t\t\t\t\"last_name\" to actor.lastName)\n\t\tval newId = insertActor.executeAndReturnKey(parameters);\n\t\treturn actor.copy(id = newId.toLong())\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The execution of the insert is the same as if you had relied on the metadata to determine which columns to use."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-insert-3",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Specifying Columns for a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcInsert"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to provide parameter values works fine, but it is not the most convenient class to use. Spring provides a couple of implementations of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameterSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface that you can use instead. The first one is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanPropertySqlParameterSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which is a very convenient class if you have a JavaBean-compliant class that contains your values. It uses the corresponding getter method to extract the parameter values. The following example shows how to use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanPropertySqlParameterSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcInsert insertActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.insertActor = new SimpleJdbcInsert(dataSource)\n\t\t\t\t.withTableName(\"t_actor\")\n\t\t\t\t.usingGeneratedKeyColumns(\"id\");\n\t}\n\n\tpublic void add(Actor actor) {\n\t\tSqlParameterSource parameters = new BeanPropertySqlParameterSource(actor);\n\t\tNumber newId = insertActor.executeAndReturnKey(parameters);\n\t\tactor.setId(newId.longValue());\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val insertActor = SimpleJdbcInsert(dataSource)\n\t\t\t.withTableName(\"t_actor\")\n\t\t\t.usingGeneratedKeyColumns(\"id\")\n\n\tfun add(actor: Actor): Actor {\n\t\tval parameters = BeanPropertySqlParameterSource(actor)\n\t\tval newId = insertActor.executeAndReturnKey(parameters)\n\t\treturn actor.copy(id = newId.toLong())\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another option is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MapSqlParameterSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that resembles a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " but provides a more convenient "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "addValue"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method that can be chained. The following example shows how to use it:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcInsert insertActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.insertActor = new SimpleJdbcInsert(dataSource)\n\t\t\t\t.withTableName(\"t_actor\")\n\t\t\t\t.usingGeneratedKeyColumns(\"id\");\n\t}\n\n\tpublic void add(Actor actor) {\n\t\tSqlParameterSource parameters = new MapSqlParameterSource()\n\t\t\t\t.addValue(\"first_name\", actor.getFirstName())\n\t\t\t\t.addValue(\"last_name\", actor.getLastName());\n\t\tNumber newId = insertActor.executeAndReturnKey(parameters);\n\t\tactor.setId(newId.longValue());\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val insertActor = SimpleJdbcInsert(dataSource)\n\t\t\t.withTableName(\"t_actor\")\n\t\t\t.usingGeneratedKeyColumns(\"id\")\n\n\tfun add(actor: Actor): Actor {\n\t\tval parameters = MapSqlParameterSource()\n\t\t\t\t\t.addValue(\"first_name\", actor.firstName)\n\t\t\t\t\t.addValue(\"last_name\", actor.lastName)\n\t\tval newId = insertActor.executeAndReturnKey(parameters)\n\t\treturn actor.copy(id = newId.toLong())\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As you can see, the configuration is the same. Only the executing code has to change to use these alternative input classes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-parameters",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SqlParameterSource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to Provide Parameter Values"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class uses metadata in the database to look up names of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "in"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters so that you do not have to explicitly declare them. You can declare parameters if you prefer to do that or if you have parameters that do not have an automatic mapping to a Java class. The first example shows a simple procedure that returns only scalar values in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "VARCHAR"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DATE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " format from a MySQL database. The example procedure reads a specified actor entry and returns "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "first_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "last_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "birth_date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " columns in the form of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters. The following listing shows the first example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CREATE PROCEDURE read_actor (\n\tIN in_id INTEGER,\n\tOUT out_first_name VARCHAR(100),\n\tOUT out_last_name VARCHAR(100),\n\tOUT out_birth_date DATE)\nBEGIN\n\tSELECT first_name, last_name, birth_date\n\tINTO out_first_name, out_last_name, out_birth_date\n\tFROM t_actor where id = in_id;\nEND;"
+              }
+            ],
+            "language": "sql",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "in_id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameter contains the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of the actor that you are looking up. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters return the data read from the table."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can declare "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a manner similar to declaring "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcInsert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". You should instantiate and configure the class in the initialization method of your data-access layer. Compared to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StoredProcedure"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class, you need not create a subclass and you need not to declare parameters that can be looked up in the database metadata. The following example of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration uses the preceding stored procedure (the only configuration option, in addition to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", is the name of the stored procedure):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcCall procReadActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tthis.procReadActor = new SimpleJdbcCall(dataSource)\n\t\t\t\t.withProcedureName(\"read_actor\");\n\t}\n\n\tpublic Actor readActor(Long id) {\n\t\tSqlParameterSource in = new MapSqlParameterSource()\n\t\t\t\t.addValue(\"in_id\", id);\n\t\tMap out = procReadActor.execute(in);\n\t\tActor actor = new Actor();\n\t\tactor.setId(id);\n\t\tactor.setFirstName((String) out.get(\"out_first_name\"));\n\t\tactor.setLastName((String) out.get(\"out_last_name\"));\n\t\tactor.setBirthDate((Date) out.get(\"out_birth_date\"));\n\t\treturn actor;\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val procReadActor = SimpleJdbcCall(dataSource)\n\t\t\t.withProcedureName(\"read_actor\")\n\n\n\tfun readActor(id: Long): Actor {\n\t\tval source = MapSqlParameterSource().addValue(\"in_id\", id)\n\t\tval output = procReadActor.execute(source)\n\t\treturn Actor(\n\t\t\t\tid,\n\t\t\t\toutput[\"out_first_name\"] as String,\n\t\t\t\toutput[\"out_last_name\"] as String,\n\t\t\t\toutput[\"out_birth_date\"] as Date)\n\t}\n\n\t\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The code you write for the execution of the call involves creating an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameterSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " containing the IN parameter. You must match the name provided for the input value with that of the parameter name declared in the stored procedure. The case does not have to match because you use metadata to determine how database objects should be referred to in a stored procedure. What is specified in the source for the stored procedure is not necessarily the way it is stored in the database. Some databases transform names to all upper case, while others use lower case or use the case as specified."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method takes the IN parameters and returns a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that contains any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters keyed by the name, as specified in the stored procedure. In this case, they are "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out_first_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out_last_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out_birth_date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The last part of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method creates an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Actor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance to use to return the data retrieved. Again, it is important to use the names of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters as they are declared in the stored procedure. Also, the case in the names of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters stored in the results map matches that of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameter names in the database, which could vary between databases. To make your code more portable, you should do a case-insensitive lookup or instruct Spring to use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LinkedCaseInsensitiveMap"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". To do the latter, you can create your own "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "setResultsMapCaseInsensitive"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Then you can pass this customized "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JdbcTemplate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance into the constructor of your "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following example shows this configuration:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcCall procReadActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tJdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);\n\t\tjdbcTemplate.setResultsMapCaseInsensitive(true);\n\t\tthis.procReadActor = new SimpleJdbcCall(jdbcTemplate)\n\t\t\t\t.withProcedureName(\"read_actor\");\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate var procReadActor = SimpleJdbcCall(JdbcTemplate(dataSource).apply {\n\t\tisResultsMapCaseInsensitive = true\n\t}).withProcedureName(\"read_actor\")\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By taking this action, you avoid conflicts in the case used for the names of your returned "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-call-1",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Calling a Stored Procedure with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcCall"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Earlier in this chapter, we described how parameters are deduced from metadata, but you can declare them explicitly if you wish. You can do so by creating and configuring "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "declareParameters"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, which takes a variable number of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects as input. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "next section"
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/jdbc/simple.html#jdbc-params"
+              },
+              {
+                "kind": "text",
+                "value": " for details on how to define an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Explicit declarations are necessary if the database you use is not a Spring-supported database. Currently, Spring supports metadata lookup of stored procedure calls for the following databases: Apache Derby, DB2, MySQL, Microsoft SQL Server, Oracle, and Sybase. We also support metadata lookup of stored functions for MySQL, Microsoft SQL Server, and Oracle."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can opt to explicitly declare one, some, or all of the parameters. The parameter metadata is still used where you do not explicitly declare parameters. To bypass all processing of metadata lookups for potential parameters and use only the declared parameters, you can call the method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "withoutProcedureColumnMetaDataAccess"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as part of the declaration. Suppose that you have two or more different call signatures declared for a database function. In this case, you call "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "useInParameterNames"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to specify the list of IN parameter names to include for a given signature."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows a fully declared procedure call and uses the information from the preceding example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcCall procReadActor;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tJdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);\n\t\tjdbcTemplate.setResultsMapCaseInsensitive(true);\n\t\tthis.procReadActor = new SimpleJdbcCall(jdbcTemplate)\n\t\t\t\t.withProcedureName(\"read_actor\")\n\t\t\t\t.withoutProcedureColumnMetaDataAccess()\n\t\t\t\t.useInParameterNames(\"in_id\")\n\t\t\t\t.declareParameters(\n\t\t\t\t\t\tnew SqlParameter(\"in_id\", Types.NUMERIC),\n\t\t\t\t\t\tnew SqlOutParameter(\"out_first_name\", Types.VARCHAR),\n\t\t\t\t\t\tnew SqlOutParameter(\"out_last_name\", Types.VARCHAR),\n\t\t\t\t\t\tnew SqlOutParameter(\"out_birth_date\", Types.DATE)\n\t\t\t\t);\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\t\tprivate val procReadActor = SimpleJdbcCall(JdbcTemplate(dataSource).apply {\n\t\t\tisResultsMapCaseInsensitive = true\n\t\t}).withProcedureName(\"read_actor\")\n\t\t\t\t.withoutProcedureColumnMetaDataAccess()\n\t\t\t\t.useInParameterNames(\"in_id\")\n\t\t\t\t.declareParameters(\n\t\t\t\t\t\tSqlParameter(\"in_id\", Types.NUMERIC),\n\t\t\t\t\t\tSqlOutParameter(\"out_first_name\", Types.VARCHAR),\n\t\t\t\t\t\tSqlOutParameter(\"out_last_name\", Types.VARCHAR),\n\t\t\t\t\t\tSqlOutParameter(\"out_birth_date\", Types.DATE)\n\t)\n\n\t\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The execution and end results of the two examples are the same. The second example specifies all details explicitly rather than relying on metadata."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-call-2",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Explicitly Declaring Parameters to Use for a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcCall"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To define a parameter for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " classes and also for the RDBMS operations classes (covered in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Modeling JDBC Operations as Java Objects"
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/jdbc/object.html"
+              },
+              {
+                "kind": "text",
+                "value": ") you can use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or one of its subclasses. To do so, you typically specify the parameter name and SQL type in the constructor. The SQL type is specified by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.sql.Types"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " constants. Earlier in this chapter, we saw declarations similar to the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "new SqlParameter(\"in_id\", Types.NUMERIC),\nnew SqlOutParameter(\"out_first_name\", Types.VARCHAR),"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "SqlParameter(\"in_id\", Types.NUMERIC),\nSqlOutParameter(\"out_first_name\", Types.VARCHAR),"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The first line with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " declares an IN parameter. You can use IN parameters for both stored procedure calls and for queries by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlQuery"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and its subclasses (covered in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Understanding "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SqlQuery"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/jdbc/object.html#jdbc-SqlQuery"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The second line (with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlOutParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") declares an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameter to be used in a stored procedure call. There is also an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlInOutParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InOut"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters (parameters that provide an IN value to the procedure and that also return a value)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Only parameters declared as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlInOutParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are used to provide input values. This is different from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StoredProcedure"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class, which (for backwards compatibility reasons) lets input values be provided for parameters declared as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlOutParameter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For IN parameters, in addition to the name and the SQL type, you can specify a scale for numeric data or a type name for custom database types. For "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameters, you can provide a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RowMapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to handle mapping of rows returned from a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "REF"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " cursor. Another option is to specify an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlReturnType"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that provides an opportunity to define customized handling of the return values."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-params",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "How to Define "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SqlParameters"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can call a stored function in almost the same way as you call a stored procedure, except that you provide a function name rather than a procedure name. You use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "withFunctionName"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method as part of the configuration to indicate that you want to make a call to a function, and the corresponding string for a function call is generated. A specialized call ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeFunction"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") is used to run the function, and it returns the function return value as an object of a specified type, which means you do not have to retrieve the return value from the results map. A similar convenience method (named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeObject"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") is also available for stored procedures that have only one "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameter. The following example (for MySQL) is based on a stored function named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "get_actor_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that returns an actor’s full name:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CREATE FUNCTION get_actor_name (in_id INTEGER)\nRETURNS VARCHAR(200) READS SQL DATA\nBEGIN\n\tDECLARE out_name VARCHAR(200);\n\tSELECT concat(first_name, ' ', last_name)\n\t\tINTO out_name\n\t\tFROM t_actor where id = in_id;\n\tRETURN out_name;\nEND;"
+              }
+            ],
+            "language": "sql",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To call this function, we again create a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the initialization method, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcCall funcGetActorName;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tJdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);\n\t\tjdbcTemplate.setResultsMapCaseInsensitive(true);\n\t\tthis.funcGetActorName = new SimpleJdbcCall(jdbcTemplate)\n\t\t\t\t.withFunctionName(\"get_actor_name\");\n\t}\n\n\tpublic String getActorName(Long id) {\n\t\tSqlParameterSource in = new MapSqlParameterSource()\n\t\t\t\t.addValue(\"in_id\", id);\n\t\tString name = funcGetActorName.executeFunction(String.class, in);\n\t\treturn name;\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\tprivate val jdbcTemplate = JdbcTemplate(dataSource).apply {\n\t\tisResultsMapCaseInsensitive = true\n\t}\n\tprivate val funcGetActorName = SimpleJdbcCall(jdbcTemplate)\n\t\t\t.withFunctionName(\"get_actor_name\")\n\n\tfun getActorName(id: Long): String {\n\t\tval source = MapSqlParameterSource().addValue(\"in_id\", id)\n\t\treturn funcGetActorName.executeFunction(String::class.java, source)\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeFunction"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method used returns a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that contains the return value from the function call."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-call-3",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Calling a Stored Function by Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcCall"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Calling a stored procedure or function that returns a result set is a bit tricky. Some databases return result sets during the JDBC results processing, while others require an explicitly registered "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " parameter of a specific type. Both approaches need additional processing to loop over the result set and process the returned rows. With the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleJdbcCall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "returningResultSet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method and declare a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RowMapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation to be used for a specific parameter. If the result set is returned during the results processing, there are no names defined, so the returned results must match the order in which you declare the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RowMapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations. The name specified is still used to store the processed list of results in the results map that is returned from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " statement."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The next example (for MySQL) uses a stored procedure that takes no IN parameters and returns all rows from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "t_actor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " table:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CREATE PROCEDURE read_all_actors()\nBEGIN\n SELECT a.id, a.first_name, a.last_name, a.birth_date FROM t_actor a;\nEND;"
+              }
+            ],
+            "language": "sql",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To call this procedure, you can declare the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RowMapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Because the class to which you want to map follows the JavaBean rules, you can use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanPropertyRowMapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is created by passing in the required class to map to in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "newInstance"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. The following example shows how to do so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class JdbcActorDao implements ActorDao {\n\n\tprivate SimpleJdbcCall procReadAllActors;\n\n\tpublic void setDataSource(DataSource dataSource) {\n\t\tJdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);\n\t\tjdbcTemplate.setResultsMapCaseInsensitive(true);\n\t\tthis.procReadAllActors = new SimpleJdbcCall(jdbcTemplate)\n\t\t\t\t.withProcedureName(\"read_all_actors\")\n\t\t\t\t.returningResultSet(\"actors\",\n\t\t\t\tBeanPropertyRowMapper.newInstance(Actor.class));\n\t}\n\n\tpublic List getActorsList() {\n\t\tMap m = procReadAllActors.execute(new HashMap<String, Object>(0));\n\t\treturn (List) m.get(\"actors\");\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class JdbcActorDao(dataSource: DataSource) : ActorDao {\n\n\t\tprivate val procReadAllActors = SimpleJdbcCall(JdbcTemplate(dataSource).apply {\n\t\t\tisResultsMapCaseInsensitive = true\n\t\t}).withProcedureName(\"read_all_actors\")\n\t\t\t\t.returningResultSet(\"actors\",\n\t\t\t\t\t\tBeanPropertyRowMapper.newInstance(Actor::class.java))\n\n\tfun getActorsList(): List<Actor> {\n\t\tval m = procReadAllActors.execute(mapOf<String, Any>())\n\t\treturn m[\"actors\"] as List<Actor>\n\t}\n\n\t// ... additional methods\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " call passes in an empty "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", because this call does not take any parameters. The list of actors is then retrieved from the results map and returned to the caller."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jdbc-simple-jdbc-call-4",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Returning a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ResultSet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or REF Cursor from a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpleJdbcCall"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Simplifying JDBC Operations with the "
+      },
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "SimpleJdbc"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      },
+      {
+        "kind": "text",
+        "value": " Classes"
+      }
+    ]
+  }
+}

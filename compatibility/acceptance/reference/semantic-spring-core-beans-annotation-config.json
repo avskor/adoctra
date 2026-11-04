@@ -1,0 +1,535 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring provides comprehensive support for annotation-based configuration, operating on metadata in the component class itself by using annotations on the relevant class, method, or field declaration. As mentioned in "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Example: The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutowiredAnnotationBeanPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/factory-extension.html#beans-factory-extension-bpp-examples-aabpp"
+          },
+          {
+            "kind": "text",
+            "value": ", Spring uses "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BeanPostProcessors"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in conjunction with annotations to make the core IOC container aware of specific annotations."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For example, the "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Autowired"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/annotation-config/autowired.html"
+          },
+          {
+            "kind": "text",
+            "value": " annotation provides the same capabilities as described in "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Autowiring Collaborators"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/dependencies/factory-autowire.html"
+          },
+          {
+            "kind": "text",
+            "value": " but with more fine-grained control and wider applicability. In addition, Spring provides support for JSR-250 annotations, such as "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@PostConstruct"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@PreDestroy"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as well as support for JSR-330 (Dependency Injection for Java) annotations contained in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "jakarta.inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " package such as "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Named"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Details about those annotations can be found in the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "relevant section"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/standard-annotations.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Annotation injection is performed before external property injection. Thus, external configuration (for example, XML-specified bean properties) effectively overrides the annotations for properties when wired through mixed approaches."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Technically, you can register the post-processors as individual bean definitions, but they are implicitly registered in an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AnnotationConfigApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " already."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In an XML-based Spring setup, you may include the following configuration tag to enable mixing and matching with annotation-based configuration:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context\n\t\thttps://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<context:annotation-config/>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<context:annotation-config/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " element implicitly registers the following post-processors:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ConfigurationClassPostProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/annotation/ConfigurationClassPostProcessor.html"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AutowiredAnnotationBeanPostProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/factory/annotation/AutowiredAnnotationBeanPostProcessor.html"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CommonAnnotationBeanPostProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/annotation/CommonAnnotationBeanPostProcessor.html"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PersistenceAnnotationBeanPostProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/orm/jpa/support/PersistenceAnnotationBeanPostProcessor.html"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "EventListenerMethodProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/event/EventListenerMethodProcessor.html"
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<context:annotation-config/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " only looks for annotations on beans in the same application context in which it is defined. This means that, if you put "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<context:annotation-config/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DispatcherServlet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it only checks for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Autowired"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " beans in your controllers, and not your services. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The DispatcherServlet"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-servlet.html"
+              },
+              {
+                "kind": "text",
+                "value": " for more information."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Annotation-based Container Configuration"
+      }
+    ]
+  }
+}

@@ -1,0 +1,346 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To provide comprehensive web testing support, the TestContext framework has a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ServletTestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " that is enabled by default. When testing against a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", this "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/testcontext-framework/key-abstractions.html"
+          },
+          {
+            "kind": "text",
+            "value": " sets up default thread-local state by using Spring Web’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "RequestContextHolder"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " before each test method and creates a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletResponse"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", and a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ServletWebRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " based on the base resource path configured with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@WebAppConfiguration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ServletTestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " also ensures that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletResponse"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ServletWebRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can be injected into the test instance, and, once the test is complete, it cleans up thread-local state."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Once you have a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " loaded for your test, you might find that you need to interact with the web mocks — for example, to set up your test fixture or to perform assertions after invoking your web component. The following example shows which mocks can be autowired into your test instance. Note that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockServletContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " are both cached across the test suite, whereas the other mocks are managed per test method by the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ServletTestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass WacTests {\n\n\t@Autowired\n\tWebApplicationContext wac; // cached\n\n\t@Autowired\n\tMockServletContext servletContext; // cached\n\n\t@Autowired\n\tMockHttpSession session;\n\n\t@Autowired\n\tMockHttpServletRequest request;\n\n\t@Autowired\n\tMockHttpServletResponse response;\n\n\t@Autowired\n\tServletWebRequest webRequest;\n\n\t//...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass WacTests {\n\n\t@Autowired\n\tlateinit var wac: WebApplicationContext // cached\n\n\t@Autowired\n\tlateinit var servletContext: MockServletContext // cached\n\n\t@Autowired\n\tlateinit var session: MockHttpSession\n\n\t@Autowired\n\tlateinit var request: MockHttpServletRequest\n\n\t@Autowired\n\tlateinit var response: MockHttpServletResponse\n\n\t@Autowired\n\tlateinit var webRequest: ServletWebRequest\n\n\t//...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Working with Web Mocks"
+      }
+    ]
+  }
+}

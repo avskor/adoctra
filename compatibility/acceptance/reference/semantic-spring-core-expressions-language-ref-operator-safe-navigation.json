@@ -1,0 +1,2634 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The safe navigation operator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") is used to avoid a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NullPointerException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and comes from the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Groovy"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.groovy-lang.org/operators.html#_safe_navigation_operator"
+              },
+              {
+                "kind": "text",
+                "value": " language. Typically, when you have a reference to an object, you might need to verify that it is not "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " before accessing methods or properties of the object. To avoid this, the safe navigation operator returns "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for the particular null-safe operation instead of throwing an exception."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When the safe navigation operator evaluates to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "null"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a particular null-safe operation within a compound expression, the remainder of the compound expression will still be evaluated."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Null-safe Operations in Compound Expressions"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#expressions-operator-safe-navigation-compound-expressions"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the safe navigation operator for property access ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nEvaluationContext context = SimpleEvaluationContext.forReadOnlyDataBinding().build();\n\nInventor tesla = new Inventor(\"Nikola Tesla\", \"Serbian\");\ntesla.setPlaceOfBirth(new PlaceOfBirth(\"Smiljan\"));\n\n// evaluates to \"Smiljan\"\nString city = parser.parseExpression(\"placeOfBirth?.city\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO1-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, tesla, String.class);\n\ntesla.setPlaceOfBirth(null);\n\n// evaluates to null - does not throw NullPointerException\ncity = parser.parseExpression(\"placeOfBirth?.city\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO1-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, tesla, String.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO1-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use safe navigation operator on non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "placeOfBirth"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " property"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO1-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use safe navigation operator on null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "placeOfBirth"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " property"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval context = SimpleEvaluationContext.forReadOnlyDataBinding().build()\n\nval tesla = Inventor(\"Nikola Tesla\", \"Serbian\")\ntesla.setPlaceOfBirth(PlaceOfBirth(\"Smiljan\"))\n\n// evaluates to \"Smiljan\"\nvar city = parser.parseExpression(\"placeOfBirth?.city\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO2-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, tesla, String::class.java)\n\ntesla.setPlaceOfBirth(null)\n\n// evaluates to null - does not throw NullPointerException\ncity = parser.parseExpression(\"placeOfBirth?.city\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO2-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, tesla, String::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO2-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use safe navigation operator on non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "placeOfBirth"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " property"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO2-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use safe navigation operator on null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "placeOfBirth"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " property"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The safe navigation operator also applies to method invocations on an object."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For example, the expression "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#calculator?.max(4, 2)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " evaluates to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "null"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " if the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#calculator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " variable has not been configured in the context. Otherwise, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "max(int, int)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method will be invoked on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#calculator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "expressions-operator-safe-navigation-property-access",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Safe Property and Method Access"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since Spring Framework 6.2, the Spring Expression Language supports safe navigation for indexing into the following types of structures."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "arrays and collections"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/expressions/language-ref/properties-arrays.html#expressions-indexing-arrays-and-collections"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "strings"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/expressions/language-ref/properties-arrays.html#expressions-indexing-strings"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "maps"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/expressions/language-ref/properties-arrays.html#expressions-indexing-maps"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "objects"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/expressions/language-ref/properties-arrays.html#expressions-indexing-objects"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "custom"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/expressions/language-ref/properties-arrays.html#expressions-indexing-custom"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the safe navigation operator for indexing into a list ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.[]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nEvaluationContext context = new StandardEvaluationContext(society);\n\n// evaluates to Inventor(\"Nikola Tesla\")\nInventor inventor = parser.parseExpression(\"members?.[0]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO3-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, Inventor.class);\n\nsociety.members = null;\n\n// evaluates to null - does not throw an exception\ninventor = parser.parseExpression(\"members?.[0]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO3-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, Inventor.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO3-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe index operator on a non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO3-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe index operator on a null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\n\n// evaluates to Inventor(\"Nikola Tesla\")\nvar inventor = parser.parseExpression(\"members?.[0]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO4-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, Inventor::class.java)\n\nsociety.members = null\n\n// evaluates to null - does not throw an exception\ninventor = parser.parseExpression(\"members?.[0]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO4-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, Inventor::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO4-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe index operator on a non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO4-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe index operator on a null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "expressions-operator-safe-navigation-indexing",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Safe Index Access"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring Expression Language supports safe navigation for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "collection selection"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/expressions/language-ref/collection-selection.html"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "collection projection"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/expressions/language-ref/collection-projection.html"
+              },
+              {
+                "kind": "text",
+                "value": " via the following operators."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null-safe selection: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "?.?"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null-safe select first: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "?.^"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null-safe select last: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "?.$"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null-safe projection: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "?.!"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the safe navigation operator for collection selection ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.?"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nStandardEvaluationContext context = new StandardEvaluationContext(society);\nString expression = \"members?.?[nationality == 'Serbian']\"; "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO5-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to [Inventor(\"Nikola Tesla\")]\nList<Inventor> list = (List<Inventor>) parser.parseExpression(expression)\n\t\t.getValue(context);\n\nsociety.members = null;\n\n// evaluates to null - does not throw a NullPointerException\nlist = (List<Inventor>) parser.parseExpression(expression)\n\t\t.getValue(context);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO5-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe selection operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\nval expression = \"members?.?[nationality == 'Serbian']\" "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO6-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to [Inventor(\"Nikola Tesla\")]\nvar list = parser.parseExpression(expression)\n\t\t.getValue(context) as List<Inventor>\n\nsociety.members = null\n\n// evaluates to null - does not throw a NullPointerException\nlist = parser.parseExpression(expression)\n\t\t.getValue(context) as List<Inventor>"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO6-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe selection operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the \"null-safe select first\" operator for collections ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.^"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nStandardEvaluationContext context = new StandardEvaluationContext(society);\nString expression =\n\t\"members?.^[nationality == 'Serbian' || nationality == 'Idvor']\"; "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO7-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to Inventor(\"Nikola Tesla\")\nInventor inventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor.class);\n\nsociety.members = null;\n\n// evaluates to null - does not throw a NullPointerException\ninventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO7-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select first\" operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\nval expression =\n\t\"members?.^[nationality == 'Serbian' || nationality == 'Idvor']\" "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO8-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to Inventor(\"Nikola Tesla\")\nvar inventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor::class.java)\n\nsociety.members = null\n\n// evaluates to null - does not throw a NullPointerException\ninventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO8-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select first\" operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the \"null-safe select last\" operator for collections ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.$"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nStandardEvaluationContext context = new StandardEvaluationContext(society);\nString expression =\n\t\"members?.$[nationality == 'Serbian' || nationality == 'Idvor']\"; "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO9-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to Inventor(\"Pupin\")\nInventor inventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor.class);\n\nsociety.members = null;\n\n// evaluates to null - does not throw a NullPointerException\ninventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO9-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select last\" operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\nval expression =\n\t\"members?.$[nationality == 'Serbian' || nationality == 'Idvor']\" "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO10-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to Inventor(\"Pupin\")\nvar inventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor::class.java)\n\nsociety.members = null\n\n// evaluates to null - does not throw a NullPointerException\ninventor = parser.parseExpression(expression)\n\t\t.getValue(context, Inventor::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO10-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select last\" operator on potentially null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to use the safe navigation operator for collection projection ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.!"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nStandardEvaluationContext context = new StandardEvaluationContext(society);\n\n// evaluates to [\"Smiljan\", \"Idvor\"]\nList placesOfBirth = parser.parseExpression(\"members?.![placeOfBirth.city]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO11-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, List.class);\n\nsociety.members = null;\n\n// evaluates to null - does not throw a NullPointerException\nplacesOfBirth = parser.parseExpression(\"members?.![placeOfBirth.city]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO11-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, List.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO11-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe projection operator on non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO11-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe projection operator on null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\n\n// evaluates to [\"Smiljan\", \"Idvor\"]\nvar placesOfBirth = parser.parseExpression(\"members?.![placeOfBirth.city]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO12-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, List::class.java)\n\nsociety.members = null\n\n// evaluates to null - does not throw a NullPointerException\nplacesOfBirth = parser.parseExpression(\"members?.![placeOfBirth.city]\") "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO12-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\t.getValue(context, List::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO12-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe projection operator on non-null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO12-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use null-safe projection operator on null "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "members"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " list"
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "expressions-operator-safe-navigation-selection-and-projection",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Safe Collection Selection and Projection"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As mentioned at the beginning of this section, when the safe navigation operator evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for a particular null-safe operation within a compound expression, the remainder of the compound expression will still be evaluated. This means that the safe navigation operator must be applied throughout a compound expression in order to avoid any unwanted "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NullPointerException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Given the expression "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person?.address.city"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", if "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " the safe navigation operator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") ensures that no exception will be thrown when attempting to access the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "address"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". However, since "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person?.address"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NullPointerException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will be thrown when attempting to access the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "city"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". To address that, you can apply null-safe navigation throughout the compound expression as in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person?.address?.city"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". That expression will safely evaluate to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if either "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#person?.address"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example demonstrates how to use the \"null-safe select first\" operator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.^"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") on a collection combined with null-safe property access ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") within a compound expression. If "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "members"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the result of the \"null-safe select first\" operator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "members?.^[nationality == 'Serbian']"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and the additional use of the safe navigation operator ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "?.name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") ensures that the entire compound expression evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "null"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instead of throwing an exception."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ExpressionParser parser = new SpelExpressionParser();\nIEEE society = new IEEE();\nStandardEvaluationContext context = new StandardEvaluationContext(society);\nString expression = \"members?.^[nationality == 'Serbian']?.name\"; "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO13-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to \"Nikola Tesla\"\nString name = parser.parseExpression(expression)\n\t\t.getValue(context, String.class);\n\nsociety.members = null;\n\n// evaluates to null - does not throw a NullPointerException\nname = parser.parseExpression(expression)\n\t\t.getValue(context, String.class);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO13-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select first\" and null-safe property access operators within compound expression."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val parser = SpelExpressionParser()\nval society = IEEE()\nval context = StandardEvaluationContext(society)\nval expression = \"members?.^[nationality == 'Serbian']?.name\" "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO14-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n// evaluates to \"Nikola Tesla\"\nString name = parser.parseExpression(expression)\n\t\t.getValue(context, String::class.java)\n\nsociety.members = null\n\n// evaluates to null - does not throw a NullPointerException\nname = parser.parseExpression(expression)\n\t\t.getValue(context, String::class.java)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO14-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use \"null-safe select first\" and null-safe property access operators within compound expression."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "expressions-operator-safe-navigation-compound-expressions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Null-safe Operations in Compound Expressions"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Safe Navigation Operator"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2055 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring MVC lets you handle CORS (Cross-Origin Resource Sharing). This section describes how to do so."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-intro"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For security reasons, browsers prohibit AJAX calls to resources outside the current origin. For example, you could have your bank account in one tab and evil.com in another. Scripts from evil.com should not be able to make AJAX requests to your bank API with your credentials — for example withdrawing money from your account!"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Cross-Origin Resource Sharing (CORS) is a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "W3C specification"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.w3.org/TR/cors/"
+              },
+              {
+                "kind": "text",
+                "value": " implemented by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "most browsers"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://caniuse.com/#feat=cors"
+              },
+              {
+                "kind": "text",
+                "value": " that lets you specify what kind of cross-domain requests are authorized, rather than using less secure and less powerful workarounds based on IFRAME or JSONP."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-intro",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Introduction"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-credentialed-requests"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using CORS with credentialed requests requires enabling "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowedCredentials"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Be aware that this option establishes a high level of trust with the configured domains and also increases the surface of attack of the web application by exposing sensitive user-specific information such as cookies and CSRF tokens."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Enabling credentials also impacts how the configured "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\"*\""
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CORS wildcards are processed:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Wildcards are not authorized in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "allowOrigins"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", but alternatively the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "allowOriginPatterns"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property may be used to match to a dynamic set of origins."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When set on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "allowedHeaders"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "allowedMethods"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Access-Control-Allow-Headers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Access-Control-Allow-Methods"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " response headers are handled by copying the related headers and method specified in the CORS preflight request."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When set on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "exposedHeaders"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Access-Control-Expose-Headers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " response header is set either to the configured list of headers or to the wildcard character. While the CORS spec does not allow the wildcard character when "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Access-Control-Allow-Credentials"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is set to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", most browsers support it and the response headers are not all available during the CORS processing, so as a consequence the wildcard character is the header value used when specified regardless of the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "allowCredentials"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "While such wildcard configuration can be handy, it is recommended when possible to configure a finite set of values instead to provide a higher level of security."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-credentialed-requests",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Credentialed Requests"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-processing"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The CORS specification distinguishes between preflight, simple, and actual requests. To learn how CORS works, you can read "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this article"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS"
+              },
+              {
+                "kind": "text",
+                "value": ", among many others, or see the specification for more details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring MVC "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations provide built-in support for CORS. After successfully mapping a request to a handler, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations check the CORS configuration for the given request and handler and take further actions. Preflight requests are handled directly, while simple and actual CORS requests are intercepted, validated, and have required CORS response headers set."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to enable cross-origin requests (that is, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Origin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header is present and differs from the host of the request), you need to have some explicitly declared CORS configuration. If no matching CORS configuration is found, preflight requests are rejected. No CORS headers are added to the responses of simple and actual CORS requests and, consequently, browsers reject them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configured"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/servlet/handler/AbstractHandlerMapping.html#setCorsConfigurations-java.util.Map-"
+              },
+              {
+                "kind": "text",
+                "value": " individually with URL pattern-based "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CorsConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mappings. In most cases, applications use the MVC Java configuration or the XML namespace to declare such mappings, which results in a single global map being passed to all "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can combine global CORS configuration at the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " level with more fine-grained, handler-level CORS configuration. For example, annotated controllers can use class- or method-level "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@CrossOrigin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations (other handlers can implement "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CorsConfigurationSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The rules for combining global and local configuration are generally additive — for example, all global and all local origins. For those attributes where only a single value can be accepted, for example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowCredentials"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "maxAge"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the local overrides the global value. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsConfiguration#combine(CorsConfiguration)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/cors/CorsConfiguration.html#combine-org.springframework.web.cors.CorsConfiguration-"
+              },
+              {
+                "kind": "text",
+                "value": " for more details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To learn more from the source or make advanced customizations, check the code behind:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CorsConfiguration"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CorsProcessor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DefaultCorsProcessor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "AbstractHandlerMapping"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-processing",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Processing"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-controller"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@CrossOrigin"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/bind/annotation/CrossOrigin.html"
+              },
+              {
+                "kind": "text",
+                "value": " annotation enables cross-origin requests on annotated controller methods, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@RestController\n@RequestMapping(\"/account\")\npublic class AccountController {\n\n\t@CrossOrigin\n\t@GetMapping(\"/{id}\")\n\tpublic Account retrieve(@PathVariable Long id) {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tpublic void remove(@PathVariable Long id) {\n\t\t// ...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@RestController\n@RequestMapping(\"/account\")\nclass AccountController {\n\n\t@CrossOrigin\n\t@GetMapping(\"/{id}\")\n\tfun retrieve(@PathVariable id: Long): Account {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tfun remove(@PathVariable id: Long) {\n\t\t// ...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@CrossOrigin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " allows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All origins."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All headers."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All HTTP methods to which the controller method is mapped."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowCredentials"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is not enabled by default, since that establishes a trust level that exposes sensitive user-specific information (such as cookies and CSRF tokens) and should only be used where appropriate. When it is enabled either "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowOrigins"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " must be set to one or more specific domain (but not the special value "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\"*\""
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or alternatively the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowOriginPatterns"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property may be used to match to a dynamic set of origins."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "maxAge"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set to 30 minutes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@CrossOrigin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is supported at the class level, too, and is inherited by all methods, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@CrossOrigin(origins = \"https://domain2.com\", maxAge = 3600)\n@RestController\n@RequestMapping(\"/account\")\npublic class AccountController {\n\n\t@GetMapping(\"/{id}\")\n\tpublic Account retrieve(@PathVariable Long id) {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tpublic void remove(@PathVariable Long id) {\n\t\t// ...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@CrossOrigin(origins = [\"https://domain2.com\"], maxAge = 3600)\n@RestController\n@RequestMapping(\"/account\")\nclass AccountController {\n\n\t@GetMapping(\"/{id}\")\n\tfun retrieve(@PathVariable id: Long): Account {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tfun remove(@PathVariable id: Long) {\n\t\t// ...\n\t}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@CrossOrigin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " at both the class level and the method level, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@CrossOrigin(maxAge = 3600)\n@RestController\n@RequestMapping(\"/account\")\npublic class AccountController {\n\n\t@CrossOrigin(\"https://domain2.com\")\n\t@GetMapping(\"/{id}\")\n\tpublic Account retrieve(@PathVariable Long id) {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tpublic void remove(@PathVariable Long id) {\n\t\t// ...\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@CrossOrigin(maxAge = 3600)\n@RestController\n@RequestMapping(\"/account\")\nclass AccountController {\n\n\t@CrossOrigin(\"https://domain2.com\")\n\t@GetMapping(\"/{id}\")\n\tfun retrieve(@PathVariable id: Long): Account {\n\t\t// ...\n\t}\n\n\t@DeleteMapping(\"/{id}\")\n\tfun remove(@PathVariable id: Long) {\n\t\t// ...\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-controller",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@CrossOrigin"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-global"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to fine-grained, controller method level configuration, you probably want to define some global CORS configuration, too. You can set URL-based "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CorsConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mappings individually on any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerMapping"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Most applications, however, use the MVC Java configuration or the MVC XML namespace to do that."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, global configuration enables the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All origins."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All headers."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "GET"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HEAD"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "POST"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowCredentials"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is not enabled by default, since that establishes a trust level that exposes sensitive user-specific information (such as cookies and CSRF tokens) and should only be used where appropriate. When it is enabled either "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowOrigins"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " must be set to one or more specific domain (but not the special value "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "\"*\""
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or alternatively the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allowOriginPatterns"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property may be used to match to a dynamic set of origins."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "maxAge"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set to 30 minutes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Reactive stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webflux-cors.html#webflux-cors-global"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To enable CORS in the MVC Java config, you can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsRegistry"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " callback, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebMvc\npublic class WebConfig implements WebMvcConfigurer {\n\n\t@Override\n\tpublic void addCorsMappings(CorsRegistry registry) {\n\n\t\tregistry.addMapping(\"/api/**\")\n\t\t\t.allowedOrigins(\"https://domain2.com\")\n\t\t\t.allowedMethods(\"PUT\", \"DELETE\")\n\t\t\t.allowedHeaders(\"header1\", \"header2\", \"header3\")\n\t\t\t.exposedHeaders(\"header1\", \"header2\")\n\t\t\t.allowCredentials(true).maxAge(3600);\n\n\t\t// Add more mappings...\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebMvc\nclass WebConfig : WebMvcConfigurer {\n\n\toverride fun addCorsMappings(registry: CorsRegistry) {\n\n\t\tregistry.addMapping(\"/api/**\")\n\t\t\t\t.allowedOrigins(\"https://domain2.com\")\n\t\t\t\t.allowedMethods(\"PUT\", \"DELETE\")\n\t\t\t\t.allowedHeaders(\"header1\", \"header2\", \"header3\")\n\t\t\t\t.exposedHeaders(\"header1\", \"header2\")\n\t\t\t\t.allowCredentials(true).maxAge(3600)\n\n\t\t// Add more mappings...\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "mvc-cors-global-java",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Java Configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To enable CORS in the XML namespace, you can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<mvc:cors>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<mvc:cors>\n\n\t<mvc:mapping path=\"/api/**\"\n\t\tallowed-origins=\"https://domain1.com, https://domain2.com\"\n\t\tallowed-methods=\"GET, PUT\"\n\t\tallowed-headers=\"header1, header2, header3\"\n\t\texposed-headers=\"header1, header2\" allow-credentials=\"true\"\n\t\tmax-age=\"123\" />\n\n\t<mvc:mapping path=\"/resources/**\"\n\t\tallowed-origins=\"https://domain1.com\" />\n\n</mvc:cors>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "mvc-cors-global-xml",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "XML Configuration"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-global",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Global Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-cors.html#webflux-cors-webfilter"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can apply CORS support through the built-in "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsFilter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/filter/CorsFilter.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you try to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CorsFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with Spring Security, keep in mind that Spring Security has "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "built-in support"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-security/reference/servlet/integrations/cors.html"
+              },
+              {
+                "kind": "text",
+                "value": " for CORS."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To configure the filter, pass a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CorsConfigurationSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to its constructor, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "CorsConfiguration config = new CorsConfiguration();\n\n// Possibly...\n// config.applyPermitDefaultValues()\n\nconfig.setAllowCredentials(true);\nconfig.addAllowedOrigin(\"https://domain1.com\");\nconfig.addAllowedHeader(\"*\");\nconfig.addAllowedMethod(\"*\");\n\nUrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();\nsource.registerCorsConfiguration(\"/**\", config);\n\nCorsFilter filter = new CorsFilter(source);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val config = CorsConfiguration()\n\n// Possibly...\n// config.applyPermitDefaultValues()\n\nconfig.allowCredentials = true\nconfig.addAllowedOrigin(\"https://domain1.com\")\nconfig.addAllowedHeader(\"*\")\nconfig.addAllowedMethod(\"*\")\n\nval source = UrlBasedCorsConfigurationSource()\nsource.registerCorsConfiguration(\"/**\", config)\n\nval filter = CorsFilter(source)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-cors-filter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "CORS Filter"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "CORS"
+      }
+    ]
+  }
+}

@@ -1,0 +1,5075 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Data binding is useful for binding user input to a target object where user input is a map with property paths as keys, following "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JavaBeans conventions"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#beans-beans-conventions"
+              },
+              {
+                "kind": "text",
+                "value": ". "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is the main class that supports this, and it provides two ways to bind user input:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Constructor binding"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#beans-constructor-binding"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " - bind user input to a public data constructor, looking up constructor argument values in the user input."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Property binding"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#beans-beans"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " - bind user input to setters, matching keys from the user input to properties of the target object structure."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can apply both constructor and property binding or only one."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To use constructor binding:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "null"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as the target object."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "targetType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to the target class."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Call "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "construct"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The target class should have a single public constructor or a single non-public constructor with arguments. If there are multiple constructors, then a default constructor if present is used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, argument values are looked up via constructor parameter names. Spring MVC and WebFlux support a custom name mapping through the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BindParam"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation on constructor parameters or fields if present. If necessary, you can also configure a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NameResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to customize the argument name to use."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Type conversion"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#beans-beans-conventions"
+              },
+              {
+                "kind": "text",
+                "value": " is applied as needed to convert user input. If the constructor parameter is an object, it is constructed recursively in the same manner, but through a nested property path. That means constructor binding creates both the target object and any objects it contains."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Constructor binding supports "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "List"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and array arguments either converted from a single string, for example, comma-separated list, or based on indexed keys such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "accounts[2].name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "account[KEY].name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Binding and conversion errors are reflected in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BindingResult"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". If the target is created successfully, then "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "target"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set to the created instance after the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "construct"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "beans-constructor-binding",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Constructor Binding"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.beans"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package adheres to the JavaBeans standard. A JavaBean is a class with a default no-argument constructor and that follows a naming convention where (for example) a property named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bingoMadness"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " would have a setter method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "setBingoMadness(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and a getter method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getBingoMadness()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For more information about JavaBeans and the specification, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javabeans"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.oracle.com/en/java/javase/17/docs/api/java.desktop/java/beans/package-summary.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One quite important class in the beans package is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface and its corresponding implementation ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapperImpl"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). As quoted from the javadoc, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " offers functionality to set and get property values (individually or in bulk), get property descriptors, and query properties to determine if they are readable or writable. Also, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " offers support for nested properties, enabling the setting of properties on sub-properties to an unlimited depth. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also supports the ability to add standard JavaBeans "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyChangeListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "VetoableChangeListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", without the need for supporting code in the target class. Last but not least, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides support for setting indexed properties. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " usually is not used by application code directly but is used by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBinder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The way the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " works is partly indicated by its name: it wraps a bean to perform actions on that bean, such as setting and retrieving properties."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Setting and getting properties is done through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "setPropertyValue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "getPropertyValue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " overloaded method variants of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". See their Javadoc for details. The below table shows some examples of these conventions:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "name"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Indicates the property "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "name"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that corresponds to the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "getName()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "isName()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "setName(..)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " methods."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "account.name"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Indicates the nested property "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "name"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " of the property "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "account"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that corresponds to (for example) the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "getAccount().setName()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "getAccount().getName()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " methods."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "accounts[2]"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Indicates the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "third"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " element of the indexed property "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "account"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ". Indexed properties can be of type "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "array"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "list"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", or other naturally ordered collection."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "accounts[KEY]"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Indicates the value of the map entry indexed by the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "KEY"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " value."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 1. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Expression"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Explanation"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": "beans-beans-conventions-properties-tbl",
+                "options": [],
+                "roles": [],
+                "stripes": "odd",
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Examples of properties"
+                  }
+                ],
+                "width": 100
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "(This next section is not vitally important to you if you do not plan to work with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directly. If you use only the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and their default implementations, you should skip ahead to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "section on "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertyEditors"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/validation/beans-beans.html#beans-beans-conversion"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ".)"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following two example classes use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to get and set properties:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public class Company {\n\n\tprivate String name;\n\tprivate Employee managingDirector;\n\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\tpublic void setName(String name) {\n\t\tthis.name = name;\n\t}\n\n\tpublic Employee getManagingDirector() {\n\t\treturn this.managingDirector;\n\t}\n\n\tpublic void setManagingDirector(Employee managingDirector) {\n\t\tthis.managingDirector = managingDirector;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class Company {\n\tvar name: String? = null\n\tvar managingDirector: Employee? = null\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public class Employee {\n\n\tprivate String name;\n\n\tprivate float salary;\n\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\tpublic void setName(String name) {\n\t\tthis.name = name;\n\t}\n\n\tpublic float getSalary() {\n\t\treturn salary;\n\t}\n\n\tpublic void setSalary(float salary) {\n\t\tthis.salary = salary;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class Employee {\n\tvar name: String? = null\n\tvar salary: Float? = null\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following code snippets show some examples of how to retrieve and manipulate some of the properties of instantiated "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Company"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "s and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Employee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "s:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "BeanWrapper company = new BeanWrapperImpl(new Company());\n// setting the company name..\ncompany.setPropertyValue(\"name\", \"Some Company Inc.\");\n// ... can also be done like this:\nPropertyValue value = new PropertyValue(\"name\", \"Some Company Inc.\");\ncompany.setPropertyValue(value);\n\n// ok, let's create the director and tie it to the company:\nBeanWrapper jim = new BeanWrapperImpl(new Employee());\njim.setPropertyValue(\"name\", \"Jim Stravinsky\");\ncompany.setPropertyValue(\"managingDirector\", jim.getWrappedInstance());\n\n// retrieving the salary of the managingDirector through the company\nFloat salary = (Float) company.getPropertyValue(\"managingDirector.salary\");"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val company = BeanWrapperImpl(Company())\n// setting the company name..\ncompany.setPropertyValue(\"name\", \"Some Company Inc.\")\n// ... can also be done like this:\nval value = PropertyValue(\"name\", \"Some Company Inc.\")\ncompany.setPropertyValue(value)\n\n// ok, let's create the director and tie it to the company:\nval jim = BeanWrapperImpl(Employee())\njim.setPropertyValue(\"name\", \"Jim Stravinsky\")\ncompany.setPropertyValue(\"managingDirector\", jim.wrappedInstance)\n\n// retrieving the salary of the managingDirector through the company\nval salary = company.getPropertyValue(\"managingDirector.salary\") as Float?"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "beans-beans-conventions",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Setting and Getting Basic and Nested Properties"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "beans-beans",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Property Binding with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BeanWrapper"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring uses the concept of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to effect the conversion between an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Object"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". It can be handy to represent properties in a different way than the object itself. For example, a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be represented in a human readable way (as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "'2007-14-09'"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), while we can still convert the human readable form back to the original date (or, even better, convert any date entered in a human readable form back to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Date"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects). This behavior can be achieved by registering custom editors of type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.beans.PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Registering custom editors on a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapper"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or, alternatively, in a specific IoC container (as mentioned in the previous chapter), gives it the knowledge of how to convert properties to the desired type. For more about "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "the javadoc of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.beans"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package from Oracle"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.oracle.com/en/java/javase/17/docs/api/java.desktop/java/beans/package-summary.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A couple of examples where property editing is used in Spring:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Setting properties on beans is done by using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations. When you use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "String"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as the value of a property of some bean that you declare in an XML file, Spring (if the setter of the corresponding property has a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " parameter) uses "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ClassEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to try to resolve the parameter to a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Parsing HTTP request parameters in Spring’s MVC framework is done by using all kinds of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations that you can manually bind in all subclasses of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CommandController"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring has a number of built-in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations to make life easy. They are all located in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.beans.propertyeditors"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package. Most, (but not all, as indicated in the following table) are, by default, registered by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanWrapperImpl"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Where the property editor is configurable in some fashion, you can still register your own variant to override the default one. The following table describes the various "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations that Spring provides:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ByteArrayPropertyEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Editor for byte arrays. Converts strings to their corresponding byte representations. Registered by default by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ClassEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Parses Strings that represent classes to actual classes and vice-versa. When a class is not found, an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "IllegalArgumentException"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is thrown. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CustomBooleanEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Customizable property editor for "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Boolean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " properties. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " but can be overridden by registering a custom instance of it as a custom editor."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CustomCollectionEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Property editor for collections, converting any source "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Collection"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to a given target "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Collection"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " type."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CustomDateEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Customizable property editor for "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.Date"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", supporting a custom "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DateFormat"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". NOT registered by default. Must be user-registered with the appropriate format as needed."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CustomNumberEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Customizable property editor for any "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Number"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " subclass, such as "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Integer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Long"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Float"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Double"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " but can be overridden by registering a custom instance of it as a custom editor."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FileEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Resolves strings to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.io.File"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " objects. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "InputStreamEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "One-way property editor that can take a string and produce (through an intermediate "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ResourceEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Resource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ") an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "InputStream"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " so that "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "InputStream"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " properties may be directly set as strings. Note that the default usage does not close the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "InputStream"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for you. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LocaleEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Can resolve strings to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Locale"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " objects and vice-versa (the string format is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "[language]_[country]_[variant]"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", same as the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "toString()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Locale"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "). Also accepts spaces as separators, as an alternative to underscores. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PatternEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Can resolve strings to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.regex.Pattern"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " objects and vice-versa."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertiesEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Can convert strings (formatted with the format defined in the javadoc of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.Properties"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " class) to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Properties"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " objects. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "StringTrimmerEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Property editor that trims strings. Optionally allows transforming an empty string into a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "null"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " value. NOT registered by default — must be user-registered."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "URLEditor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Can resolve a string representation of a URL to an actual "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "URL"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " object. By default, registered by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanWrapperImpl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 2. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "70"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Class"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Explanation"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": "beans-beans-property-editors-tbl",
+            "options": [],
+            "roles": [],
+            "stripes": "odd",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Built-in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Implementations"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring uses the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.beans.PropertyEditorManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to set the search path for property editors that might be needed. The search path also includes "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sun.bean.editors"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which includes "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations for types such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Font"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Color"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and most of the primitive types. Note also that the standard JavaBeans infrastructure automatically discovers "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " classes (without you having to register them explicitly) if they are in the same package as the class they handle and have the same name as that class, with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Editor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " appended. For example, one could have the following class and package structure, which would be sufficient for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SomethingEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class to be recognized and used as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Something"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "-typed properties."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "com\n  chank\n    pop\n      Something\n      SomethingEditor // the PropertyEditor for the Something class"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that you can also use the standard "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanInfo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " JavaBeans mechanism here as well (described to some extent "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "here"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.oracle.com/javase/tutorial/javabeans/advanced/customization.html"
+              },
+              {
+                "kind": "text",
+                "value": "). The following example uses the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanInfo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism to explicitly register one or more "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances with the properties of an associated class:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "com\n  chank\n    pop\n      Something\n      SomethingBeanInfo // the BeanInfo for the Something class"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following Java source code for the referenced "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SomethingBeanInfo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class associates a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CustomNumberEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "age"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Something"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class SomethingBeanInfo extends SimpleBeanInfo {\n\n\tpublic PropertyDescriptor[] getPropertyDescriptors() {\n\t\ttry {\n\t\t\tfinal PropertyEditor numberPE = new CustomNumberEditor(Integer.class, true);\n\t\t\tPropertyDescriptor ageDescriptor = new PropertyDescriptor(\"age\", Something.class) {\n\t\t\t\t@Override\n\t\t\t\tpublic PropertyEditor createPropertyEditor(Object bean) {\n\t\t\t\t\treturn numberPE;\n\t\t\t\t}\n\t\t\t};\n\t\t\treturn new PropertyDescriptor[] { ageDescriptor };\n\t\t}\n\t\tcatch (IntrospectionException ex) {\n\t\t\tthrow new Error(ex.toString());\n\t\t}\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class SomethingBeanInfo : SimpleBeanInfo() {\n\n\toverride fun getPropertyDescriptors(): Array<PropertyDescriptor> {\n\t\ttry {\n\t\t\tval numberPE = CustomNumberEditor(Int::class.java, true)\n\t\t\tval ageDescriptor = object : PropertyDescriptor(\"age\", Something::class.java) {\n\t\t\t\toverride fun createPropertyEditor(bean: Any): PropertyEditor {\n\t\t\t\t\treturn numberPE\n\t\t\t\t}\n\t\t\t}\n\t\t\treturn arrayOf(ageDescriptor)\n\t\t} catch (ex: IntrospectionException) {\n\t\t\tthrow Error(ex.toString())\n\t\t}\n\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When setting bean properties as string values, a Spring IoC container ultimately uses standard JavaBeans "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations to convert these strings to the complex type of the property. Spring pre-registers a number of custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations (for example, to convert a class name expressed as a string into a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object). Additionally, Java’s standard JavaBeans "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " lookup mechanism lets a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a class be named appropriately and placed in the same package as the class for which it provides support, so that it can be found automatically."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If there is a need to register other custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditors"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", several mechanisms are available. The most manual approach, which is not normally convenient or recommended, is to use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "registerCustomEditor()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ConfigurableBeanFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface, assuming you have a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " reference. Another (slightly more convenient) mechanism is to use a special bean factory post-processor called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Although you can use bean factory post-processors with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " has a nested property setup, so we strongly recommend that you use it with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", where you can deploy it in similar fashion to any other bean and where it can be automatically detected and applied."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that all bean factories and application contexts automatically use a number of built-in property editors, through their use of a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to handle property conversions. The standard property editors that the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " registers are listed in the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "previous section"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/validation/beans-beans.html#beans-beans-conversion"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Additionally, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "s also override or add additional editors to handle resource lookups in a manner appropriate to the specific application context type."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Standard JavaBeans "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances are used to convert property values expressed as strings to the actual complex type of the property. You can use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", a bean factory post-processor, to conveniently add support for additional "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances to an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example, which defines a user class called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExoticType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and another class called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DependsOnExoticType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which needs "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExoticType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " set as a property:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example;\n\npublic class ExoticType {\n\n\tprivate String name;\n\n\tpublic ExoticType(String name) {\n\t\tthis.name = name;\n\t}\n}\n\npublic class DependsOnExoticType {\n\n\tprivate ExoticType type;\n\n\tpublic void setType(ExoticType type) {\n\t\tthis.type = type;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example\n\nclass ExoticType(val name: String)\n\nclass DependsOnExoticType {\n\n\tvar type: ExoticType? = null\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When things are properly set up, we want to be able to assign the type property as a string, which a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " converts into an actual "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExoticType"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance. The following bean definition shows how to set up this relationship:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean id=\"sample\" class=\"example.DependsOnExoticType\">\n\t<property name=\"type\" value=\"aNameForExoticType\"/>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation could look similar to the following:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example;\n\nimport java.beans.PropertyEditorSupport;\n\n// converts string representation to ExoticType object\npublic class ExoticTypeEditor extends PropertyEditorSupport {\n\n\tpublic void setAsText(String text) {\n\t\tsetValue(new ExoticType(text.toUpperCase()));\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example\n\nimport java.beans.PropertyEditorSupport\n\n// converts string representation to ExoticType object\nclass ExoticTypeEditor : PropertyEditorSupport() {\n\n\toverride fun setAsText(text: String) {\n\t\tvalue = ExoticType(text.toUpperCase())\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, the following example shows how to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to register the new "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which will then be able to use it as needed:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean class=\"org.springframework.beans.factory.config.CustomEditorConfigurer\">\n\t<property name=\"customEditors\">\n\t\t<map>\n\t\t\t<entry key=\"example.ExoticType\" value=\"example.ExoticTypeEditor\"/>\n\t\t</map>\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "beans-beans-conversion-customeditor-registration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Custom "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "'s"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Another mechanism for registering property editors with the Spring container is to create and use a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This interface is particularly useful when you need to use the same set of property editors in several different situations. You can write a corresponding registrar and reuse it in each case. "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances work in conjunction with an interface called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistry"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", an interface that is implemented by the Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanWrapper"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances are particularly convenient when used in conjunction with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (described "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "here"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/validation/beans-beans.html#beans-beans-conversion-customeditor-registration"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), which exposes a property called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "setPropertyEditorRegistrars(..)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances added to a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in this fashion can easily be shared with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and Spring MVC controllers. Furthermore, it avoids the need for synchronization on custom editors: A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is expected to create fresh "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances for each bean creation attempt."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows how to create your own "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo.editors.spring;\n\npublic final class CustomPropertyEditorRegistrar implements PropertyEditorRegistrar {\n\n\tpublic void registerCustomEditors(PropertyEditorRegistry registry) {\n\n\t\t// it is expected that new PropertyEditor instances are created\n\t\tregistry.registerCustomEditor(ExoticType.class, new ExoticTypeEditor());\n\n\t\t// you could register as many custom property editors as are required here...\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo.editors.spring\n\nimport org.springframework.beans.PropertyEditorRegistrar\nimport org.springframework.beans.PropertyEditorRegistry\n\nclass CustomPropertyEditorRegistrar : PropertyEditorRegistrar {\n\n\toverride fun registerCustomEditors(registry: PropertyEditorRegistry) {\n\n\t\t// it is expected that new PropertyEditor instances are created\n\t\tregistry.registerCustomEditor(ExoticType::class.java, ExoticTypeEditor())\n\n\t\t// you could register as many custom property editors as are required here...\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See also the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.beans.support.ResourceEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for an example "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation. Notice how in its implementation of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "registerCustomEditors(..)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, it creates new instances of each property editor."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The next example shows how to configure a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomEditorConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and inject an instance of our "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CustomPropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " into it:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean class=\"org.springframework.beans.factory.config.CustomEditorConfigurer\">\n\t<property name=\"propertyEditorRegistrars\">\n\t\t<list>\n\t\t\t<ref bean=\"customPropertyEditorRegistrar\"/>\n\t\t</list>\n\t</property>\n</bean>\n\n<bean id=\"customPropertyEditorRegistrar\"\n\tclass=\"com.foo.editors.spring.CustomPropertyEditorRegistrar\"/>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally (and in a bit of a departure from the focus of this chapter) for those of you using "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring’s MVC web framework"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc.html#mvc"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", using a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in conjunction with data-binding web controllers can be very convenient. The following example uses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditorRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the implementation of an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@InitBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Controller\npublic class RegisterUserController {\n\n\tprivate final PropertyEditorRegistrar customPropertyEditorRegistrar;\n\n\tRegisterUserController(PropertyEditorRegistrar propertyEditorRegistrar) {\n\t\tthis.customPropertyEditorRegistrar = propertyEditorRegistrar;\n\t}\n\n\t@InitBinder\n\tvoid initBinder(WebDataBinder binder) {\n\t\tthis.customPropertyEditorRegistrar.registerCustomEditors(binder);\n\t}\n\n\t// other methods related to registering a User\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Controller\nclass RegisterUserController(\n\tprivate val customPropertyEditorRegistrar: PropertyEditorRegistrar) {\n\n\t@InitBinder\n\tfun initBinder(binder: WebDataBinder) {\n\t\tthis.customPropertyEditorRegistrar.registerCustomEditors(binder)\n\t}\n\n\t// other methods related to registering a User\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This style of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " registration can lead to concise code (the implementation of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@InitBinder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method is only one line long) and lets common "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyEditor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " registration code be encapsulated in a class and then shared amongst as many controllers as needed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "beans-beans-conversion-customeditor-registration-per",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertyEditorRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "beans-beans-conversion",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "PropertyEditor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "'s"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Data Binding"
+      }
+    ]
+  }
+}

@@ -1,0 +1,3362 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When writing integration tests against a relational database, it is often beneficial to run SQL scripts to modify the database schema or insert test data into tables. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "spring-jdbc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module provides support for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "initializing"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " an embedded or existing database by executing SQL scripts when the Spring "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is loaded. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Embedded database support"
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/jdbc/embedded-database-support.html"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Testing data access logic with an embedded database"
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/jdbc/embedded-database-support.html#jdbc-embedded-database-dao-testing"
+              },
+              {
+                "kind": "text",
+                "value": " for details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although it is very useful to initialize a database for testing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "once"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " when the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is loaded, sometimes it is essential to be able to modify the database "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "during"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " integration tests. The following sections explain how to run SQL scripts programmatically and declaratively during integration tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring provides the following options for executing SQL scripts programmatically within integration test methods."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.jdbc.datasource.init.ScriptUtils"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.jdbc.datasource.init.ResourceDatabasePopulator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.test.context.junit4.AbstractTransactionalJUnit4SpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.test.context.testng.AbstractTransactionalTestNGSpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides a collection of static utility methods for working with SQL scripts and is mainly intended for internal use within the framework. However, if you require full control over how SQL scripts are parsed and run, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " may suit your needs better than some of the other alternatives described later. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javadoc"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jdbc/datasource/init/ScriptUtils.html"
+              },
+              {
+                "kind": "text",
+                "value": " for individual methods in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for further details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResourceDatabasePopulator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides an object-based API for programmatically populating, initializing, or cleaning up a database by using SQL scripts defined in external resources. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResourceDatabasePopulator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides options for configuring the character encoding, statement separator, comment delimiters, and error handling flags used when parsing and running the scripts. Each of the configuration options has a reasonable default value. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javadoc"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jdbc/datasource/init/ResourceDatabasePopulator.html"
+              },
+              {
+                "kind": "text",
+                "value": " for details on default values. To run the scripts configured in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResourceDatabasePopulator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can invoke either the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "populate(Connection)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method to run the populator against a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.sql.Connection"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute(DataSource)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method to run the populator against a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javax.sql.DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following example specifies SQL scripts for a test schema and test data, sets the statement separator to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@@"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and run the scripts against a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Test\nvoid databaseTest() {\n\tResourceDatabasePopulator populator = new ResourceDatabasePopulator();\n\tpopulator.addScripts(\n\t\t\tnew ClassPathResource(\"test-schema.sql\"),\n\t\t\tnew ClassPathResource(\"test-data.sql\"));\n\tpopulator.setSeparator(\"@@\");\n\tpopulator.execute(this.dataSource);\n\t// run code that uses the test schema and data\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Test\nfun databaseTest() {\n\tval populator = ResourceDatabasePopulator()\n\tpopulator.addScripts(\n\t\t\tClassPathResource(\"test-schema.sql\"),\n\t\t\tClassPathResource(\"test-data.sql\"))\n\tpopulator.setSeparator(\"@@\")\n\tpopulator.execute(dataSource)\n\t// run code that uses the test schema and data\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResourceDatabasePopulator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " internally delegates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptUtils"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for parsing and running SQL scripts. Similarly, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeSqlScript(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods in "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractTransactionalJUnit4SpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/support-classes.html#testcontext-support-classes-junit4"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AbstractTransactionalTestNGSpringContextTests"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/support-classes.html#testcontext-support-classes-testng"
+              },
+              {
+                "kind": "text",
+                "value": " internally use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResourceDatabasePopulator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to run SQL scripts. See the Javadoc for the various "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executeSqlScript(..)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods for further details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-executing-sql-programmatically",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Executing SQL scripts programmatically"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the aforementioned mechanisms for running SQL scripts programmatically, you can declaratively configure SQL scripts in the Spring TestContext Framework. Specifically, you can declare the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Sql"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation on a test class or test method to configure individual SQL statements or the resource paths to SQL scripts that should be run against a given database before or after an integration test class or test method. Support for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Sql"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is provided by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SqlScriptsTestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which is enabled by default."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Method-level "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declarations override class-level declarations by default, but this behavior may be configured per test class or per test method via "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlMergeMode"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Merging and Overriding Configuration with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlMergeMode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/testcontext-framework/executing-sql.html#testcontext-executing-sql-declaratively-script-merging"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for further details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "However, this does not apply to class-level declarations configured for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BEFORE_TEST_CLASS"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AFTER_TEST_CLASS"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " execution phases. Such declarations cannot be overridden, and the corresponding scripts and statements will be executed once per class in addition to any method-level scripts and statements."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Each path is interpreted as a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Resource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". A plain path (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"schema.sql\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") is treated as a classpath resource that is relative to the package in which the test class is defined. A path starting with a slash is treated as an absolute classpath resource (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"/org/example/schema.sql\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). A path that references a URL (for example, a path prefixed with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "classpath:"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "file:"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "http:"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") is loaded by using the specified resource protocol."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As of Spring Framework 6.2, paths may contain property placeholders ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "${…​}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") that will be replaced by properties stored in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Environment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " of the test’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows how to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " at the class level and at the method level within a JUnit Jupiter based integration test class:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig\n@Sql(\"/test-schema.sql\")\nclass DatabaseTests {\n\n\t@Test\n\tvoid emptySchemaTest() {\n\t\t// run code that uses the test schema without any test data\n\t}\n\n\t@Test\n\t@Sql({\"/test-schema.sql\", \"/test-user-data.sql\"})\n\tvoid userTest() {\n\t\t// run code that uses the test schema and test data\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig\n@Sql(\"/test-schema.sql\")\nclass DatabaseTests {\n\n\t@Test\n\tfun emptySchemaTest() {\n\t\t// run code that uses the test schema without any test data\n\t}\n\n\t@Test\n\t@Sql(\"/test-schema.sql\", \"/test-user-data.sql\")\n\tfun userTest() {\n\t\t// run code that uses the test schema and test data\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-script-resources",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Path Resource Semantics"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no SQL scripts or statements are specified, an attempt is made to detect a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " script, depending on where "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is declared. If a default cannot be detected, an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IllegalStateException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is thrown."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Class-level declaration: If the annotated test class is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "com.example.MyTest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", the corresponding default script is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "classpath:com/example/MyTest.sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Method-level declaration: If the annotated test method is named "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "testMethod()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and is defined in the class "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "com.example.MyTest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", the corresponding default script is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "classpath:com/example/MyTest.testMethod.sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-script-detection",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default Script Detection"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to see which SQL scripts are being executed, set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.test.context.jdbc"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " logging category to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DEBUG"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to see which SQL statements are being executed, set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.jdbc.datasource.init"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " logging category to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DEBUG"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-logging",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Logging SQL Scripts and Statements"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you need to configure multiple sets of SQL scripts for a given test class or test method but with different syntax configuration, different error handling rules, or different execution phases per set, you can declare multiple instances of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You can either use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as a repeatable annotation, or you can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlGroup"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation as an explicit container for declaring multiple instances of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows how to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as a repeatable annotation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@Sql(scripts = \"/test-schema.sql\", config = @SqlConfig(commentPrefix = \"`\"))\n@Sql(\"/test-user-data.sql\")\nvoid userTest() {\n\t// run code that uses the test schema and test data\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@Sql(\"/test-schema.sql\", config = SqlConfig(commentPrefix = \"`\"))\n@Sql(\"/test-user-data.sql\")\nfun userTest() {\n\t// run code that uses the test schema and test data\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the scenario presented in the preceding example, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "test-schema.sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " script uses a different syntax for single-line comments."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example is identical to the preceding example, except that the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declarations are grouped together within "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlGroup"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The use of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlGroup"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is optional, but you may need to use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlGroup"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for compatibility with other JVM languages."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@SqlGroup({\n\t@Sql(scripts = \"/test-schema.sql\", config = @SqlConfig(commentPrefix = \"`\")),\n\t@Sql(\"/test-user-data.sql\")\n)}\nvoid userTest() {\n\t// run code that uses the test schema and test data\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@SqlGroup(\n\tSql(\"/test-schema.sql\", config = SqlConfig(commentPrefix = \"`\")),\n\tSql(\"/test-user-data.sql\")\n)\nfun userTest() {\n\t// Run code that uses the test schema and test data\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-multiple-annotations",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Declaring Multiple "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Sql"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Sets"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By default, SQL scripts are run before the corresponding test method. However, if you need to run a particular set of scripts after the test method (for example, to clean up database state), you can set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "executionPhase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AFTER_TEST_METHOD"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@Sql(\n\tscripts = \"create-test-data.sql\",\n\tconfig = @SqlConfig(transactionMode = ISOLATED)\n)\n@Sql(\n\tscripts = \"delete-test-data.sql\",\n\tconfig = @SqlConfig(transactionMode = ISOLATED),\n\texecutionPhase = AFTER_TEST_METHOD\n)\nvoid userTest() {\n\t// run code that needs the test data to be committed\n\t// to the database outside of the test's transaction\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@Sql(\"create-test-data.sql\",\n\tconfig = SqlConfig(transactionMode = ISOLATED))\n@Sql(\"delete-test-data.sql\",\n\tconfig = SqlConfig(transactionMode = ISOLATED),\n\texecutionPhase = AFTER_TEST_METHOD)\nfun userTest() {\n\t// run code that needs the test data to be committed\n\t// to the database outside of the test's transaction\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ISOLATED"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AFTER_TEST_METHOD"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " are statically imported from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Sql.TransactionMode"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Sql.ExecutionPhase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", respectively."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As of Spring Framework 6.1, it is possible to run a particular set of scripts before or after the test class by setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "executionPhase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute in a class-level "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declaration to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BEFORE_TEST_CLASS"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AFTER_TEST_CLASS"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig\n@Sql(scripts = \"/test-schema.sql\", executionPhase = BEFORE_TEST_CLASS)\nclass DatabaseTests {\n\n\t@Test\n\tvoid emptySchemaTest() {\n\t\t// run code that uses the test schema without any test data\n\t}\n\n\t@Test\n\t@Sql(\"/test-user-data.sql\")\n\tvoid userTest() {\n\t\t// run code that uses the test schema and test data\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@SpringJUnitConfig\n@Sql(\"/test-schema.sql\", executionPhase = BEFORE_TEST_CLASS)\nclass DatabaseTests {\n\n\t@Test\n\tfun emptySchemaTest() {\n\t\t// run code that uses the test schema without any test data\n\t}\n\n\t@Test\n\t@Sql(\"/test-user-data.sql\")\n\tfun userTest() {\n\t\t// run code that uses the test schema and test data\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BEFORE_TEST_CLASS"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is statically imported from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Sql.ExecutionPhase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-script-execution-phases",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Script Execution Phases"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can configure script parsing and error handling by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation. When declared as a class-level annotation on an integration test class, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " serves as global configuration for all SQL scripts within the test class hierarchy. When declared directly by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "config"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " serves as local configuration for the SQL scripts declared within the enclosing "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation. Every attribute in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " has an implicit default value, which is documented in the javadoc of the corresponding attribute. Due to the rules defined for annotation attributes in the Java Language Specification, it is, unfortunately, not possible to assign a value of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "null"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to an annotation attribute. Thus, in order to support overrides of inherited global configuration, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attributes have an explicit default value of either "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (for Strings), "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (for arrays), or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DEFAULT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (for enumerations). This approach lets local declarations of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " selectively override individual attributes from global declarations of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " by providing a value other than "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DEFAULT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Global "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attributes are inherited whenever local "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attributes do not supply an explicit value other than "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "\"\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DEFAULT"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Explicit local configuration, therefore, overrides global configuration."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The configuration options provided by "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlConfig"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " are equivalent to those supported by "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ScriptUtils"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceDatabasePopulator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " but are a superset of those provided by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jdbc:initialize-database/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " XML namespace element. See the javadoc of individual attributes in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/jdbc/Sql.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlConfig"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/jdbc/SqlConfig.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "By default, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SqlScriptsTestExecutionListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " infers the desired transaction semantics for scripts configured by using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Specifically, SQL scripts are run without a transaction, within an existing Spring-managed transaction (for example, a transaction managed by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TransactionalTestExecutionListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for a test annotated with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Transactional"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "), or within an isolated transaction, depending on the configured value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "transactionMode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute in "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlConfig"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and the presence of a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PlatformTransactionManager"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " in the test’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". As a bare minimum, however, a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "javax.sql.DataSource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " must be present in the test’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If the algorithms used by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "SqlScriptsTestExecutionListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to detect a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DataSource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PlatformTransactionManager"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and infer the transaction semantics do not suit your needs, you can specify explicit names by setting the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "dataSource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "transactionManager"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attributes of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlConfig"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Furthermore, you can control the transaction propagation behavior by setting the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "transactionMode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlConfig"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (for example, whether scripts should be run in an isolated transaction). Although a thorough discussion of all supported options for transaction management with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is beyond the scope of this reference manual, the javadoc for "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@SqlConfig"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/jdbc/SqlConfig.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "SqlScriptsTestExecutionListener"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/jdbc/SqlScriptsTestExecutionListener.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " provide detailed information, and the following example shows a typical testing scenario that uses JUnit Jupiter and transactional tests with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestDatabaseConfig.class)\n@Transactional\nclass TransactionalSqlScriptsTests {\n\n\tfinal JdbcTemplate jdbcTemplate;\n\n\t@Autowired\n\tTransactionalSqlScriptsTests(DataSource dataSource) {\n\t\tthis.jdbcTemplate = new JdbcTemplate(dataSource);\n\t}\n\n\t@Test\n\t@Sql(\"/test-data.sql\")\n\tvoid usersTest() {\n\t\t// verify state in test database:\n\t\tassertNumUsers(2);\n\t\t// run code that uses the test data...\n\t}\n\n\tint countRowsInTable(String tableName) {\n\t\treturn JdbcTestUtils.countRowsInTable(this.jdbcTemplate, tableName);\n\t}\n\n\tvoid assertNumUsers(int expected) {\n\t\tassertEquals(expected, countRowsInTable(\"user\"),\n\t\t\t\"Number of rows in the [user] table.\");\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@SpringJUnitConfig(TestDatabaseConfig::class)\n@Transactional\nclass TransactionalSqlScriptsTests @Autowired constructor(dataSource: DataSource) {\n\n\tval jdbcTemplate: JdbcTemplate = JdbcTemplate(dataSource)\n\n\t@Test\n\t@Sql(\"/test-data.sql\")\n\tfun usersTest() {\n\t\t// verify state in test database:\n\t\tassertNumUsers(2)\n\t\t// run code that uses the test data...\n\t}\n\n\tfun countRowsInTable(tableName: String): Int {\n\t\treturn JdbcTestUtils.countRowsInTable(jdbcTemplate, tableName)\n\t}\n\n\tfun assertNumUsers(expected: Int) {\n\t\tassertEquals(expected, countRowsInTable(\"user\"),\n\t\t\t\t\"Number of rows in the [user] table.\")\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Note that there is no need to clean up the database after the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "usersTest()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method is run, since any changes made to the database (either within the test method or within the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "/test-data.sql"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " script) are automatically rolled back by the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TransactionalTestExecutionListener"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "transaction management"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "testing/testcontext-framework/tx.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for details)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "testcontext-executing-sql-declaratively-tx",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Transaction management for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-script-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Script Configuration with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SqlConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is possible to merge method-level "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declarations with class-level declarations. For example, this allows you to provide the configuration for a database schema or some common test data once per test class and then provide additional, use case specific test data per test method. To enable "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Sql"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " merging, annotate either your test class or test method with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlMergeMode(MERGE)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". To disable merging for a specific test method (or specific test subclass), you can switch back to the default mode via "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@SqlMergeMode(OVERRIDE)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Consult the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SqlMergeMode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation documentation section"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/annotations/integration-spring/annotation-sqlmergemode.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for examples and further details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "testcontext-executing-sql-declaratively-script-merging",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Merging and Overriding Configuration with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@SqlMergeMode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "testcontext-executing-sql-declaratively",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Executing SQL scripts declaratively with @Sql"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Executing SQL Scripts"
+      }
+    ]
+  }
+}

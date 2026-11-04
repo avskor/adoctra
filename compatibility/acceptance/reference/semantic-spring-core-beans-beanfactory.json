@@ -1,0 +1,1429 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API provides the underlying basis for Spring’s IoC functionality. Its specific contracts are mostly used in integration with other parts of Spring and related third-party frameworks, and its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation is a key delegate within the higher-level "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GenericApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " container."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and related interfaces (such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactoryAware"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InitializingBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DisposableBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") are important integration points for other framework components. By not requiring any annotations or even reflection, they allow for very efficient interaction between the container and its components. Application-level beans may use the same callback interfaces but typically prefer declarative dependency injection instead, either through annotations or through programmatic configuration."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that the core "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API level and its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation do not make assumptions about the configuration format or any component annotations to be used. All of these flavors come in through extensions (such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XmlBeanDefinitionReader"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutowiredAnnotationBeanPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and operate on shared "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects as a core metadata representation. This is the essence of what makes Spring’s container so flexible and extensible."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section explains the differences between the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " container levels and the implications on bootstrapping."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You should use an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " unless you have a good reason for not doing so, with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GenericApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and its subclass "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationConfigApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the common implementations for custom bootstrapping. These are the primary entry points to Spring’s core container for all common purposes: loading of configuration files, triggering a classpath scan, programmatically registering bean definitions and annotated classes, and (as of 5.0) registering functional bean definitions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Because an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " includes all the functionality of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it is generally recommended over a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", except for scenarios where full control over bean processing is needed. Within an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (such as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GenericApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation), several kinds of beans are detected by convention (that is, by bean name or by bean type — in particular, post-processors), while a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is agnostic about any special beans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For many extended container features, such as annotation processing and AOP proxying, the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanPostProcessor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " extension point"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/beans/factory-extension.html#beans-factory-extension-bpp"
+              },
+              {
+                "kind": "text",
+                "value": " is essential. If you use only a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", such post-processors do not get detected and activated by default. This situation could be confusing, because nothing is actually wrong with your bean configuration. Rather, in such a scenario, the container needs to be fully bootstrapped through additional setup."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following table lists features provided by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interfaces and implementations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Bean instantiation/wiring"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Integrated lifecycle management"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Automatic "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanPostProcessor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " registration"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Automatic "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanFactoryPostProcessor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " registration"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Convenient "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MessageSource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " access (for internationalization)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Built-in "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ApplicationEvent"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " publication mechanism"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 1. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Feature"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "BeanFactory"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "ApplicationContext"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": "context-introduction-ctx-vs-beanfactory-feature-matrix",
+            "options": [],
+            "roles": [],
+            "stripes": "odd",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Feature Matrix"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To explicitly register a bean post-processor with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you need to programmatically call "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "addBeanPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "DefaultListableBeanFactory factory = new DefaultListableBeanFactory();\n// populate the factory with bean definitions\n\n// now register any needed BeanPostProcessor instances\nfactory.addBeanPostProcessor(new AutowiredAnnotationBeanPostProcessor());\nfactory.addBeanPostProcessor(new MyBeanPostProcessor());\n\n// now start using the factory"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val factory = DefaultListableBeanFactory()\n// populate the factory with bean definitions\n\n// now register any needed BeanPostProcessor instances\nfactory.addBeanPostProcessor(AutowiredAnnotationBeanPostProcessor())\nfactory.addBeanPostProcessor(MyBeanPostProcessor())\n\n// now start using the factory"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To apply a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactoryPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you need to call its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "postProcessBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "DefaultListableBeanFactory factory = new DefaultListableBeanFactory();\nXmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(factory);\nreader.loadBeanDefinitions(new FileSystemResource(\"beans.xml\"));\n\n// bring in some property values from a Properties file\nPropertySourcesPlaceholderConfigurer cfg = new PropertySourcesPlaceholderConfigurer();\ncfg.setLocation(new FileSystemResource(\"jdbc.properties\"));\n\n// now actually do the replacement\ncfg.postProcessBeanFactory(factory);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val factory = DefaultListableBeanFactory()\nval reader = XmlBeanDefinitionReader(factory)\nreader.loadBeanDefinitions(FileSystemResource(\"beans.xml\"))\n\n// bring in some property values from a Properties file\nval cfg = PropertySourcesPlaceholderConfigurer()\ncfg.setLocation(FileSystemResource(\"jdbc.properties\"))\n\n// now actually do the replacement\ncfg.postProcessBeanFactory(factory)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In both cases, the explicit registration steps are inconvenient, which is why the various "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " variants are preferred over a plain "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultListableBeanFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in Spring-backed applications, especially when relying on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanFactoryPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanPostProcessor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances for extended container functionality in a typical enterprise setup."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "AnnotationConfigApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " has all common annotation post-processors registered and may bring in additional processors underneath the covers through configuration annotations, such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnableTransactionManagement"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". At the abstraction level of Spring’s annotation-based configuration model, the notion of bean post-processors becomes a mere internal container detail."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "context-introduction-ctx-vs-beanfactory",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BeanFactory"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "?"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "The "
+      },
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "BeanFactory"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      },
+      {
+        "kind": "text",
+        "value": " API"
+      }
+    ]
+  }
+}

@@ -1,0 +1,505 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Reactive stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/dispatcher-handler.html"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring MVC, as many other web frameworks, is designed around the front controller pattern where a central "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Servlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", provides a shared algorithm for request processing, while actual work is performed by configurable delegate components. This model is flexible and supports diverse workflows."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as any "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Servlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", needs to be declared and mapped according to the Servlet specification by using Java configuration or in "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "web.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". In turn, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " uses Spring configuration to discover the delegate components it needs for request mapping, view resolution, exception handling, "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "and more"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-servlet/special-bean-types.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example of the Java configuration registers and initializes the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", which is auto-detected by the Servlet container (see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Servlet Config"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-servlet/container-config.html"
+          },
+          {
+            "kind": "text",
+            "value": "):"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public class MyWebApplicationInitializer implements WebApplicationInitializer {\n\n\t@Override\n\tpublic void onStartup(ServletContext servletContext) {\n\n\t\t// Load Spring web application configuration\n\t\tAnnotationConfigWebApplicationContext context = new AnnotationConfigWebApplicationContext();\n\t\tcontext.register(AppConfig.class);\n\n\t\t// Create and register the DispatcherServlet\n\t\tDispatcherServlet servlet = new DispatcherServlet(context);\n\t\tServletRegistration.Dynamic registration = servletContext.addServlet(\"app\", servlet);\n\t\tregistration.setLoadOnStartup(1);\n\t\tregistration.addMapping(\"/app/*\");\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MyWebApplicationInitializer : WebApplicationInitializer {\n\n\toverride fun onStartup(servletContext: ServletContext) {\n\n\t\t// Load Spring web application configuration\n\t\tval context = AnnotationConfigWebApplicationContext()\n\t\tcontext.register(AppConfig::class.java)\n\n\t\t// Create and register the DispatcherServlet\n\t\tval servlet = DispatcherServlet(context)\n\t\tval registration = servletContext.addServlet(\"app\", servlet)\n\t\tregistration.setLoadOnStartup(1)\n\t\tregistration.addMapping(\"/app/*\")\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In addition to using the ServletContext API directly, you can also extend "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AbstractAnnotationConfigDispatcherServletInitializer"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and override specific methods (see the example under "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Context Hierarchy"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-servlet/context-hierarchy.html"
+          },
+          {
+            "kind": "text",
+            "value": ")."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For programmatic use cases, a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "GenericWebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can be used as an alternative to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AnnotationConfigWebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". See the "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GenericWebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/context/support/GenericWebApplicationContext.html"
+          },
+          {
+            "kind": "text",
+            "value": " javadoc for details."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "web.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " configuration registers and initializes the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<web-app>\n\n\t<listener>\n\t\t<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>\n\t</listener>\n\n\t<context-param>\n\t\t<param-name>contextConfigLocation</param-name>\n\t\t<param-value>/WEB-INF/app-context.xml</param-value>\n\t</context-param>\n\n\t<servlet>\n\t\t<servlet-name>app</servlet-name>\n\t\t<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>\n\t\t<init-param>\n\t\t\t<param-name>contextConfigLocation</param-name>\n\t\t\t<param-value></param-value>\n\t\t</init-param>\n\t\t<load-on-startup>1</load-on-startup>\n\t</servlet>\n\n\t<servlet-mapping>\n\t\t<servlet-name>app</servlet-name>\n\t\t<url-pattern>/app/*</url-pattern>\n\t</servlet-mapping>\n\n</web-app>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring Boot follows a different initialization sequence. Rather than hooking into the lifecycle of the Servlet container, Spring Boot uses Spring configuration to bootstrap itself and the embedded Servlet container. "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Filter"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Servlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " declarations are detected in Spring configuration and registered with the Servlet container. For more details, see the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring Boot documentation"
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-boot/reference/web/servlet.html#web.servlet.embedded-container"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "DispatcherServlet"
+      }
+    ]
+  }
+}

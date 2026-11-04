@@ -1,0 +1,280 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "MockMvc can be setup in one of two ways. One is to point directly to the controllers you want to test and programmatically configure Spring MVC infrastructure. The second is to point to Spring configuration with Spring MVC and controller infrastructure in it."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For a comparison of those two modes, check "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Setup Options"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/mockmvc/setup-options.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To set up MockMvc for testing a specific controller, use the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MyWebTests {\n\n\tMockMvc mockMvc;\n\n\t@BeforeEach\n\tvoid setup() {\n\t\tthis.mockMvc = MockMvcBuilders.standaloneSetup(new AccountController()).build();\n\t}\n\n\t// ...\n\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MyWebTests {\n\n\tlateinit var mockMvc : MockMvc\n\n\t@BeforeEach\n\tfun setup() {\n\t\tmockMvc = MockMvcBuilders.standaloneSetup(AccountController()).build()\n\t}\n\n\t// ...\n\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Or you can also use this setup when testing through the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebTestClient"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/webtestclient.html#webtestclient-controller-config"
+          },
+          {
+            "kind": "text",
+            "value": " which delegates to the same builder as shown above."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To set up MockMvc through Spring configuration, use the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig(locations = \"my-servlet-context.xml\")\nclass MyWebTests {\n\n\tMockMvc mockMvc;\n\n\t@BeforeEach\n\tvoid setup(WebApplicationContext wac) {\n\t\tthis.mockMvc = MockMvcBuilders.webAppContextSetup(wac).build();\n\t}\n\n\t// ...\n\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig(locations = [\"my-servlet-context.xml\"])\nclass MyWebTests {\n\n\tlateinit var mockMvc: MockMvc\n\n\t@BeforeEach\n\tfun setup(wac: WebApplicationContext) {\n\t\tmockMvc = MockMvcBuilders.webAppContextSetup(wac).build()\n\t}\n\n\t// ...\n\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Or you can also use this setup when testing through the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebTestClient"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/webtestclient.html#webtestclient-context-config"
+          },
+          {
+            "kind": "text",
+            "value": " which delegates to the same builder as shown above."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Configuring MockMvc"
+      }
+    ]
+  }
+}

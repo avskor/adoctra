@@ -1,0 +1,477 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Class Data Sharing (CDS) is a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JVM feature"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.oracle.com/en/java/javase/17/vm/class-data-sharing.html"
+              },
+              {
+                "kind": "text",
+                "value": " that can help reduce the startup time and memory footprint of Java applications."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To use this feature, a CDS archive should be created for the particular classpath of the application. The Spring Framework provides a hook-point to ease the creation of the archive. Once the archive is available, users should opt in to use it via a JVM flag."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A CDS archive for an application can be created when the application exits. The Spring Framework provides a mode of operation where the process can exit automatically once the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " has refreshed. In this mode, all non-lazy initialized singletons have been instantiated, and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InitializingBean#afterPropertiesSet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " callbacks have been invoked; but the lifecycle has not started, and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ContextRefreshedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " has not yet been published."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create the archive, two additional JVM flags must be specified:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-XX:ArchiveClassesAtExit=application.jsa"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": creates the CDS archive on exit"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-Dspring.context.exit=onRefresh"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": starts and then immediately exits your Spring application as described above"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create a CDS archive, your JDK/JRE must have a base image. If you add the flags above to your startup script, you may get a warning that looks like this:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-XX:ArchiveClassesAtExit is unsupported when base CDS archive is not loaded. Run with -Xlog:cds for more info."
+              }
+            ],
+            "language": "shell",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The base CDS archive is usually provided out-of-the-box, but can also be created if needed by issuing the following command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ java -Xshare:dump"
+              }
+            ],
+            "language": "shell",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_creating_the_cds_archive",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Creating the CDS Archive"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once the archive is available, add "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-XX:SharedArchiveFile=application.jsa"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to your startup script to use it, assuming an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.jsa"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file in the working directory."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To check if the CDS cache is effective, you can use (for testing purposes only, not in production) "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Xshare:on"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " which prints an error message and exits if CDS can’t be enabled."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To figure out how effective the cache is, you can enable class loading logs by adding an extra attribute: "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Xlog:class+load:file=cds.log"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". This creates a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cds.log"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with every attempt to load a class and its source. Classes that are loaded from the cache should have a \"shared objects file\" source, as shown in the following example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[0.064s][info][class,load] org.springframework.core.env.EnvironmentCapable source: shared objects file (top)\n[0.064s][info][class,load] org.springframework.beans.factory.BeanFactory source: shared objects file (top)\n[0.064s][info][class,load] org.springframework.beans.factory.ListableBeanFactory source: shared objects file (top)\n[0.064s][info][class,load] org.springframework.beans.factory.HierarchicalBeanFactory source: shared objects file (top)\n[0.065s][info][class,load] org.springframework.context.MessageSource source: shared objects file (top)"
+              }
+            ],
+            "language": "shell",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If CDS can’t be enabled or if you have a large number of classes that are not loaded from the cache, make sure that the following conditions are fulfilled when creating and using the archive:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The very same JVM must be used."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The classpath must be specified as a list of JARs, and avoid the usage of directories and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "*"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " wildcard characters."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The timestamps of the JARs must be preserved."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When using the archive, the classpath must be the same than the one used to create the archive, in the same order. Additional JARs or directories can be specified "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "at the end"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (but won’t be cached)."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_using_the_archive",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using the Archive"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "CDS"
+      }
+    ]
+  }
+}

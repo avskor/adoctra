@@ -1,0 +1,638 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can register a client filter ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExchangeFilterFunction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ") through the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebClient.Builder"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in order to intercept and modify requests, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "WebClient client = WebClient.builder()\n\t\t.filter((request, next) -> {\n\n\t\t\tClientRequest filtered = ClientRequest.from(request)\n\t\t\t\t\t.header(\"foo\", \"bar\")\n\t\t\t\t\t.build();\n\n\t\t\treturn next.exchange(filtered);\n\t\t})\n\t\t.build();"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "val client = WebClient.builder()\n\t\t.filter { request, next ->\n\n\t\t\tval filtered = ClientRequest.from(request)\n\t\t\t\t\t.header(\"foo\", \"bar\")\n\t\t\t\t\t.build()\n\n\t\t\tnext.exchange(filtered)\n\t\t}\n\t\t.build()"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This can be used for cross-cutting concerns, such as authentication. The following example uses a filter for basic authentication through a static factory method:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "import static org.springframework.web.reactive.function.client.ExchangeFilterFunctions.basicAuthentication;\n\nWebClient client = WebClient.builder()\n\t\t.filter(basicAuthentication(\"user\", \"password\"))\n\t\t.build();"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "import org.springframework.web.reactive.function.client.ExchangeFilterFunctions.basicAuthentication\n\nval client = WebClient.builder()\n\t\t.filter(basicAuthentication(\"user\", \"password\"))\n\t\t.build()"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Filters can be added or removed by mutating an existing "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebClient"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instance, resulting in a new "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebClient"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instance that does not affect the original one. For example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "import static org.springframework.web.reactive.function.client.ExchangeFilterFunctions.basicAuthentication;\n\nWebClient client = webClient.mutate()\n\t\t.filters(filterList -> {\n\t\t\tfilterList.add(0, basicAuthentication(\"user\", \"password\"));\n\t\t})\n\t\t.build();"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "val client = webClient.mutate()\n\t\t.filters { it.add(0, basicAuthentication(\"user\", \"password\")) }\n\t\t.build()"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebClient"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is a thin facade around the chain of filters followed by an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExchangeFunction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". It provides a workflow to make requests, to encode to and from higher level objects, and it helps to ensure that response content is always consumed. When filters handle the response in some way, extra care must be taken to always consume its content or to otherwise propagate it downstream to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebClient"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " which will ensure the same. Below is a filter that handles the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UNAUTHORIZED"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " status code but ensures that any response content, whether expected or not, is released:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public ExchangeFilterFunction renewTokenFilter() {\n\treturn (request, next) -> next.exchange(request).flatMap(response -> {\n\t\tif (response.statusCode().value() == HttpStatus.UNAUTHORIZED.value()) {\n\t\t\treturn response.releaseBody()\n\t\t\t\t\t.then(renewToken())\n\t\t\t\t\t.flatMap(token -> {\n\t\t\t\t\t\tClientRequest newRequest = ClientRequest.from(request).build();\n\t\t\t\t\t\treturn next.exchange(newRequest);\n\t\t\t\t\t});\n\t\t} else {\n\t\t\treturn Mono.just(response);\n\t\t}\n\t});\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "fun renewTokenFilter(): ExchangeFilterFunction? {\n\treturn ExchangeFilterFunction { request: ClientRequest?, next: ExchangeFunction ->\n\t\tnext.exchange(request!!).flatMap { response: ClientResponse ->\n\t\t\tif (response.statusCode().value() == HttpStatus.UNAUTHORIZED.value()) {\n\t\t\t\treturn@flatMap response.releaseBody()\n\t\t\t\t\t\t.then(renewToken())\n\t\t\t\t\t\t.flatMap { token: String? ->\n\t\t\t\t\t\t\tval newRequest = ClientRequest.from(request).build()\n\t\t\t\t\t\t\tnext.exchange(newRequest)\n\t\t\t\t\t\t}\n\t\t\t} else {\n\t\t\t\treturn@flatMap Mono.just(response)\n\t\t\t}\n\t\t}\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The example below demonstrates how to use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExchangeFilterFunction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " interface to create a custom filter class that helps with computing a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Content-Length"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " header for "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "PUT"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "POST"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "multipart/form-data"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " requests using buffering."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public class MultipartExchangeFilterFunction implements ExchangeFilterFunction {\n\n    @Override\n    public Mono<ClientResponse> filter(ClientRequest request, ExchangeFunction next) {\n        if (MediaType.MULTIPART_FORM_DATA.includes(request.headers().getContentType())\n                && (request.method() == HttpMethod.PUT || request.method() == HttpMethod.POST)) {\n            return next.exchange(ClientRequest.from(request).body((outputMessage, context) ->\n                request.body().insert(new BufferingDecorator(outputMessage), context)).build()\n            );\n        } else {\n            return next.exchange(request);\n        }\n    }\n\n    private static final class BufferingDecorator extends ClientHttpRequestDecorator {\n\n        private BufferingDecorator(ClientHttpRequest delegate) {\n            super(delegate);\n        }\n\n        @Override\n        public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {\n            return DataBufferUtils.join(body).flatMap(buffer -> {\n                getHeaders().setContentLength(buffer.readableByteCount());\n                return super.writeWith(Mono.just(buffer));\n            });\n        }\n    }\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MultipartExchangeFilterFunction : ExchangeFilterFunction {\n\n    override fun filter(request: ClientRequest, next: ExchangeFunction): Mono<ClientResponse> {\n        return if (MediaType.MULTIPART_FORM_DATA.includes(request.headers().getContentType())\n            && (request.method() == HttpMethod.PUT || request.method() == HttpMethod.POST)) {\n            next.exchange(ClientRequest.from(request)\n                .body { message, context -> request.body().insert(BufferingDecorator(message), context) }\n                .build())\n        }\n        else {\n            next.exchange(request)\n        }\n\n    }\n\n    private class BufferingDecorator(delegate: ClientHttpRequest) : ClientHttpRequestDecorator(delegate) {\n        override fun writeWith(body: Publisher<out DataBuffer>): Mono<Void> {\n            return DataBufferUtils.join(body)\n                .flatMap {\n                    headers.contentLength = it.readableByteCount().toLong()\n                    super.writeWith(Mono.just(it))\n                }\n        }\n    }\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Filters"
+      }
+    ]
+  }
+}

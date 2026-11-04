@@ -1,0 +1,443 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Because autowiring by type may lead to multiple candidates, it is often necessary to have more control over the selection process. One way to accomplish this is with Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Primary"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation. "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Primary"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " indicates that a particular bean should be given preference when multiple beans are candidates to be autowired to a single-valued dependency. If exactly one primary bean exists among the candidates, it becomes the autowired value."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Consider the following configuration that defines "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "firstMovieCatalog"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " as the primary "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MovieCatalog"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\npublic class MovieConfiguration {\n\n\t@Bean\n\t@Primary\n\tpublic MovieCatalog firstMovieCatalog() { ... }\n\n\t@Bean\n\tpublic MovieCatalog secondMovieCatalog() { ... }\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\nclass MovieConfiguration {\n\n\t@Bean\n\t@Primary\n\tfun firstMovieCatalog(): MovieCatalog { ... }\n\n\t@Bean\n\tfun secondMovieCatalog(): MovieCatalog { ... }\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Alternatively, as of 6.2, there is a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Fallback"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation for demarcating any beans other than the regular ones to be injected. If only one regular bean is left, it is effectively primary as well:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\npublic class MovieConfiguration {\n\n\t@Bean\n\tpublic MovieCatalog firstMovieCatalog() { ... }\n\n\t@Bean\n\t@Fallback\n\tpublic MovieCatalog secondMovieCatalog() { ... }\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\nclass MovieConfiguration {\n\n\t@Bean\n\tfun firstMovieCatalog(): MovieCatalog { ... }\n\n\t@Bean\n\t@Fallback\n\tfun secondMovieCatalog(): MovieCatalog { ... }\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "With both variants of the preceding configuration, the following "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MovieRecommender"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is autowired with the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "firstMovieCatalog"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public class MovieRecommender {\n\n\t@Autowired\n\tprivate MovieCatalog movieCatalog;\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MovieRecommender {\n\n\t@Autowired\n\tprivate lateinit var movieCatalog: MovieCatalog\n\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The corresponding bean definitions follow:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context\n\t\thttps://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<context:annotation-config/>\n\n\t<bean class=\"example.SimpleMovieCatalog\" primary=\"true\">\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean id=\"movieRecommender\" class=\"example.MovieRecommender\"/>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Fine-tuning Annotation-based Autowiring with "
+      },
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@Primary"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      },
+      {
+        "kind": "text",
+        "value": " or "
+      },
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@Fallback"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      }
+    ]
+  }
+}

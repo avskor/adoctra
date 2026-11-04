@@ -747,9 +747,9 @@ class SemanticProjectionTests(unittest.TestCase):
         # 59 selected pages plus the rest of the full Asciidoctor, AsciiDoc
         # language, Asciidoctor PDF and Antora documentation
         # (test_documentation_corpus.py pins those).
-        self.assertEqual(len(cases), 748)
+        self.assertEqual(len(cases), 1197)
         full = {'asciidoctor-docs-2.0.23', 'asciidoc-lang-0.3.0', 'asciidoctor-pdf-2.3.27', 'antora-3.2.2',
-                'junit-6.1.3', 'debezium-3.7.0'}
+                'junit-6.1.3', 'debezium-3.7.0', 'spring-framework-6.2.0'}
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

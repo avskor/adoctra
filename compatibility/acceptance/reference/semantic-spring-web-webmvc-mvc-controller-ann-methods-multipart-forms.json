@@ -1,0 +1,818 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Reactive stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/controller/ann-methods/multipart-forms.html"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "After a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MultipartResolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " has been "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "enabled"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-servlet/multipart.html"
+          },
+          {
+            "kind": "text",
+            "value": ", the content of POST requests with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "multipart/form-data"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is parsed and accessible as regular request parameters. The following example accesses one regular form field and one uploaded file:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Controller\npublic class FileUploadController {\n\n\t@PostMapping(\"/form\")\n\tpublic String handleFormUpload(@RequestParam(\"name\") String name,\n\t\t\t@RequestParam(\"file\") MultipartFile file) {\n\n\t\tif (!file.isEmpty()) {\n\t\t\tbyte[] bytes = file.getBytes();\n\t\t\t// store the bytes somewhere\n\t\t\treturn \"redirect:uploadSuccess\";\n\t\t}\n\t\treturn \"redirect:uploadFailure\";\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Controller\nclass FileUploadController {\n\n\t@PostMapping(\"/form\")\n\tfun handleFormUpload(@RequestParam(\"name\") name: String,\n\t\t\t\t\t\t@RequestParam(\"file\") file: MultipartFile): String {\n\n\t\tif (!file.isEmpty) {\n\t\t\tval bytes = file.bytes\n\t\t\t// store the bytes somewhere\n\t\t\treturn \"redirect:uploadSuccess\"\n\t\t}\n\t\treturn \"redirect:uploadFailure\"\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Declaring the argument type as a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "List<MultipartFile>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " allows for resolving multiple files for the same parameter name."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RequestParam"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation is declared as a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Map<String, MultipartFile>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MultiValueMap<String, MultipartFile>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", without a parameter name specified in the annotation, then the map is populated with the multipart files for each given parameter name."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "With Servlet multipart parsing, you may also declare "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "jakarta.servlet.http.Part"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instead of Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MultipartFile"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as a method argument or collection value type."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can also use multipart content as part of data binding to a "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "command object"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-controller/ann-methods/modelattrib-method-args.html"
+          },
+          {
+            "kind": "text",
+            "value": ". For example, the form field and file from the preceding example could be fields on a form object, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MyForm {\n\n\tprivate String name;\n\n\tprivate MultipartFile file;\n\n\t// ...\n}\n\n@Controller\npublic class FileUploadController {\n\n\t@PostMapping(\"/form\")\n\tpublic String handleFormUpload(MyForm form, BindingResult errors) {\n\t\tif (!form.getFile().isEmpty()) {\n\t\t\tbyte[] bytes = form.getFile().getBytes();\n\t\t\t// store the bytes somewhere\n\t\t\treturn \"redirect:uploadSuccess\";\n\t\t}\n\t\treturn \"redirect:uploadFailure\";\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class MyForm(val name: String, val file: MultipartFile, ...)\n\n@Controller\nclass FileUploadController {\n\n\t@PostMapping(\"/form\")\n\tfun handleFormUpload(form: MyForm, errors: BindingResult): String {\n\t\tif (!form.file.isEmpty) {\n\t\t\tval bytes = form.file.bytes\n\t\t\t// store the bytes somewhere\n\t\t\treturn \"redirect:uploadSuccess\"\n\t\t}\n\t\treturn \"redirect:uploadFailure\"\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Multipart requests can also be submitted from non-browser clients in a RESTful service scenario. The following example shows a file with JSON:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "POST /someUrl\nContent-Type: multipart/mixed\n\n--edt7Tfrdusa7r3lNQc79vXuhIIMlatb7PQg7Vp\nContent-Disposition: form-data; name=\"meta-data\"\nContent-Type: application/json; charset=UTF-8\nContent-Transfer-Encoding: 8bit\n\n{\n\t\"name\": \"value\"\n}\n--edt7Tfrdusa7r3lNQc79vXuhIIMlatb7PQg7Vp\nContent-Disposition: form-data; name=\"file-data\"; filename=\"file.properties\"\nContent-Type: text/xml\nContent-Transfer-Encoding: 8bit\n... File Data ..."
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can access the \"meta-data\" part with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RequestParam"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " as a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "String"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " but you’ll probably want it deserialized from JSON (similar to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RequestBody"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). Use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RequestPart"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation to access a multipart after converting it with an "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HttpMessageConverter"
+              }
+            ],
+            "kind": "xref",
+            "target": "integration/rest-clients.html#rest-message-conversion"
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@PostMapping(\"/\")\npublic String handle(@RequestPart(\"meta-data\") MetaData metadata,\n\t\t@RequestPart(\"file-data\") MultipartFile file) {\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@PostMapping(\"/\")\nfun handle(@RequestPart(\"meta-data\") metadata: MetaData,\n\t\t@RequestPart(\"file-data\") file: MultipartFile): String {\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RequestPart"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in combination with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "jakarta.validation.Valid"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or use Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Validated"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation, both of which cause Standard Bean Validation to be applied. By default, validation errors cause a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MethodArgumentNotValidException"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", which is turned into a 400 (BAD_REQUEST) response. Alternatively, you can handle validation errors locally within the controller through an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Errors"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BindingResult"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " argument, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@PostMapping(\"/\")\npublic String handle(@Valid @RequestPart(\"meta-data\") MetaData metadata, Errors errors) {\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@PostMapping(\"/\")\nfun handle(@Valid @RequestPart(\"meta-data\") metadata: MetaData, errors: Errors): String {\n\t// ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If method validation applies because other parameters have "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Constraint"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotations, then "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HandlerMethodValidationException"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is raised instead. For more details, see the section on "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Validation"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-controller/ann-validation.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Multipart"
+      }
+    ]
+  }
+}

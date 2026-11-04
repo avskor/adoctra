@@ -1,0 +1,2840 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-exceptions.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Controller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-controller/ann-advice.html"
+              },
+              {
+                "kind": "text",
+                "value": " classes can have "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods to handle exceptions from controller methods, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "include-code::./SimpleController[indent=0]"
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The exception may match against a top-level exception being propagated (for example, a direct "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IOException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " being thrown) or against a nested cause within a wrapper exception (for example, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IOException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " wrapped inside an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IllegalStateException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). As of 5.3, this can match at arbitrary cause levels, whereas previously only an immediate cause was considered."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For matching exception types, preferably declare the target exception as a method argument, as the preceding example shows. When multiple exception methods match, a root exception match is generally preferred to a cause exception match. More specifically, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExceptionDepthComparator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is used to sort exceptions based on their depth from the thrown exception type."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, the annotation declaration may narrow the exception types to match, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "include-code::./ExceptionController[tag=narrow,indent=0]"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can even use a list of specific exception types with a very generic argument signature, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "include-code::./ExceptionController[tag=general,indent=0]"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The distinction between root and cause exception matching can be surprising."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IOException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " variant shown earlier, the method is typically called with the actual "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FileSystemException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RemoteException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance as the argument, since both of them extend from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IOException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". However, if any such matching exception is propagated within a wrapper exception which is itself an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IOException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the passed-in exception instance is that wrapper exception."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The behavior is even simpler in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "handle(Exception)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " variant. This is always invoked with the wrapper exception in a wrapping scenario, with the actually matching exception to be found through "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ex.getCause()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in that case. The passed-in exception is the actual "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FileSystemException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RemoteException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance only when these are thrown as top-level exceptions."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We generally recommend that you be as specific as possible in the argument signature, reducing the potential for mismatches between root and cause exception types. Consider breaking a multi-matching method into individual "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods, each matching a single specific exception type through its signature."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In a multi-"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " arrangement, we recommend declaring your primary root exception mappings on a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " prioritized with a corresponding order. While a root exception match is preferred to a cause, this is defined among the methods of a given controller or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class. This means a cause match on a higher-priority "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean is preferred to any match (for example, root) on a lower-priority "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ControllerAdvice"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Last but not least, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method implementation can choose to back out of dealing with a given exception instance by rethrowing it in its original form. This is useful in scenarios where you are interested only in root-level matches or in matches within a specific context that cannot be statically determined. A rethrown exception is propagated through the remaining resolution chain, as though the given "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method would not have matched in the first place."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Support for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods in Spring MVC is built on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DispatcherServlet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " level, "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerExceptionResolver"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-servlet/exceptionhandlers.html"
+              },
+              {
+                "kind": "text",
+                "value": " mechanism."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-ann-exceptionhandler-exc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Exception Mapping"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-exceptions.html#webflux-ann-exceptionhandler-media"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to exception types, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods can also declare producible media types. This allows to refine error responses depending on the media types requested by HTTP clients, typically in the \"Accept\" HTTP request header."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Applications can declare producible media types directly on annotations, for the same exception type:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "include-code::./MediaTypeController[tag=mediatype,indent=0]"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here, methods handle the same exception type but will not be rejected as duplicates. Instead, API clients requesting \"application/json\" will receive a JSON error, and browsers will get an HTML error view. Each "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation can declare several producible media types, the content negotiation during the error handling phase will decide which content type will be used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-ann-exceptionhandler-media",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Media Type Mapping"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-exceptions.html#webflux-ann-exceptionhandler-args"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods support the following arguments:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Exception type"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to the raised exception."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HandlerMethod"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to the controller method that raised the exception."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "WebRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "NativeWebRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Generic access to request parameters and request and session attributes without direct use of the Servlet API."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.servlet.ServletRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.servlet.ServletResponse"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Choose any specific request or response type (for example, "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ServletRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HttpServletRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or Spring’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultipartRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MultipartHttpServletRequest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ")."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jakarta.servlet.http.HttpSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Enforces the presence of a session. As a consequence, such an argument is never "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "null"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      },
+                      {
+                        "kind": "line-break"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Note that session access is not thread-safe. Consider setting the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RequestMappingHandlerAdapter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instance’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "synchronizeOnSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " flag to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " if multiple requests are allowed to access a session concurrently."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.security.Principal"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Currently authenticated user — possibly a specific "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Principal"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation class if known."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HttpMethod"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The HTTP method of the request."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.Locale"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The current request locale, determined by the most specific "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LocaleResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " available — in effect, the configured "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LocaleResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LocaleContextResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.TimeZone"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.time.ZoneId"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The time zone associated with the current request, as determined by a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LocaleContextResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.io.OutputStream"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.io.Writer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to the raw response body, as exposed by the Servlet API."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.Map"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.ui.Model"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.ui.ModelMap"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to the model for an error response. Always empty."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RedirectAttributes"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Specify attributes to use in case of a redirect — (that is to be appended to the query string) and flash attributes to be stored temporarily until the request after the redirect. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Redirect Attributes"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/redirecting-passing-data.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Flash Attributes"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/flash-attributes.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SessionAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to any session attribute, in contrast to model attributes stored in the session as a result of a class-level "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@SessionAttributes"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " declaration. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@SessionAttribute"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/sessionattribute.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for more details."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@RequestAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "For access to request attributes. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@RequestAttribute"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/requestattrib.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for more details."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "33.3333"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "66.6667"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Method argument"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [
+              "header"
+            ],
+            "roles": [],
+            "stripes": "odd",
+            "title": null,
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "mvc-ann-exceptionhandler-args",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Method Arguments"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-exceptions.html#webflux-ann-exceptionhandler-return-values"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ExceptionHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods support the following return values:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ResponseBody"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The return value is converted through "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HttpMessageConverter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instances and written to the response. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@ResponseBody"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/responsebody.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HttpEntity<B>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ResponseEntity<B>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The return value specifies that the full response (including the HTTP headers and the body) be converted through "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "HttpMessageConverter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instances and written to the response. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ResponseEntity"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-controller/ann-methods/responseentity.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ErrorResponse"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "To render an RFC 9457 error response with details in the body, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Error Responses"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-ann-rest-exceptions.html"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ProblemDetail"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "To render an RFC 9457 error response with details in the body, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Error Responses"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-ann-rest-exceptions.html"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "String"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "A view name to be resolved with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ViewResolver"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementations and used together with the implicit model — determined through command objects and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ModelAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " methods. The handler method can also programmatically enrich the model by declaring a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Model"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " argument (described earlier)."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "View"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "A "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "View"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instance to use for rendering together with the implicit model — determined through command objects and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ModelAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " methods. The handler method may also programmatically enrich the model by declaring a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Model"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " argument (descried earlier)."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java.util.Map"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.ui.Model"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Attributes to be added to the implicit model with the view name implicitly determined through a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RequestToViewNameTranslator"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ModelAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "An attribute to be added to the model with the view name implicitly determined through a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RequestToViewNameTranslator"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    [
+                      {
+                        "kind": "text",
+                        "value": " Note that "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ModelAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is optional. See “Any other return value” at the end of this table."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ModelAndView"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " object"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The view and model attributes to use and, optionally, a response status."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "void"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "A method with a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "void"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " return type (or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "null"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " return value) is considered to have fully handled the response if it also has a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ServletResponse"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OutputStream"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " argument, or a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ResponseStatus"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " annotation. The same is also true if the controller has made a positive "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ETag"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "lastModified"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " timestamp check (see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Controllers"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc/mvc-caching.html#mvc-caching-etag-lastmodified"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for details)."
+                      }
+                    ],
+                    [
+                      {
+                        "kind": "text",
+                        "value": " If none of the above is true, a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "void"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " return type can also indicate “no response body” for REST controllers or default view name selection for HTML controllers."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Any other return value"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "If a return value is not matched to any of the above and is not a simple type (as determined by "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BeanUtils#isSimpleProperty"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/BeanUtils.html#isSimpleProperty-java.lang.Class-"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "), by default, it is treated as a model attribute to be added to the model. If it is a simple type, it remains unresolved."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "33.3333"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "66.6667"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Return value"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [
+              "header"
+            ],
+            "roles": [],
+            "stripes": "odd",
+            "title": null,
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "mvc-ann-exceptionhandler-return-values",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Return Values"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Exceptions"
+      }
+    ]
+  }
+}

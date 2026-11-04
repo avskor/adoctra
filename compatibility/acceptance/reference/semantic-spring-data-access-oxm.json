@@ -1,0 +1,3492 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This chapter, describes Spring’s Object-XML Mapping support. Object-XML Mapping (O-X mapping for short) is the act of converting an XML document to and from an object. This conversion process is also known as XML Marshalling, or XML Serialization. This chapter uses these terms interchangeably."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Within the field of O-X mapping, a marshaller is responsible for serializing an object (graph) to XML. In similar fashion, an unmarshaller deserializes the XML to an object graph. This XML can take the form of a DOM document, an input or output stream, or a SAX handler."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Some of the benefits of using Spring for your O/X mapping needs are:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Ease of configuration"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/oxm.html#oxm-ease-of-configuration"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Consistent Interfaces"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/oxm.html#oxm-consistent-interfaces"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Consistent Exception Hierarchy"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/oxm.html#oxm-consistent-exception-hierarchy"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring’s bean factory makes it easy to configure marshallers, without needing to construct JAXB context, JiBX binding factories, and so on. You can configure the marshallers as you would any other bean in your application context. Additionally, XML namespace-based configuration is available for a number of marshallers, making the configuration even simpler."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "oxm-ease-of-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Ease of configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring’s O-X mapping operates through two global interfaces: "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/oxm/Marshaller.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Unmarshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/oxm/Unmarshaller.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". These abstractions let you switch O-X mapping frameworks with relative ease, with little or no change required on the classes that do the marshalling. This approach has the additional benefit of making it possible to do XML marshalling with a mix-and-match approach (for example, some marshalling performed using JAXB and some by XStream) in a non-intrusive fashion, letting you use the strength of each technology."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "oxm-consistent-interfaces",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Consistent Interfaces"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring provides a conversion from exceptions from the underlying O-X mapping tool to its own exception hierarchy with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "XmlMappingException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as the root exception. These runtime exceptions wrap the original exception so that no information is lost."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "oxm-consistent-exception-hierarchy",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Consistent Exception Hierarchy"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "oxm-introduction",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Introduction"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As stated in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "introduction"
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/oxm.html#oxm-introduction"
+              },
+              {
+                "kind": "text",
+                "value": ", a marshaller serializes an object to XML, and an unmarshaller deserializes XML stream to an object. This section describes the two Spring interfaces used for this purpose."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring abstracts all marshalling operations behind the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.oxm.Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface, the main method of which follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public interface Marshaller {\n\n\t/**\n\t * Marshal the object graph with the given root into the provided Result.\n\t */\n\tvoid marshal(Object graph, Result result) throws XmlMappingException, IOException;\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface has one main method, which marshals the given object to a given "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "javax.xml.transform.Result"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The result is a tagging interface that basically represents an XML output abstraction. Concrete implementations wrap various XML representations, as the following table indicates:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "DOMResult"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.w3c.dom.Node"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "SAXResult"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.xml.sax.ContentHandler"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "StreamResult"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.File"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.OutputStream"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.Writer"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Result implementation"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Wraps XML representation"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": "oxm-marshaller-tbl",
+                "options": [],
+                "roles": [],
+                "stripes": "odd",
+                "title": null,
+                "width": 100
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Although the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "marshal()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method accepts a plain object as its first parameter, most "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations cannot handle arbitrary objects. Instead, an object class must be mapped in a mapping file, be marked with an annotation, be registered with the marshaller, or have a common base class. Refer to the later sections in this chapter to determine how your O-X technology manages this."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "oxm-marshaller",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Understanding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Similar to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", we have the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.oxm.Unmarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface, which the following listing shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public interface Unmarshaller {\n\n\t/**\n\t * Unmarshal the given provided Source into an object graph.\n\t */\n\tObject unmarshal(Source source) throws XmlMappingException, IOException;\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This interface also has one method, which reads from the given "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "javax.xml.transform.Source"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (an XML input abstraction) and returns the object read. As with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Result"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Source"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is a tagging interface that has three concrete implementations. Each wraps a different XML representation, as the following table indicates:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "DOMSource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.w3c.dom.Node"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "SAXSource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.xml.sax.InputSource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "org.xml.sax.XMLReader"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "StreamSource"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.File"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.InputStream"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "java.io.Reader"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Source implementation"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Wraps XML representation"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": "oxm-unmarshaller-tbl",
+                "options": [],
+                "roles": [],
+                "stripes": "odd",
+                "title": null,
+                "width": 100
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Even though there are two separate marshalling interfaces ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Unmarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), all implementations in Spring-WS implement both in one class. This means that you can wire up one marshaller class and refer to it both as a marshaller and as an unmarshaller in your "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "applicationContext.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "oxm-unmarshaller",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Understanding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unmarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring converts exceptions from the underlying O-X mapping tool to its own exception hierarchy with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "XmlMappingException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as the root exception. These runtime exceptions wrap the original exception so that no information will be lost."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Additionally, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MarshallingFailureException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "UnmarshallingFailureException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " provide a distinction between marshalling and unmarshalling operations, even though the underlying O-X mapping tool does not do so."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The O-X Mapping exception hierarchy is shown in the following figure:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "alt": [
+                  {
+                    "kind": "text",
+                    "value": "oxm exceptions"
+                  }
+                ],
+                "attributes": {},
+                "caption": null,
+                "context": "image",
+                "id": null,
+                "roles": [],
+                "src": "oxm-exceptions.png",
+                "svg": null,
+                "target": "oxm-exceptions.png",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "oxm-xmlmappingexception",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Understanding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XmlMappingException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "oxm-marshaller-unmarshaller",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Marshaller"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unmarshaller"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use Spring’s OXM for a wide variety of situations. In the following example, we use it to marshal the settings of a Spring-managed application as an XML file. In the following example, we use a simple JavaBean to represent the settings:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class Settings {\n\n\tprivate boolean fooEnabled;\n\n\tpublic boolean isFooEnabled() {\n\t\treturn fooEnabled;\n\t}\n\n\tpublic void setFooEnabled(boolean fooEnabled) {\n\t\tthis.fooEnabled = fooEnabled;\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class Settings {\n\tvar isFooEnabled: Boolean = false\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The application class uses this bean to store its settings. Besides a main method, the class has two methods: "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "saveSettings()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " saves the settings bean to a file named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "settings.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "loadSettings()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " loads these settings again. The following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "main()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method constructs a Spring application context and calls these two methods:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "import java.io.FileInputStream;\nimport java.io.FileOutputStream;\nimport java.io.IOException;\nimport javax.xml.transform.stream.StreamResult;\nimport javax.xml.transform.stream.StreamSource;\nimport org.springframework.context.ApplicationContext;\nimport org.springframework.context.support.ClassPathXmlApplicationContext;\nimport org.springframework.oxm.Marshaller;\nimport org.springframework.oxm.Unmarshaller;\n\npublic class Application {\n\n\tprivate static final String FILE_NAME = \"settings.xml\";\n\tprivate Settings settings = new Settings();\n\tprivate Marshaller marshaller;\n\tprivate Unmarshaller unmarshaller;\n\n\tpublic void setMarshaller(Marshaller marshaller) {\n\t\tthis.marshaller = marshaller;\n\t}\n\n\tpublic void setUnmarshaller(Unmarshaller unmarshaller) {\n\t\tthis.unmarshaller = unmarshaller;\n\t}\n\n\tpublic void saveSettings() throws IOException {\n\t\ttry (FileOutputStream os = new FileOutputStream(FILE_NAME)) {\n\t\t\tthis.marshaller.marshal(settings, new StreamResult(os));\n\t\t}\n\t}\n\n\tpublic void loadSettings() throws IOException {\n\t\ttry (FileInputStream is = new FileInputStream(FILE_NAME)) {\n\t\t\tthis.settings = (Settings) this.unmarshaller.unmarshal(new StreamSource(is));\n\t\t}\n\t}\n\n\tpublic static void main(String[] args) throws IOException {\n\t\tApplicationContext appContext =\n\t\t\t\tnew ClassPathXmlApplicationContext(\"applicationContext.xml\");\n\t\tApplication application = (Application) appContext.getBean(\"application\");\n\t\tapplication.saveSettings();\n\t\tapplication.loadSettings();\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class Application {\n\n\tlateinit var marshaller: Marshaller\n\n\tlateinit var unmarshaller: Unmarshaller\n\n\tfun saveSettings() {\n\t\tFileOutputStream(FILE_NAME).use { outputStream -> marshaller.marshal(settings, StreamResult(outputStream)) }\n\t}\n\n\tfun loadSettings() {\n\t\tFileInputStream(FILE_NAME).use { inputStream -> settings = unmarshaller.unmarshal(StreamSource(inputStream)) as Settings }\n\t}\n}\n\nprivate const val FILE_NAME = \"settings.xml\"\n\nfun main(args: Array<String>) {\n\tval appContext = ClassPathXmlApplicationContext(\"applicationContext.xml\")\n\tval application = appContext.getBean(\"application\") as Application\n\tapplication.saveSettings()\n\tapplication.loadSettings()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Application"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " requires both a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unmarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property to be set. We can do so by using the following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "applicationContext.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\t<bean id=\"application\" class=\"Application\">\n\t\t<property name=\"marshaller\" ref=\"xstreamMarshaller\" />\n\t\t<property name=\"unmarshaller\" ref=\"xstreamMarshaller\" />\n\t</bean>\n\t<bean id=\"xstreamMarshaller\" class=\"org.springframework.oxm.xstream.XStreamMarshaller\"/>\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This application context uses XStream, but we could have used any of the other marshaller instances described later in this chapter. Note that, by default, XStream does not require any further configuration, so the bean definition is rather simple. Also note that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XStreamMarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implements both "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unmarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", so we can refer to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "xstreamMarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean in both the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unmarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of the application."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This sample application produces the following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "settings.xml"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<settings foo-enabled=\"false\"/>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "oxm-usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Marshaller"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unmarshaller"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can configure marshallers more concisely by using tags from the OXM namespace. To make these tags available, you must first reference the appropriate schema in the preamble of the XML configuration file. The following example shows how to do so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:oxm=\"http://www.springframework.org/schema/oxm\" "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/oxm\n\t\thttps://www.springframework.org/schema/oxm/spring-oxm.xsd\"> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Reference the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "oxm"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Specify the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "oxm"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema location."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The schema makes the following elements available:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jaxb2-marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/oxm.html#oxm-jaxb2-xsd"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jibx-marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/oxm.html#oxm-jibx-xsd"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each tag is explained in its respective marshaller’s section. As an example, though, the configuration of a JAXB2 marshaller might resemble the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<oxm:jaxb2-marshaller id=\"marshaller\" contextPath=\"org.springframework.ws.samples.airline.schema\"/>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "oxm-schema-based-config",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "XML Configuration Namespace"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The JAXB binding compiler translates a W3C XML Schema into one or more Java classes, a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jaxb.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file, and possibly some resource files. JAXB also offers a way to generate a schema from annotated Java classes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring supports the JAXB 2.0 API as XML marshalling strategies, following the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unmarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interfaces described in "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Unmarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "data-access/oxm.html#oxm-marshaller-unmarshaller"
+              },
+              {
+                "kind": "text",
+                "value": ". The corresponding integration classes reside in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.oxm.jaxb"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Jaxb2Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class implements both of Spring’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Unmarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interfaces. It requires a context path to operate. You can set the context path by setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextPath"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. The context path is a list of colon-separated Java package names that contain schema derived classes. It also offers a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "classesToBeBound"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property, which allows you to set an array of classes to be supported by the marshaller. Schema validation is performed by specifying one or more schema resources to the bean, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans>\n\t<bean id=\"jaxb2Marshaller\" class=\"org.springframework.oxm.jaxb.Jaxb2Marshaller\">\n\t\t<property name=\"classesToBeBound\">\n\t\t\t<list>\n\t\t\t\t<value>org.springframework.oxm.jaxb.Flight</value>\n\t\t\t\t<value>org.springframework.oxm.jaxb.Flights</value>\n\t\t\t</list>\n\t\t</property>\n\t\t<property name=\"schema\" value=\"classpath:org/springframework/oxm/schema.xsd\"/>\n\t</bean>\n\n\t...\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jaxb2-marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element configures a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.oxm.jaxb.Jaxb2Marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<oxm:jaxb2-marshaller id=\"marshaller\" contextPath=\"org.springframework.ws.samples.airline.schema\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Alternatively, you can provide the list of classes to bind to the marshaller by using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "class-to-be-bound"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " child element:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<oxm:jaxb2-marshaller id=\"marshaller\">\n\t<oxm:class-to-be-bound name=\"org.springframework.ws.samples.airline.schema.Airport\"/>\n\t<oxm:class-to-be-bound name=\"org.springframework.ws.samples.airline.schema.Flight\"/>\n\t...\n</oxm:jaxb2-marshaller>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following table describes the available attributes:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "autowidth": false,
+                    "body": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "id"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "The ID of the marshaller"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "No"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ],
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "contextPath"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "The JAXB Context path"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "No"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "caption": null,
+                    "columns": [
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3333"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3333"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3334"
+                      }
+                    ],
+                    "context": "table",
+                    "explicit_width": false,
+                    "float": null,
+                    "foot": [],
+                    "frame": "all",
+                    "grid": "all",
+                    "head": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Attribute"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Description"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Required"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "id": null,
+                    "options": [],
+                    "roles": [],
+                    "stripes": "odd",
+                    "title": null,
+                    "width": 100
+                  }
+                ],
+                "context": "section",
+                "id": "oxm-jaxb2-xsd",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "XML Configuration Namespace"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "oxm-jaxb2",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jaxb2Marshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "oxm-jaxb",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "JAXB"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The JiBX framework offers a solution similar to that which Hibernate provides for ORM: A binding definition defines the rules for how your Java objects are converted to or from XML. After preparing the binding and compiling the classes, a JiBX binding compiler enhances the class files and adds code to handle converting instances of the classes from or to XML."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more information on JiBX, see the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JiBX web site"
+                  }
+                ],
+                "kind": "link",
+                "target": "http://jibx.sourceforge.net/"
+              },
+              {
+                "kind": "text",
+                "value": ". The Spring integration classes reside in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.oxm.jibx"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JibxMarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class implements both the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Marshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Unmarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface. To operate, it requires the name of the class to marshal in, which you can set using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "targetClass"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. Optionally, you can set the binding name by setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "bindingName"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. In the following example, we bind the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Flights"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans>\n\t<bean id=\"jibxFlightsMarshaller\" class=\"org.springframework.oxm.jibx.JibxMarshaller\">\n\t\t<property name=\"targetClass\">org.springframework.oxm.jibx.Flights</property>\n\t</bean>\n\t...\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JibxMarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is configured for a single class. If you want to marshal multiple classes, you have to configure multiple "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JibxMarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances with different "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "targetClass"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property values."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jibx-marshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " tag configures a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.oxm.jibx.JibxMarshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<oxm:jibx-marshaller id=\"marshaller\" target-class=\"org.springframework.ws.samples.airline.schema.Flight\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following table describes the available attributes:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "autowidth": false,
+                    "body": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "id"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "The ID of the marshaller"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "No"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ],
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "target-class"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "The target class for this marshaller"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "Yes"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ],
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "bindingName"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "The binding name used by this marshaller"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "paragraphs": [
+                            [
+                              {
+                                "kind": "text",
+                                "value": "No"
+                              }
+                            ]
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "caption": null,
+                    "columns": [
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3333"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3333"
+                      },
+                      {
+                        "autowidth": false,
+                        "halign": "left",
+                        "style": null,
+                        "valign": "top",
+                        "width": "33.3334"
+                      }
+                    ],
+                    "context": "table",
+                    "explicit_width": false,
+                    "float": null,
+                    "foot": [],
+                    "frame": "all",
+                    "grid": "all",
+                    "head": [
+                      [
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Attribute"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Description"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        },
+                        {
+                          "background": null,
+                          "colspan": 1,
+                          "halign": "left",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Required"
+                            }
+                          ],
+                          "rowspan": 1,
+                          "style": null,
+                          "valign": "top"
+                        }
+                      ]
+                    ],
+                    "id": null,
+                    "options": [],
+                    "roles": [],
+                    "stripes": "odd",
+                    "title": null,
+                    "width": 100
+                  }
+                ],
+                "context": "section",
+                "id": "oxm-jibx-xsd",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "XML Configuration Namespace"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "oxm-jibx-marshaller",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JibxMarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "oxm-jibx",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "JiBX"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "XStream is a simple library to serialize objects to XML and back again. It does not require any mapping and generates clean XML."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more information on XStream, see the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XStream web site"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://x-stream.github.io/"
+              },
+              {
+                "kind": "text",
+                "value": ". The Spring integration classes reside in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.oxm.xstream"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "XStreamMarshaller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " does not require any configuration and can be configured in an application context directly. To further customize the XML, you can set an alias map, which consists of string aliases mapped to classes, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans>\n\t<bean id=\"xstreamMarshaller\" class=\"org.springframework.oxm.xstream.XStreamMarshaller\">\n\t\t<property name=\"aliases\">\n\t\t\t<props>\n\t\t\t\t<prop key=\"Flight\">org.springframework.oxm.xstream.Flight</prop>\n\t\t\t</props>\n\t\t</property>\n\t</bean>\n\t...\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "By default, XStream lets arbitrary classes be unmarshalled, which can lead to unsafe Java serialization effects. As such, we do not recommend using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "XStreamMarshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to unmarshal XML from external sources (that is, the Web), as this can result in security vulnerabilities."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you choose to use the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "XStreamMarshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to unmarshal XML from an external source, set the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "supportedClasses"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property on the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "XStreamMarshaller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"xstreamMarshaller\" class=\"org.springframework.oxm.xstream.XStreamMarshaller\">\n\t<property name=\"supportedClasses\" value=\"org.springframework.oxm.xstream.Flight\"/>\n\t...\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Doing so ensures that only the registered classes are eligible for unmarshalling."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Additionally, you can register "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "custom converters"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/oxm/xstream/XStreamMarshaller.html#setConverters(com.thoughtworks.xstream.converters.ConverterMatcher…​)"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to make sure that only your supported classes can be unmarshalled. You might want to add a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CatchAllConverter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " as the last converter in the list, in addition to converters that explicitly support the domain classes that should be supported. As a result, default XStream converters with lower priorities and possible security vulnerabilities do not get invoked."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that XStream is an XML serialization library, not a data binding library. Therefore, it has limited namespace support. As a result, it is rather unsuitable for usage within Web Services."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "oxm-xstream-marshaller",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XStreamMarshaller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "oxm-xstream",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "XStream"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Marshalling XML by Using Object-XML Mappers"
+      }
+    ]
+  }
+}

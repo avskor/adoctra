@@ -1,0 +1,3643 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This part of the appendix lists XML schemas related to the core container."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As the name implies, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "util"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " tags deal with common, utility configuration issues, such as configuring collections, referencing constants, and so forth. To use the tags in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "util"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file (the text in the snippet references the correct schema so that the tags in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "util"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " namespace are available to you):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:util=\"http://www.springframework.org/schema/util\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/util https://www.springframework.org/schema/util/spring-util.xsd\">\n\n\t\t<!-- bean definitions here -->\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following bean definition:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean id=\"...\" class=\"...\">\n\t<property name=\"isolation\">\n\t\t<bean id=\"java.sql.Connection.TRANSACTION_SERIALIZABLE\"\n\t\t\t\tclass=\"org.springframework.beans.factory.config.FieldRetrievingFactoryBean\" />\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FieldRetrievingFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to set the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "isolation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property on a bean to the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.sql.Connection.TRANSACTION_SERIALIZABLE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " constant. This is all well and good, but it is verbose and (unnecessarily) exposes Spring’s internal plumbing to the end user."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following XML Schema-based version is more concise, clearly expresses the developer’s intent (“inject this constant value”), and it reads better:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean id=\"...\" class=\"...\">\n\t<property name=\"isolation\">\n\t\t<util:constant static-field=\"java.sql.Connection.TRANSACTION_SERIALIZABLE\"/>\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "FieldRetrievingFactoryBean"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/factory/config/FieldRetrievingFactoryBean.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FactoryBean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " that retrieves a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "static"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or non-static field value. It is typically used for retrieving "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "public"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "static"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "final"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " constants, which may then be used to set a property value or constructor argument for another bean."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "static"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " field is exposed, by using the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "staticField"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/factory/config/FieldRetrievingFactoryBean.html#setStaticField(java.lang.String)"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"myField\"\n\t\tclass=\"org.springframework.beans.factory.config.FieldRetrievingFactoryBean\">\n\t<property name=\"staticField\" value=\"java.sql.Connection.TRANSACTION_SERIALIZABLE\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "There is also a convenience usage form where the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "static"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " field is specified as the bean name, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"java.sql.Connection.TRANSACTION_SERIALIZABLE\"\n\t\tclass=\"org.springframework.beans.factory.config.FieldRetrievingFactoryBean\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This does mean that there is no longer any choice in what the bean "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "id"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is (so any other bean that refers to it also has to use this longer name), but this form is very concise to define and very convenient to use as an inner bean since the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "id"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " does not have to be specified for the bean reference, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"...\" class=\"...\">\n\t<property name=\"isolation\">\n\t\t<bean id=\"java.sql.Connection.TRANSACTION_SERIALIZABLE\"\n\t\t\t\tclass=\"org.springframework.beans.factory.config.FieldRetrievingFactoryBean\" />\n\t</property>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can also access a non-static (instance) field of another bean, as described in the API documentation for the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "FieldRetrievingFactoryBean"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/factory/config/FieldRetrievingFactoryBean.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " class."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Injecting enumeration values into beans as either property or constructor arguments is easy to do in Spring. You do not actually have to do anything or know anything about the Spring internals (or even about classes such as the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FieldRetrievingFactoryBean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "). The following example enumeration shows how easy injecting an enum value is:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "package jakarta.persistence;\n\npublic enum PersistenceContextType {\n\n\tTRANSACTION,\n\tEXTENDED\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "package jakarta.persistence\n\nenum class PersistenceContextType {\n\n\tTRANSACTION,\n\tEXTENDED\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Now consider the following setter of type "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PersistenceContextType"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and the corresponding bean definition:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "package example;\n\npublic class Client {\n\n\tprivate PersistenceContextType persistenceContextType;\n\n\tpublic void setPersistenceContextType(PersistenceContextType type) {\n\t\tthis.persistenceContextType = type;\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "package example\n\nclass Client {\n\n\tlateinit var persistenceContextType: PersistenceContextType\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean class=\"example.Client\">\n\t<property name=\"persistenceContextType\" value=\"TRANSACTION\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "xsd-schemas-util-frfb",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Setting a Bean Property or Constructor Argument from a Field Value"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-constant",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:constant/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- target bean to be referenced by name -->\n<bean id=\"testBean\" class=\"org.springframework.beans.TestBean\" scope=\"prototype\">\n\t<property name=\"age\" value=\"10\"/>\n\t<property name=\"spouse\">\n\t\t<bean class=\"org.springframework.beans.TestBean\">\n\t\t\t<property name=\"age\" value=\"11\"/>\n\t\t</bean>\n\t</property>\n</bean>\n\n<!-- results in 10, which is the value of property 'age' of bean 'testBean' -->\n<bean id=\"testBean.age\" class=\"org.springframework.beans.factory.config.PropertyPathFactoryBean\"/>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertyPathFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to create a bean (of type "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "int"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testBean.age"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that has a value equal to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "age"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " bean."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now consider the following example, which adds a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:property-path/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- target bean to be referenced by name -->\n<bean id=\"testBean\" class=\"org.springframework.beans.TestBean\" scope=\"prototype\">\n\t<property name=\"age\" value=\"10\"/>\n\t<property name=\"spouse\">\n\t\t<bean class=\"org.springframework.beans.TestBean\">\n\t\t\t<property name=\"age\" value=\"11\"/>\n\t\t</bean>\n\t</property>\n</bean>\n\n<!-- results in 10, which is the value of property 'age' of bean 'testBean' -->\n<util:property-path id=\"name\" path=\"testBean.age\"/>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "path"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<property-path/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element follows the form of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "beanName.beanProperty"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". In this case, it picks up the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "age"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property of the bean named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "testBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The value of that "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "age"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "10"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertyPathFactoryBean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "FactoryBean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " that evaluates a property path on a given target object. The target object can be specified directly or by a bean name. You can then use this value in another bean definition as a property value or constructor argument."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows a path being used against another bean, by name:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<!-- target bean to be referenced by name -->\n<bean id=\"person\" class=\"org.springframework.beans.TestBean\" scope=\"prototype\">\n\t<property name=\"age\" value=\"10\"/>\n\t<property name=\"spouse\">\n\t\t<bean class=\"org.springframework.beans.TestBean\">\n\t\t\t<property name=\"age\" value=\"11\"/>\n\t\t</bean>\n\t</property>\n</bean>\n\n<!-- results in 11, which is the value of property 'spouse.age' of bean 'person' -->\n<bean id=\"theAge\"\n\t\tclass=\"org.springframework.beans.factory.config.PropertyPathFactoryBean\">\n\t<property name=\"targetBeanName\" value=\"person\"/>\n\t<property name=\"propertyPath\" value=\"spouse.age\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In the following example, a path is evaluated against an inner bean:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<!-- results in 12, which is the value of property 'age' of the inner bean -->\n<bean id=\"theAge\"\n\t\tclass=\"org.springframework.beans.factory.config.PropertyPathFactoryBean\">\n\t<property name=\"targetObject\">\n\t\t<bean class=\"org.springframework.beans.TestBean\">\n\t\t\t<property name=\"age\" value=\"12\"/>\n\t\t</bean>\n\t</property>\n\t<property name=\"propertyPath\" value=\"age\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "There is also a shortcut form, where the bean name is the property path. The following example shows the shortcut form:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<!-- results in 10, which is the value of property 'age' of bean 'person' -->\n<bean id=\"person.age\"\n\t\tclass=\"org.springframework.beans.factory.config.PropertyPathFactoryBean\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This form does mean that there is no choice in the name of the bean. Any reference to it also has to use the same "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "id"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", which is the path. If used as an inner bean, there is no need to refer to it at all, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"...\" class=\"...\">\n\t<property name=\"age\">\n\t\t<bean id=\"person.age\"\n\t\t\t\tclass=\"org.springframework.beans.factory.config.PropertyPathFactoryBean\"/>\n\t</property>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can specifically set the result type in the actual definition. This is not necessary for most use cases, but it can sometimes be useful. See the javadoc for more info on this feature."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "xsd-schemas-util-property-path-dependency",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:property-path/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to Set a Bean Property or Constructor Argument"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-property-path",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:property-path/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Properties instance with values loaded from the supplied location -->\n<bean id=\"jdbcConfiguration\" class=\"org.springframework.beans.factory.config.PropertiesFactoryBean\">\n\t<property name=\"location\" value=\"classpath:com/foo/jdbc-production.properties\"/>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertiesFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to instantiate a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance with values loaded from the supplied "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Resource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-webclient/client-builder.html#webflux-client-builder-reactor-resources"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " location)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "util:properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element to make a more concise representation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Properties instance with values loaded from the supplied location -->\n<util:properties id=\"jdbcConfiguration\" location=\"classpath:com/foo/jdbc-production.properties\"/>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-properties",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:properties/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.List instance with values loaded from the supplied 'sourceList' -->\n<bean id=\"emails\" class=\"org.springframework.beans.factory.config.ListFactoryBean\">\n\t<property name=\"sourceList\">\n\t\t<list>\n\t\t\t<value>pechorin@hero.org</value>\n\t\t\t<value>raskolnikov@slums.org</value>\n\t\t\t<value>stavrogin@gov.org</value>\n\t\t\t<value>porfiry@gov.org</value>\n\t\t</list>\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ListFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.List"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance and initialize it with values taken from the supplied "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sourceList"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:list/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element to make a more concise representation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.List instance with the supplied values -->\n<util:list id=\"emails\">\n\t<value>pechorin@hero.org</value>\n\t<value>raskolnikov@slums.org</value>\n\t<value>stavrogin@gov.org</value>\n\t<value>porfiry@gov.org</value>\n</util:list>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also explicitly control the exact type of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that is instantiated and populated by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "list-class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:list/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element. For example, if we really need a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.LinkedList"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to be instantiated, we could use the following configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:list id=\"emails\" list-class=\"java.util.LinkedList\">\n\t<value>jackshaftoe@vagabond.org</value>\n\t<value>eliza@thinkingmanscrumpet.org</value>\n\t<value>vanhoek@pirate.org</value>\n\t<value>d'Arcachon@nemesis.org</value>\n</util:list>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "list-class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute is supplied, the container chooses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "List"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-list",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:list/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Map instance with values loaded from the supplied 'sourceMap' -->\n<bean id=\"emails\" class=\"org.springframework.beans.factory.config.MapFactoryBean\">\n\t<property name=\"sourceMap\">\n\t\t<map>\n\t\t\t<entry key=\"pechorin\" value=\"pechorin@hero.org\"/>\n\t\t\t<entry key=\"raskolnikov\" value=\"raskolnikov@slums.org\"/>\n\t\t\t<entry key=\"stavrogin\" value=\"stavrogin@gov.org\"/>\n\t\t\t<entry key=\"porfiry\" value=\"porfiry@gov.org\"/>\n\t\t</map>\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MapFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Map"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance initialized with key-value pairs taken from the supplied "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'sourceMap'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:map/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element to make a more concise representation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Map instance with the supplied key-value pairs -->\n<util:map id=\"emails\">\n\t<entry key=\"pechorin\" value=\"pechorin@hero.org\"/>\n\t<entry key=\"raskolnikov\" value=\"raskolnikov@slums.org\"/>\n\t<entry key=\"stavrogin\" value=\"stavrogin@gov.org\"/>\n\t<entry key=\"porfiry\" value=\"porfiry@gov.org\"/>\n</util:map>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also explicitly control the exact type of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Map"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that is instantiated and populated by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'map-class'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:map/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element. For example, if we really need a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.TreeMap"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to be instantiated, we could use the following configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:map id=\"emails\" map-class=\"java.util.TreeMap\">\n\t<entry key=\"pechorin\" value=\"pechorin@hero.org\"/>\n\t<entry key=\"raskolnikov\" value=\"raskolnikov@slums.org\"/>\n\t<entry key=\"stavrogin\" value=\"stavrogin@gov.org\"/>\n\t<entry key=\"porfiry\" value=\"porfiry@gov.org\"/>\n</util:map>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'map-class'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute is supplied, the container chooses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Map"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-map",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:map/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Set instance with values loaded from the supplied 'sourceSet' -->\n<bean id=\"emails\" class=\"org.springframework.beans.factory.config.SetFactoryBean\">\n\t<property name=\"sourceSet\">\n\t\t<set>\n\t\t\t<value>pechorin@hero.org</value>\n\t\t\t<value>raskolnikov@slums.org</value>\n\t\t\t<value>stavrogin@gov.org</value>\n\t\t\t<value>porfiry@gov.org</value>\n\t\t</set>\n\t</property>\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration uses a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation (the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SetFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Set"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance initialized with values taken from the supplied "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sourceSet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:set/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element to make a more concise representation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- creates a java.util.Set instance with the supplied values -->\n<util:set id=\"emails\">\n\t<value>pechorin@hero.org</value>\n\t<value>raskolnikov@slums.org</value>\n\t<value>stavrogin@gov.org</value>\n\t<value>porfiry@gov.org</value>\n</util:set>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also explicitly control the exact type of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Set"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that is instantiated and populated by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "set-class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<util:set/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element. For example, if we really need a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.TreeSet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to be instantiated, we could use the following configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:set id=\"emails\" set-class=\"java.util.TreeSet\">\n\t<value>pechorin@hero.org</value>\n\t<value>raskolnikov@slums.org</value>\n\t<value>stavrogin@gov.org</value>\n\t<value>porfiry@gov.org</value>\n</util:set>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "set-class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute is supplied, the container chooses a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Set"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-util-set",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<util:set/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "xsd-schemas-util",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "util"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Schema"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "aop"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " tags deal with configuring all things AOP in Spring, including Spring’s own proxy-based AOP framework and Spring’s integration with the AspectJ AOP framework. These tags are comprehensively covered in the chapter entitled "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Aspect Oriented Programming with Spring"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/aop.html"
+              },
+              {
+                "kind": "text",
+                "value": " ."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the interest of completeness, to use the tags in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "aop"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file (the text in the snippet references the correct schema so that the tags in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "aop"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " namespace are available to you):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "xsd-schemas-aop",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "aop"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Schema"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "context"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " tags deal with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration that relates to plumbing — that is, not usually beans that are important to an end-user but rather beans that do a lot of the “grunt” work in Spring, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanfactoryPostProcessors"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following snippet references the correct schema so that the elements in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "context"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " namespace are available to you:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element activates the replacement of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "${…​}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " placeholders, which are resolved against a specified properties file (as a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring resource location"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-webclient/client-builder.html#webflux-client-builder-reactor-resources"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). This element is a convenience mechanism that sets up a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertySourcesPlaceholderConfigurer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/factory-extension.html#beans-factory-placeholderconfigurer"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for you. If you need more control over the specific "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertySourcesPlaceholderConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " setup, you can explicitly define it as a bean yourself."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Only one such element should be defined for a given application with the properties that it needs. Several property placeholders can be configured as long as they have distinct placeholder syntax ("
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "${…​}"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ")."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you need to modularize the source of properties used for the replacement, you should not create multiple properties placeholders. Rather, each module should contribute a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertySource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Environment"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Alternatively, you can create your own "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertySourcesPlaceholderConfigurer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " bean that gathers the properties to use."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-pphc",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<property-placeholder/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element activates the Spring infrastructure to detect annotations in bean classes:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring’s "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Configuration"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "core/beans/basics.html#beans-factory-metadata"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " model"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Autowired"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "/"
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@Inject"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "core/beans/annotation-config.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Value"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Lookup"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JSR-250’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Resource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@PostConstruct"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@PreDestroy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (if available)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JAX-WS’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@WebServiceRef"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and EJB 3’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@EJB"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (if available)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JPA’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@PersistenceContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@PersistenceUnit"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (if available)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Spring’s "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "@EventListener"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "core/beans/context-introduction.html#context-functionality-events-annotation"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternatively, you can choose to explicitly activate the individual "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanPostProcessors"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for those annotations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element does not activate processing of Spring’s "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Transactional"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access/transaction/declarative/annotations.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation; you can use the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<tx:annotation-driven/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "data-access.html#tx-decl-explained"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element for that purpose. Similarly, Spring’s "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "caching annotations"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/cache/annotations.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " need to be explicitly "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "enabled"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/cache/annotations.html#cache-annotation-enable"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as well."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-ac",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<annotation-config/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element is detailed in the section on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "annotation-based container configuration"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/annotation-config.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-component-scan",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<component-scan/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element is detailed in the section on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "load-time weaving with AspectJ in the Spring Framework"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/aop/using-aspectj.html#aop-aj-ltw"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-ltw",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<load-time-weaver/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element is detailed in the section on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "using AspectJ to dependency inject domain objects with Spring"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/aop/using-aspectj.html#aop-atconfigurable"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-sc",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<spring-configured/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element is detailed in the section on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuring annotation-based MBean export"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/jmx/naming.html#jmx-context-mbeanexport"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-context-mbe",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<mbean-export/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "xsd-schemas-context",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "context"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Schema"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Last but not least, we have the elements in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "beans"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " schema. These elements have been in Spring since the very dawn of the framework. Examples of the various elements in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "beans"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " schema are not shown here because they are quite comprehensively covered in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dependencies and configuration in detail"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/beans/dependencies/factory-properties-detailed.html"
+              },
+              {
+                "kind": "text",
+                "value": " (and, indeed, in that entire "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "chapter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc-view/mvc-xslt.html#mvc-view-xslt-beandefs"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that you can add zero or more key-value pairs to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " XML definitions. What, if anything, is done with this extra metadata is totally up to your own custom logic (and so is typically only of use if you write your own custom elements as described in the appendix entitled "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XML Schema Authoring"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/appendix/xml-custom.html"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<meta/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element in the context of a surrounding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (note that, without any logic to interpret it, the metadata is effectively useless as it stands)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\">\n\n\t<bean id=\"foo\" class=\"x.y.Foo\">\n\t\t<meta key=\"cacheName\" value=\"foo\"/> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t\t<property name=\"name\" value=\"Rick\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This is the example "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "meta"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element"
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the case of the preceding example, you could assume that there is some logic that consumes the bean definition and sets up some caching infrastructure that uses the supplied metadata."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "xsd-schemas-beans",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "The Beans Schema"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "XML Schemas"
+      }
+    ]
+  }
+}

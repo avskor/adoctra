@@ -1,0 +1,1271 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring’s JMX offering includes comprehensive support for JMX notifications."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring’s JMX support makes it easy to register any number of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with any number of MBeans (this includes MBeans exported by Spring’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and MBeans registered through some other mechanism). For example, consider the scenario where one would like to be informed (through a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") each and every time an attribute of a target MBean changes. The following example writes notifications to the console:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package com.example;\n\nimport javax.management.AttributeChangeNotification;\nimport javax.management.Notification;\nimport javax.management.NotificationFilter;\nimport javax.management.NotificationListener;\n\npublic class ConsoleLoggingNotificationListener\n\t\timplements NotificationListener, NotificationFilter {\n\n\tpublic void handleNotification(Notification notification, Object handback) {\n\t\tSystem.out.println(notification);\n\t\tSystem.out.println(handback);\n\t}\n\n\tpublic boolean isNotificationEnabled(Notification notification) {\n\t\treturn AttributeChangeNotification.class.isAssignableFrom(notification.getClass());\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example adds "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConsoleLoggingNotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (defined in the preceding example) to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notificationListenerMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"beans\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean1\" value-ref=\"testBean\"/>\n\t\t\t</map>\n\t\t</property>\n\t\t<property name=\"notificationListenerMappings\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean1\">\n\t\t\t\t\t<bean class=\"com.example.ConsoleLoggingNotificationListener\"/>\n\t\t\t\t</entry>\n\t\t\t</map>\n\t\t</property>\n\t</bean>\n\n\t<bean id=\"testBean\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With the preceding configuration in place, every time a JMX "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is broadcast from the target MBean ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bean:name=testBean1"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConsoleLoggingNotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean that was registered as a listener through the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notificationListenerMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is notified. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ConsoleLoggingNotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean can then take whatever action it deems appropriate in response to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also use straight bean names as the link between exported beans and listeners, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"beans\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean1\" value-ref=\"testBean\"/>\n\t\t\t</map>\n\t\t</property>\n\t\t<property name=\"notificationListenerMappings\">\n\t\t\t<map>\n\t\t\t\t<entry key=\""
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testBean"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "\">\n\t\t\t\t\t<bean class=\"com.example.ConsoleLoggingNotificationListener\"/>\n\t\t\t\t</entry>\n\t\t\t</map>\n\t\t</property>\n\t</bean>\n\n\t<bean id=\""
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testBean"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to register a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance for all of the beans that the enclosing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " exports, you can use the special wildcard ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "*"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") as the key for an entry in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notificationListenerMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property map, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<property name=\"notificationListenerMappings\">\n\t<map>\n\t\t<entry key=\"*\">\n\t\t\t<bean class=\"com.example.ConsoleLoggingNotificationListener\"/>\n\t\t</entry>\n\t</map>\n</property>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need to do the inverse (that is, register a number of distinct listeners against an MBean), you must instead use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notificationListeners"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " list property (in preference to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notificationListenerMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property). This time, instead of configuring a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for a single MBean, we configure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListenerBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListenerBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " encapsulates a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ObjectName"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ObjectNames"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") that it is to be registered against in an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanServer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListenerBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also encapsulates a number of other properties, such as a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and an arbitrary handback object that can be used in advanced JMX notification scenarios."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The configuration when using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationListenerBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances is not wildly different to what was presented previously, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"beans\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean1\" value-ref=\"testBean\"/>\n\t\t\t</map>\n\t\t</property>\n\t\t<property name=\"notificationListeners\">\n\t\t\t<list>\n\t\t\t\t<bean class=\"org.springframework.jmx.export.NotificationListenerBean\">\n\t\t\t\t\t<constructor-arg>\n\t\t\t\t\t\t<bean class=\"com.example.ConsoleLoggingNotificationListener\"/>\n\t\t\t\t\t</constructor-arg>\n\t\t\t\t\t<property name=\"mappedObjectNames\">\n\t\t\t\t\t\t<list>\n\t\t\t\t\t\t\t<value>bean:name=testBean1</value>\n\t\t\t\t\t\t</list>\n\t\t\t\t\t</property>\n\t\t\t\t</bean>\n\t\t\t</list>\n\t\t</property>\n\t</bean>\n\n\t<bean id=\"testBean\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The preceding example is equivalent to the first notification example. Assume, then, that we want to be given a handback object every time a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is raised and that we also want to filter out extraneous "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notifications"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " by supplying a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following example accomplishes these goals:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"beans\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean1\" value-ref=\"testBean1\"/>\n\t\t\t\t<entry key=\"bean:name=testBean2\" value-ref=\"testBean2\"/>\n\t\t\t</map>\n\t\t</property>\n\t\t<property name=\"notificationListeners\">\n\t\t\t<list>\n\t\t\t\t<bean class=\"org.springframework.jmx.export.NotificationListenerBean\">\n\t\t\t\t\t<constructor-arg ref=\"customerNotificationListener\"/>\n\t\t\t\t\t<property name=\"mappedObjectNames\">\n\t\t\t\t\t\t<list>\n\t\t\t\t\t\t\t<!-- handles notifications from two distinct MBeans -->\n\t\t\t\t\t\t\t<value>bean:name=testBean1</value>\n\t\t\t\t\t\t\t<value>bean:name=testBean2</value>\n\t\t\t\t\t\t</list>\n\t\t\t\t\t</property>\n\t\t\t\t\t<property name=\"handback\">\n\t\t\t\t\t\t<bean class=\"java.lang.String\">\n\t\t\t\t\t\t\t<constructor-arg value=\"This could be anything...\"/>\n\t\t\t\t\t\t</bean>\n\t\t\t\t\t</property>\n\t\t\t\t\t<property name=\"notificationFilter\" ref=\"customerNotificationListener\"/>\n\t\t\t\t</bean>\n\t\t\t</list>\n\t\t</property>\n\t</bean>\n\n\t<!-- implements both the NotificationListener and NotificationFilter interfaces -->\n\t<bean id=\"customerNotificationListener\" class=\"com.example.ConsoleLoggingNotificationListener\"/>\n\n\t<bean id=\"testBean1\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n\t<bean id=\"testBean2\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"ANOTHER TEST\"/>\n\t\t<property name=\"age\" value=\"200\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "(For a full discussion of what a handback object is and, indeed, what a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is, see the section of the JMX specification (1.2) entitled 'The JMX Notification Model'.)"
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-notifications-listeners",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering Listeners for Notifications"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring provides support not only for registering to receive "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notifications"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " but also for publishing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notifications"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section is really only relevant to Spring-managed beans that have been exposed as MBeans through an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Any existing user-defined MBeans should use the standard JMX APIs for notification publication."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The key interface in Spring’s JMX notification publication support is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface (defined in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.jmx.export.notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package). Any bean that is going to be exported as an MBean through an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance can implement the related "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisherAware"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface to gain access to a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisherAware"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface supplies an instance of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the implementing bean through a simple setter method, which the bean can then use to publish "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notifications"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As stated in the javadoc of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NotificationPublisher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jmx/export/notification/NotificationPublisher.html"
+              },
+              {
+                "kind": "text",
+                "value": " interface, managed beans that publish events through the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism are not responsible for the state management of notification listeners. Spring’s JMX support takes care of handling all the JMX infrastructure issues. All you need to do, as an application developer, is implement the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisherAware"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface and start publishing events by using the supplied "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance. Note that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is set after the managed bean has been registered with an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanServer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance is quite straightforward. You create a JMX "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance (or an instance of an appropriate "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " subclass), populate the notification with the data pertinent to the event that is to be published, and invoke the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sendNotification(Notification)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance, passing in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notification"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the following example, exported instances of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JmxTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " publish a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " every time the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add(int, int)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " operation is invoked:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.jmx;\n\nimport org.springframework.jmx.export.notification.NotificationPublisherAware;\nimport org.springframework.jmx.export.notification.NotificationPublisher;\nimport javax.management.Notification;\n\npublic class JmxTestBean implements IJmxTestBean, NotificationPublisherAware {\n\n\tprivate String name;\n\tprivate int age;\n\tprivate boolean isSuperman;\n\tprivate NotificationPublisher publisher;\n\n\t// other getters and setters omitted for clarity\n\n\tpublic int add(int x, int y) {\n\t\tint answer = x + y;\n\t\tthis.publisher.sendNotification(new Notification(\"add\", this, 0));\n\t\treturn answer;\n\t}\n\n\tpublic void dontExposeMe() {\n\t\tthrow new RuntimeException();\n\t}\n\n\tpublic void setNotificationPublisher(NotificationPublisher notificationPublisher) {\n\t\tthis.publisher = notificationPublisher;\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface and the machinery to get it all working is one of the nicer features of Spring’s JMX support. It does, however, come with the price tag of coupling your classes to both Spring and JMX. As always, the advice here is to be pragmatic. If you need the functionality offered by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NotificationPublisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and you can accept the coupling to both Spring and JMX, then do so."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-notifications-publishing",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Publishing Notifications"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Notifications"
+      }
+    ]
+  }
+}

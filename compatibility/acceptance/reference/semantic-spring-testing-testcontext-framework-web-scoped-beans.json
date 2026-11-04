@@ -1,0 +1,768 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring has supported "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Request- and session-scoped beans"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/factory-scopes.html#beans-factory-scopes-other"
+          },
+          {
+            "kind": "text",
+            "value": " since the early years, and you can test your request-scoped and session-scoped beans by following these steps:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Ensure that a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is loaded for your test by annotating your test class with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@WebAppConfiguration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Inject the mock request or session into your test instance and prepare your test fixture as appropriate."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Invoke your web component that you retrieved from the configured "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (with dependency injection)."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Perform assertions against the mocks."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The next code snippet shows the XML configuration for a login use case. Note that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean has a dependency on a request-scoped "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "loginAction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean. Also, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "LoginAction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is instantiated by using "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SpEL expressions"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/expressions.html"
+          },
+          {
+            "kind": "text",
+            "value": " that retrieve the username and password from the current HTTP request. In our test, we want to configure these request parameters through the mock managed by the TestContext framework. The following listing shows the configuration for this use case:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<beans>\n\n\t<bean id=\"userService\" class=\"com.example.SimpleUserService\"\n\t\t\tc:loginAction-ref=\"loginAction\"/>\n\n\t<bean id=\"loginAction\" class=\"com.example.LoginAction\"\n\t\t\tc:username=\"#{request.getParameter('user')}\"\n\t\t\tc:password=\"#{request.getParameter('pswd')}\"\n\t\t\tscope=\"request\">\n\t\t<aop:scoped-proxy/>\n\t</bean>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Request-scoped bean configuration"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "RequestScopedBeanTests"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", we inject both the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UserService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (that is, the subject under test) and the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " into our test instance. Within our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "requestScope()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " test method, we set up our test fixture by setting request parameters in the provided "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". When the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "loginUser()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method is invoked on our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", we are assured that the user service has access to the request-scoped "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "loginAction"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for the current "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpServletRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (that is, the one in which we just set parameters). We can then perform assertions against the results based on the known inputs for the username and password. The following listing shows how to do so:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass RequestScopedBeanTests {\n\n\t@Autowired UserService userService;\n\t@Autowired MockHttpServletRequest request;\n\n\t@Test\n\tvoid requestScope() {\n\t\trequest.setParameter(\"user\", \"enigma\");\n\t\trequest.setParameter(\"pswd\", \"$pr!ng\");\n\n\t\tLoginResults results = userService.loginUser();\n\t\t// assert results\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass RequestScopedBeanTests {\n\n\t@Autowired lateinit var userService: UserService\n\t@Autowired lateinit var request: MockHttpServletRequest\n\n\t@Test\n\tfun requestScope() {\n\t\trequest.setParameter(\"user\", \"enigma\")\n\t\trequest.setParameter(\"pswd\", \"\\$pr!ng\")\n\n\t\tval results = userService.loginUser()\n\t\t// assert results\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Request-scoped bean test"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following code snippet is similar to the one we saw earlier for a request-scoped bean. However, this time, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean has a dependency on a session-scoped "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userPreferences"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean. Note that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UserPreferences"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean is instantiated by using a SpEL expression that retrieves the theme from the current HTTP session. In our test, we need to configure a theme in the mock session managed by the TestContext framework. The following example shows how to do so:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<beans>\n\n\t<bean id=\"userService\" class=\"com.example.SimpleUserService\"\n\t\t\tc:userPreferences-ref=\"userPreferences\" />\n\n\t<bean id=\"userPreferences\" class=\"com.example.UserPreferences\"\n\t\t\tc:theme=\"#{session.getAttribute('theme')}\"\n\t\t\tscope=\"session\">\n\t\t<aop:scoped-proxy/>\n\t</bean>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Session-scoped bean configuration"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SessionScopedBeanTests"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", we inject the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UserService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpSession"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " into our test instance. Within our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "sessionScope()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " test method, we set up our test fixture by setting the expected "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "theme"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute in the provided "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpSession"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". When the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "processUserPreferences()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method is invoked on our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", we are assured that the user service has access to the session-scoped "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "userPreferences"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for the current "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockHttpSession"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", and we can perform assertions against the results based on the configured theme. The following example shows how to do so:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass SessionScopedBeanTests {\n\n\t@Autowired UserService userService;\n\t@Autowired MockHttpSession session;\n\n\t@Test\n\tvoid sessionScope() throws Exception {\n\t\tsession.setAttribute(\"theme\", \"blue\");\n\n\t\tResults results = userService.processUserPreferences();\n\t\t// assert results\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitWebConfig\nclass SessionScopedBeanTests {\n\n\t@Autowired lateinit var userService: UserService\n\t@Autowired lateinit var session: MockHttpSession\n\n\t@Test\n\tfun sessionScope() {\n\t\tsession.setAttribute(\"theme\", \"blue\")\n\n\t\tval results = userService.processUserPreferences()\n\t\t// assert results\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Session-scoped bean test"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Testing Request- and Session-scoped Beans"
+      }
+    ]
+  }
+}

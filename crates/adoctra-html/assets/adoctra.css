@@ -349,6 +349,9 @@ aside.admonition {
   text-align: center;
   text-transform: uppercase;
 }
+/* A nested admonition's label inherits the outer content cell's size and
+   spacing, like Ruby's unsized `td.icon .title` there. */
+.admonition-content .admonition-title { font-size: inherit; letter-spacing: inherit; }
 .admonition-title img { max-width: none; }
 /* Ruby styles only a text label (its div.title); an icon cell does not. */
 .admonition-title:has(> img) {
@@ -370,7 +373,9 @@ aside.admonition {
    that carries a listing's or image's margin. */
 /* An adoctra list is Ruby's wrapped list, so its last item keeps the
    0.625em of Ruby's item `p`. */
-.admonition-content > :last-child:is(p, ul, ol, dl),
+/* A nested admonition's margin is Ruby's table's, the inner element zeroed
+   there too. */
+.admonition-content > :last-child:is(p, ul, ol, dl, aside.admonition),
 .admonition-content > :last-child:not(ul, ol) > :last-child { margin-block-end: 0; }
 
 /* `icons=font`: Ruby's Font Awesome glyphs and colours. */
@@ -810,6 +815,11 @@ ul li ol { margin-inline-start: 1.5em; }
 :is(ul, ol):not([class^="sectlevel"]) > li > :is(div, ul, ol, dl, table, figure, aside, details, nav, blockquote, hr) {
   font-size: 1rem;
   letter-spacing: normal;
+}
+/* In an admonition Ruby's block wrappers inherit the content cell's 17px
+   (a nested list's 1.25em indent is 21.25px there, not 20px). */
+.admonition-content :is(ul, ol):not([class^="sectlevel"]) > li > :is(div, ul, ol, dl, table, figure, aside, details, nav, blockquote, hr) {
+  font-size: inherit;
 }
 :is(ul, ol):not([class^="sectlevel"]) > li strong { letter-spacing: -0.005em; }
 /* That is Ruby's `p strong` (the item text); bold text in a verbatim block

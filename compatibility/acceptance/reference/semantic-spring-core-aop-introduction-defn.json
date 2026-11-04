@@ -1,0 +1,328 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Let us begin by defining some central AOP concepts and terminology. These terms are not Spring-specific. Unfortunately, AOP terminology is not particularly intuitive. However, it would be even more confusing if Spring used its own terminology."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Aspect: A modularization of a concern that cuts across multiple classes. Transaction management is a good example of a crosscutting concern in enterprise Java applications. In Spring AOP, aspects are implemented by using regular classes (the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "schema-based approach"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/aop/schema.html"
+              },
+              {
+                "kind": "text",
+                "value": ") or regular classes annotated with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Aspect"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation (the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@AspectJ style"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/aop/ataspectj.html"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Join point: A point during the execution of a program, such as the execution of a method or the handling of an exception. In Spring AOP, a join point always represents a method execution."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Advice: Action taken by an aspect at a particular join point. Different types of advice include \"around\", \"before\", and \"after\" advice. (Advice types are discussed later.) Many AOP frameworks, including Spring, model an advice as an interceptor and maintain a chain of interceptors around the join point."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Pointcut: A predicate that matches join points. Advice is associated with a pointcut expression and runs at any join point matched by the pointcut (for example, the execution of a method with a certain name). The concept of join points as matched by pointcut expressions is central to AOP, and Spring uses the AspectJ pointcut expression language by default."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Introduction: Declaring additional methods or fields on behalf of a type. Spring AOP lets you introduce new interfaces (and a corresponding implementation) to any advised object. For example, you could use an introduction to make a bean implement an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IsModified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface, to simplify caching. (An introduction is known as an inter-type declaration in the AspectJ community.)"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Target object: An object being advised by one or more aspects. Also referred to as the \"advised object\". Since Spring AOP is implemented by using runtime proxies, this object is always a proxied object."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AOP proxy: An object created by the AOP framework in order to implement the aspect contracts (advice method executions and so on). In the Spring Framework, an AOP proxy is a JDK dynamic proxy or a CGLIB proxy."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Weaving: linking aspects with other application types or objects to create an advised object. This can be done at compile time (using the AspectJ compiler, for example), load time, or at runtime. Spring AOP, like other pure Java AOP frameworks, performs weaving at runtime."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring AOP includes the following types of advice:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before advice: Advice that runs before a join point but that does not have the ability to prevent execution flow proceeding to the join point (unless it throws an exception)."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After returning advice: Advice to be run after a join point completes normally (for example, if a method returns without throwing an exception)."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After throwing advice: Advice to be run if a method exits by throwing an exception."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After (finally) advice: Advice to be run regardless of the means by which a join point exits (normal or exceptional return)."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Around advice: Advice that surrounds a join point such as a method invocation. This is the most powerful kind of advice. Around advice can perform custom behavior before and after the method invocation. It is also responsible for choosing whether to proceed to the join point or to shortcut the advised method execution by returning its own return value or throwing an exception."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Around advice is the most general kind of advice. Since Spring AOP, like AspectJ, provides a full range of advice types, we recommend that you use the least powerful advice type that can implement the required behavior. For example, if you need only to update a cache with the return value of a method, you are better off implementing an after returning advice than an around advice, although an around advice can accomplish the same thing. Using the most specific advice type provides a simpler programming model with less potential for errors. For example, you do not need to invoke the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "proceed()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method on the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JoinPoint"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " used for around advice, and, hence, you cannot fail to invoke it."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "All advice parameters are statically typed so that you work with advice parameters of the appropriate type (for example, the type of the return value from a method execution) rather than "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Object"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " arrays."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The concept of join points matched by pointcuts is the key to AOP, which distinguishes it from older technologies offering only interception. Pointcuts enable advice to be targeted independently of the object-oriented hierarchy. For example, you can apply an around advice providing declarative transaction management to a set of methods that span multiple objects (such as all business operations in the service layer)."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "AOP Concepts"
+      }
+    ]
+  }
+}

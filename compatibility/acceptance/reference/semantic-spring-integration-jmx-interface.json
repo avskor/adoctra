@@ -1,0 +1,3308 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the example in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "preceding section"
+                  }
+                ],
+                "kind": "xref",
+                "target": "integration/jmx/exporting.html#jmx-exporting-registration-behavior"
+              },
+              {
+                "kind": "text",
+                "value": ", you had little control over the management interface of your bean. All of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " properties and methods of each exported bean were exposed as JMX attributes and operations, respectively. To exercise finer-grained control over exactly which properties and methods of your exported beans are actually exposed as JMX attributes and operations, Spring JMX provides a comprehensive and extensible mechanism for controlling the management interfaces of your beans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Behind the scenes, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " delegates to an implementation of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.jmx.export.assembler.MBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, which is responsible for defining the management interface of each bean that is exposed. The default implementation, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.jmx.export.assembler.SimpleReflectiveMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", defines a management interface that exposes all public properties and methods (as you saw in the examples in the preceding sections). Spring provides two additional implementations of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface that let you control the generated management interface by using either source-level metadata or any arbitrary interface."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-assembler",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MBeanInfoAssembler"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " API"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can define the management interfaces for your beans by using source-level metadata. The reading of metadata is encapsulated by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.jmx.export.metadata.JmxAttributeSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface. Spring JMX provides a default implementation that uses Java annotations, namely "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.springframework.jmx.export.annotation.AnnotationJmxAttributeSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". You must configure the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with an implementation instance of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JmxAttributeSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface for it to function correctly, since there is no default."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To mark a bean for export to JMX, you should annotate the bean class with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation. You must annotate each method you wish to expose as an operation with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedOperation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation and annotate each property you wish to expose with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedAttribute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation. When annotating properties, you can omit either the annotation of the getter or the setter to create a write-only or read-only attribute, respectively."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "-annotated bean must be public, as must the methods exposing operations or attributes."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows an annotated version of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JmxTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class that we used in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Creating an MBeanServer"
+                  }
+                ],
+                "kind": "xref",
+                "target": "integration/jmx/exporting.html#jmx-exporting-mbeanserver"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.jmx;\n\n@ManagedResource(\n\t\tobjectName=\"bean:name=testBean4\",\n\t\tdescription=\"My Managed Bean\",\n\t\tlog=true,\n\t\tlogFile=\"jmx.log\",\n\t\tcurrencyTimeLimit=15,\n\t\tpersistPolicy=\"OnUpdate\",\n\t\tpersistPeriod=200,\n\t\tpersistLocation=\"foo\",\n\t\tpersistName=\"bar\")\npublic class AnnotationTestBean {\n\n\tprivate int age;\n\tprivate String name;\n\n\tpublic void setAge(int age) {\n\t\tthis.age = age;\n\t}\n\n\t@ManagedAttribute(description=\"The Age Attribute\", currencyTimeLimit=15)\n\tpublic int getAge() {\n\t\treturn this.age;\n\t}\n\n\t@ManagedAttribute(description=\"The Name Attribute\",\n\t\t\tcurrencyTimeLimit=20,\n\t\t\tdefaultValue=\"bar\",\n\t\t\tpersistPolicy=\"OnUpdate\")\n\tpublic void setName(String name) {\n\t\tthis.name = name;\n\t}\n\n\t@ManagedAttribute(defaultValue=\"foo\", persistPeriod=300)\n\tpublic String getName() {\n\t\treturn this.name;\n\t}\n\n\t@ManagedOperation(description=\"Add two numbers\")\n\t@ManagedOperationParameter(name = \"x\", description = \"The first number\")\n\t@ManagedOperationParameter(name = \"y\", description = \"The second number\")\n\tpublic int add(int x, int y) {\n\t\treturn x + y;\n\t}\n\n\tpublic void dontExposeMe() {\n\t\tthrow new RuntimeException();\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding example, you can see that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class is annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and that this "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation is configured with a set of attributes. These attributes can be used to configure various aspects of the MBean that is generated by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and are explained in greater detail later in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring JMX Annotations"
+                  }
+                ],
+                "kind": "xref",
+                "target": "integration/jmx/interface.html#jmx-interface-metadata-types"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Both the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "age"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " properties are annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedAttribute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", but, in the case of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "age"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property, only the getter method is annotated. This causes both of these properties to be included in the management interface as managed attributes, but the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "age"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute is read-only."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add(int, int)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method is annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedOperation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", whereas the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dontExposeMe()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method is not. This causes the management interface to contain only one operation ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add(int, int)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") when you use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class is not required to implement any Java interfaces, since the JMX management interface is derived solely from annotations."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following configuration shows how you can configure the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"assembler\" ref=\"assembler\"/>\n\t\t<property name=\"namingStrategy\" ref=\"namingStrategy\"/>\n\t\t<property name=\"autodetect\" value=\"true\"/>\n\t</bean>\n\n\t<!-- will create management interface using annotation metadata -->\n\t<bean id=\"assembler\"\n\t\t\tclass=\"org.springframework.jmx.export.assembler.MetadataMBeanInfoAssembler\">\n\t\t<property name=\"attributeSource\" ref=\"jmxAttributeSource\"/>\n\t</bean>\n\n\t<!-- will pick up the ObjectName from the annotation -->\n\t<bean id=\"namingStrategy\"\n\t\t\tclass=\"org.springframework.jmx.export.naming.MetadataNamingStrategy\">\n\t\t<property name=\"attributeSource\" ref=\"jmxAttributeSource\"/>\n\t</bean>\n\n\t<bean id=\"jmxAttributeSource\"\n\t\t\tclass=\"org.springframework.jmx.export.annotation.AnnotationJmxAttributeSource\"/>\n\n\t<bean id=\"testBean\" class=\"org.springframework.jmx.AnnotationTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding example, a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean has been configured with an instance of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationJmxAttributeSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class and passed to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " through the assembler property. This is all that is required to take advantage of annotation-driven management interfaces for your Spring-exposed MBeans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-metadata",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using Source-level Metadata: Java Annotations"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following table describes the annotations that are available for use in Spring JMX:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Classes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Marks all instances of a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Class"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " as JMX managed resources."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedNotification"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Classes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Indicates a JMX notification emitted by a managed resource."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Methods (only getters and setters)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Marks a getter or setter as one half of a JMX attribute."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedMetric"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Methods (only getters)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Marks a getter as a JMX attribute, with added descriptor properties to indicate that it is a metric."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperation"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Methods"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Marks a method as a JMX operation."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperationParameter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Methods"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Defines a description for an operation parameter."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 1. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "20"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "20"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "60"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Annotation"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Applies to"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": "jmx-metadata-types",
+            "options": [],
+            "roles": [],
+            "stripes": "odd",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Spring JMX annotations"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following table describes some of the common attributes that are available for use in these annotations. Consult the Javadoc for each annotation for further details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "objectName"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Used by "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MetadataNamingStrategy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to determine the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ObjectName"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " of a managed resource."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "description"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedNotification"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedMetric"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperation"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperationParameter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the description of the resource, notification, attribute, metric, or operation."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "currencyTimeLimit"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedMetric"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "currencyTimeLimit"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "defaultValue"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedAttribute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "defaultValue"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "log"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "log"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "logFile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "logFile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistPolicy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedMetric"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistPolicy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistPeriod"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedMetric"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistPeriod"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistLocation"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistLocation"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistName"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedResource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the value of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "persistName"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " descriptor field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "name"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperationParameter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the display name of an operation parameter."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "index"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ManagedOperationParameter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Sets the index of an operation parameter."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 2. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "20"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "20"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "60"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Attribute"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Applies to"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": "jmx-metadata-parameters",
+            "options": [],
+            "roles": [],
+            "stripes": "odd",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Spring JMX annotation attributes"
+              }
+            ],
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-metadata-types",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Spring JMX Annotations"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To simplify configuration even further, Spring includes the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutodetectCapableMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface, which extends the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface to add support for auto-detection of MBean resources. If you configure the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutodetectCapableMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it is allowed to \"vote\" on the inclusion of beans for exposure to JMX."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The only implementation of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutodetectCapableMBeanInfo"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which votes to include any bean that is marked with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. The default approach in this case is to use the bean name as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ObjectName"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which results in configuration similar to the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<!-- notice how no 'beans' are explicitly configured here -->\n\t\t<property name=\"autodetect\" value=\"true\"/>\n\t\t<property name=\"assembler\" ref=\"assembler\"/>\n\t</bean>\n\n\t<bean id=\"assembler\" class=\"org.springframework.jmx.export.assembler.MetadataMBeanInfoAssembler\">\n\t\t<property name=\"attributeSource\">\n\t\t\t<bean class=\"org.springframework.jmx.export.annotation.AnnotationJmxAttributeSource\"/>\n\t\t</property>\n\t</bean>\n\n\t<bean id=\"testBean\" class=\"org.springframework.jmx.AnnotationTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that, in the preceding configuration, no beans are passed to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MBeanExporter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". However, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is still registered, since it is annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ManagedResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " detects this and votes to include it. The only downside with this approach is that the name of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AnnotationTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " now has business meaning. You can address this issue by configuring an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ObjectNamingStrategy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as explained in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Controlling "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ObjectName"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " Instances for Your Beans"
+                  }
+                ],
+                "kind": "xref",
+                "target": "integration/jmx/naming.html"
+              },
+              {
+                "kind": "text",
+                "value": ". You can also see an example which uses the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataNamingStrategy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using Source-level Metadata: Java Annotations"
+                  }
+                ],
+                "kind": "xref",
+                "target": "integration/jmx/interface.html#jmx-interface-metadata"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-autodetect",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AutodetectCapableMBeanInfoAssembler"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Interface"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MetadataMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", Spring also includes the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which lets you constrain the methods and properties that are exposed based on the set of methods defined in a collection of interfaces."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although the standard mechanism for exposing MBeans is to use interfaces and a simple naming scheme, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extends this functionality by removing the need for naming conventions, letting you use more than one interface and removing the need for your beans to implement the MBean interfaces."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consider the following interface, which is used to define a management interface for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JmxTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class that we showed earlier:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public interface IJmxTestBean {\n\n\tpublic int add(int x, int y);\n\n\tpublic long myOperation();\n\n\tpublic int getAge();\n\n\tpublic void setAge(int age);\n\n\tpublic void setName(String name);\n\n\tpublic String getName();\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This interface defines the methods and properties that are exposed as operations and attributes on the JMX MBean. The following code shows how to configure Spring JMX to use this interface as the definition for the management interface:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\n\t<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t\t<property name=\"beans\">\n\t\t\t<map>\n\t\t\t\t<entry key=\"bean:name=testBean5\" value-ref=\"testBean\"/>\n\t\t\t</map>\n\t\t</property>\n\t\t<property name=\"assembler\">\n\t\t\t<bean class=\"org.springframework.jmx.export.assembler.InterfaceBasedMBeanInfoAssembler\">\n\t\t\t\t<property name=\"managedInterfaces\">\n\t\t\t\t\t<value>org.springframework.jmx.IJmxTestBean</value>\n\t\t\t\t</property>\n\t\t\t</bean>\n\t\t</property>\n\t</bean>\n\n\t<bean id=\"testBean\" class=\"org.springframework.jmx.JmxTestBean\">\n\t\t<property name=\"name\" value=\"TEST\"/>\n\t\t<property name=\"age\" value=\"100\"/>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding example, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is configured to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IJmxTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface when constructing the management interface for any bean. It is important to understand that beans processed by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are not required to implement the interface used to generate the JMX management interface."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding case, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IJmxTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface is used to construct all management interfaces for all beans. In many cases, this is not the desired behavior, and you may want to use different interfaces for different beans. In this case, you can pass "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance through the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "interfaceMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property, where the key of each entry is the bean name and the value of each entry is a comma-separated list of interface names to use for that bean."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If no management interface is specified through either the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "managedInterfaces"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "interfaceMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " properties, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InterfaceBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " reflects on the bean and uses all of the interfaces implemented by that bean to create the management interface."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-java",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Defining Management Interfaces by Using Java Interfaces"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MethodNameBasedMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lets you specify a list of method names that are exposed to JMX as attributes and operations. The following code shows a sample configuration:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<bean id=\"exporter\" class=\"org.springframework.jmx.export.MBeanExporter\">\n\t<property name=\"beans\">\n\t\t<map>\n\t\t\t<entry key=\"bean:name=testBean5\" value-ref=\"testBean\"/>\n\t\t</map>\n\t</property>\n\t<property name=\"assembler\">\n\t\t<bean class=\"org.springframework.jmx.export.assembler.MethodNameBasedMBeanInfoAssembler\">\n\t\t\t<property name=\"managedMethods\">\n\t\t\t\t<value>add,myOperation,getName,setName,getAge</value>\n\t\t\t</property>\n\t\t</bean>\n\t</property>\n</bean>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding example, you can see that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "myOperation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods are exposed as JMX operations, and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getName()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "setName(String)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getAge()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are exposed as the appropriate half of a JMX attribute. In the preceding code, the method mappings apply to beans that are exposed to JMX. To control method exposure on a bean-by-bean basis, you can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "methodMappings"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MethodNameMBeanInfoAssembler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to map bean names to lists of method names."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jmx-interface-methodnames",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MethodNameBasedMBeanInfoAssembler"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Controlling the Management Interface of Your Beans"
+      }
+    ]
+  }
+}

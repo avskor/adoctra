@@ -1,0 +1,1006 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When you use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DependencyInjectionTestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (which is configured by default), the dependencies of your test instances are injected from beans in the application context that you configured with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ContextConfiguration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or related annotations. You may use setter injection, field injection, or both, depending on which annotations you choose and whether you place them on setter methods or fields. If you are using JUnit Jupiter you may also optionally use constructor injection (see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Dependency Injection with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringExtension"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/testcontext-framework/support-classes.html#testcontext-junit-jupiter-di"
+          },
+          {
+            "kind": "text",
+            "value": "). For consistency with Spring’s annotation-based injection support, you may also use Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation or the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation from JSR-330 for field and setter injection."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For testing frameworks other than JUnit Jupiter, the TestContext framework does not participate in instantiation of the test class. Thus, the use of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for constructors has no effect for test classes."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Although field injection is discouraged in production code, field injection is actually quite natural in test code. The rationale for the difference is that you will never instantiate your test class directly. Consequently, there is no need to be able to invoke a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " constructor or setter method on your test class."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Because "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is used to perform "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "autowiring by type"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/dependencies/factory-autowire.html"
+          },
+          {
+            "kind": "text",
+            "value": " , if you have multiple bean definitions of the same type, you cannot rely on this approach for those particular beans. In that case, you can use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in conjunction with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". You can also choose to use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in conjunction with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Named"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Alternatively, if your test class has access to its "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", you can perform an explicit lookup by using (for example) a call to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "applicationContext.getBean(\"titleRepository\", TitleRepository.class)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If you do not want dependency injection applied to your test instances, do not annotate fields or setter methods with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Inject"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Alternatively, you can disable dependency injection altogether by explicitly configuring your class with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestExecutionListeners"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and omitting "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DependencyInjectionTestExecutionListener.class"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " from the list of listeners."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Consider the scenario of testing a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HibernateTitleRepository"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " class, as outlined in the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Goals"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/integration.html#integration-testing-goals"
+          },
+          {
+            "kind": "text",
+            "value": " section. The next two code listings demonstrate the use of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " on fields and setter methods. The application context configuration is presented after all sample code listings."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The dependency injection behavior in the following code listings is not specific to JUnit Jupiter. The same DI techniques can be used in conjunction with any supported testing framework."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following examples make calls to static assertion methods, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertNotNull()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", but without prepending the call with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Assertions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In such cases, assume that the method was properly imported through an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import static"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " declaration that is not shown in the example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The first code listing shows a JUnit Jupiter based implementation of the test class that uses "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for field injection:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension.class)\n// specifies the Spring configuration to load for this test fixture\n@ContextConfiguration(\"repository-config.xml\")\nclass HibernateTitleRepositoryTests {\n\n\t// this instance will be dependency injected by type\n\t@Autowired\n\tHibernateTitleRepository titleRepository;\n\n\t@Test\n\tvoid findById() {\n\t\tTitle title = titleRepository.findById(new Long(10));\n\t\tassertNotNull(title);\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension::class)\n// specifies the Spring configuration to load for this test fixture\n@ContextConfiguration(\"repository-config.xml\")\nclass HibernateTitleRepositoryTests {\n\n\t// this instance will be dependency injected by type\n\t@Autowired\n\tlateinit var titleRepository: HibernateTitleRepository\n\n\t@Test\n\tfun findById() {\n\t\tval title = titleRepository.findById(10)\n\t\tassertNotNull(title)\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Alternatively, you can configure the class to use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for setter injection, as follows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension.class)\n// specifies the Spring configuration to load for this test fixture\n@ContextConfiguration(\"repository-config.xml\")\nclass HibernateTitleRepositoryTests {\n\n\t// this instance will be dependency injected by type\n\tHibernateTitleRepository titleRepository;\n\n\t@Autowired\n\tvoid setTitleRepository(HibernateTitleRepository titleRepository) {\n\t\tthis.titleRepository = titleRepository;\n\t}\n\n\t@Test\n\tvoid findById() {\n\t\tTitle title = titleRepository.findById(new Long(10));\n\t\tassertNotNull(title);\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension::class)\n// specifies the Spring configuration to load for this test fixture\n@ContextConfiguration(\"repository-config.xml\")\nclass HibernateTitleRepositoryTests {\n\n\t// this instance will be dependency injected by type\n\tlateinit var titleRepository: HibernateTitleRepository\n\n\t@Autowired\n\tfun setTitleRepository(titleRepository: HibernateTitleRepository) {\n\t\tthis.titleRepository = titleRepository\n\t}\n\n\t@Test\n\tfun findById() {\n\t\tval title = titleRepository.findById(10)\n\t\tassertNotNull(title)\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The preceding code listings use the same XML context file referenced by the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ContextConfiguration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation (that is, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "repository-config.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). The following shows this configuration:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\">\n\n\t<!-- this bean will be injected into the HibernateTitleRepositoryTests class -->\n\t<bean id=\"titleRepository\" class=\"com.foo.repository.hibernate.HibernateTitleRepository\">\n\t\t<property name=\"sessionFactory\" ref=\"sessionFactory\"/>\n\t</bean>\n\n\t<bean id=\"sessionFactory\" class=\"org.springframework.orm.hibernate5.LocalSessionFactoryBean\">\n\t\t<!-- configuration elided for brevity -->\n\t</bean>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you are extending from a Spring-provided test base class that happens to use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Autowired"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on one of its setter methods, you might have multiple beans of the affected type defined in your application context (for example, multiple "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " beans). In such a case, you can override the setter method and use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Qualifier"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation to indicate a specific target bean, as follows (but make sure to delegate to the overridden method in the superclass as well):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// ...\n\n\t@Autowired\n\t@Override\n\tpublic void setDataSource(@Qualifier(\"myDataSource\") DataSource dataSource) {\n\t\tsuper.setDataSource(dataSource);\n\t}\n\n// ..."
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// ...\n\n\t@Autowired\n\toverride fun setDataSource(@Qualifier(\"myDataSource\") dataSource: DataSource) {\n\t\tsuper.setDataSource(dataSource)\n\t}\n\n// ..."
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The specified qualifier value indicates the specific "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean to inject, narrowing the set of type matches to a specific bean. Its value is matched against "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<qualifier>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " declarations within the corresponding "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " definitions. The bean name is used as a fallback qualifier value, so you can effectively also point to a specific bean by name there (as shown earlier, assuming that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "myDataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is the bean "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Dependency Injection of Test Fixtures"
+      }
+    ]
+  }
+}

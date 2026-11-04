@@ -1,0 +1,768 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestBean"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is used on a field in a test class to override a specific bean in the test’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with an instance provided by a factory method."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The associated factory method name is derived from the annotated field’s name, or the bean name if specified. The factory method must be "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "static"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", accept no arguments, and have a return type compatible with the type of the bean to override. To make things more explicit, or if you’d rather use a different name, the annotation allows for a specific method name to be provided."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "By default, the annotated field’s type is used to search for candidate beans to override. If multiple candidates match, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can be provided to narrow the candidate to override. Alternatively, a candidate whose bean name matches the name of the field will match."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A bean will be created if a corresponding bean does not exist. However, if you would like for the test to fail when a corresponding bean does not exist, you can set the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "enforceOverride"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "true"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " – for example, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestBean(enforceOverride = true)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To use a by-name override rather than a by-type override, specify the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "name"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute of the annotation."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Qualifiers, including the name of the field, are used to determine if a separate "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " needs to be created. If you are using this feature to override the same bean in several tests, make sure to name the field consistently to avoid creating unnecessary contexts."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "warning"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows how to use the default behavior of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestBean"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class OverrideBeanTests {\n\t@TestBean "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO1-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\tprivate CustomService customService;\n\n\t// test case body...\n\n\tprivate static CustomService customService() { "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO1-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\treturn new MyFakeCustomService();\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Mark a field for overriding the bean with type "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "CustomService"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "The result of this static method will be used as the instance and injected into the field."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In the example above, we are overriding the bean with type "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CustomService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". If more than one bean of that type exists, the bean named "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "customService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is considered. Otherwise, the test will fail, and you will need to provide a qualifier of some sort to identify which of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CustomService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " beans you want to override."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example uses a by-name lookup, rather than a by-type lookup:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class OverrideBeanTests {\n\t@TestBean(name = \"service\", methodName = \"createCustomService\") "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\tprivate CustomService customService;\n\n\t// test case body...\n\n\tprivate static CustomService createCustomService() { "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\treturn new MyFakeCustomService();\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Mark a field for overriding the bean with name "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "service"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ", and specify that the factory method is named "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "createCustomService"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "The result of this static method will be used as the instance and injected into the field."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring searches for the factory method to invoke in the test class, in the test class hierarchy, and in the enclosing class hierarchy for a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " test class."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, a factory method in an external class can be referenced via its fully-qualified method name following the syntax "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<fully-qualified class name>#<method name>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " – for example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "methodName = \"org.example.TestUtils#createCustomService\""
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Only "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "singleton"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " beans can be overridden. Any attempt to override a non-singleton bean will result in an exception."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When overriding a bean created by a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FactoryBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FactoryBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will be replaced with a singleton bean corresponding to the value returned from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@TestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " factory method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@TestBean"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      }
+    ]
+  }
+}

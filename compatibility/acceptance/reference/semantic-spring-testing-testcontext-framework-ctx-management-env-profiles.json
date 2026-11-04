@@ -1,0 +1,1921 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The Spring Framework has first-class support for the notion of environments and profiles (AKA \"bean definition profiles\"), and integration tests can be configured to activate particular bean definition profiles for various testing scenarios. This is achieved by annotating a test class with the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation and supplying a list of profiles that should be activated when loading the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for the test."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with any implementation of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SmartContextLoader"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SPI, but "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is not supported with implementations of the older "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ContextLoader"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SPI."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Consider two examples with XML configuration and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " classes:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<!-- app-config.xml -->\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jdbc=\"http://www.springframework.org/schema/jdbc\"\n\txmlns:jee=\"http://www.springframework.org/schema/jee\"\n\txsi:schemaLocation=\"...\">\n\n\t<bean id=\"transferService\"\n\t\t\tclass=\"com.bank.service.internal.DefaultTransferService\">\n\t\t<constructor-arg ref=\"accountRepository\"/>\n\t\t<constructor-arg ref=\"feePolicy\"/>\n\t</bean>\n\n\t<bean id=\"accountRepository\"\n\t\t\tclass=\"com.bank.repository.internal.JdbcAccountRepository\">\n\t\t<constructor-arg ref=\"dataSource\"/>\n\t</bean>\n\n\t<bean id=\"feePolicy\"\n\t\tclass=\"com.bank.service.internal.ZeroFeePolicy\"/>\n\n\t<beans profile=\"dev\">\n\t\t<jdbc:embedded-database id=\"dataSource\">\n\t\t\t<jdbc:script\n\t\t\t\tlocation=\"classpath:com/bank/config/sql/schema.sql\"/>\n\t\t\t<jdbc:script\n\t\t\t\tlocation=\"classpath:com/bank/config/sql/test-data.sql\"/>\n\t\t</jdbc:embedded-database>\n\t</beans>\n\n\t<beans profile=\"production\">\n\t\t<jee:jndi-lookup id=\"dataSource\" jndi-name=\"java:comp/env/jdbc/datasource\"/>\n\t</beans>\n\n\t<beans profile=\"default\">\n\t\t<jdbc:embedded-database id=\"dataSource\">\n\t\t\t<jdbc:script\n\t\t\t\tlocation=\"classpath:com/bank/config/sql/schema.sql\"/>\n\t\t</jdbc:embedded-database>\n\t</beans>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension.class)\n// ApplicationContext will be loaded from \"classpath:/app-config.xml\"\n@ContextConfiguration(\"/app-config.xml\")\n@ActiveProfiles(\"dev\")\nclass TransferServiceTest {\n\n\t@Autowired\n\tTransferService transferService;\n\n\t@Test\n\tvoid testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ExtendWith(SpringExtension::class)\n// ApplicationContext will be loaded from \"classpath:/app-config.xml\"\n@ContextConfiguration(\"/app-config.xml\")\n@ActiveProfiles(\"dev\")\nclass TransferServiceTest {\n\n\t@Autowired\n\tlateinit var transferService: TransferService\n\n\t@Test\n\tfun testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransferServiceTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is run, its "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is loaded from the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "app-config.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " configuration file in the root of the classpath. If you inspect "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "app-config.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", you can see that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "accountRepository"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean has a dependency on a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dataSource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean. However, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dataSource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is not defined as a top-level bean. Instead, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dataSource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is defined three times: in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "production"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " profile, in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dev"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " profile, and in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "default"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " profile."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "By annotating "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransferServiceTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles(\"dev\")"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", we instruct the Spring TestContext Framework to load the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with the active profiles set to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\"dev\"}"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". As a result, an embedded database is created and populated with test data, and the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "accountRepository"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean is wired with a reference to the development "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DataSource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". That is likely what we want in an integration test."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "It is sometimes useful to assign beans to a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "default"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " profile. Beans within the default profile are included only when no other profile is specifically activated. You can use this to define “fallback” beans to be used in the application’s default state. For example, you may explicitly provide a data source for "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dev"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "production"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " profiles, but define an in-memory data source as a default when neither of these is active."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following code listings demonstrate how to implement the same configuration and integration test with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " classes instead of XML:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"dev\")\npublic class StandaloneDataConfig {\n\n\t@Bean\n\tpublic DataSource dataSource() {\n\t\treturn new EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t.build();\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"dev\")\nclass StandaloneDataConfig {\n\n\t@Bean\n\tfun dataSource(): DataSource {\n\t\treturn EmbeddedDatabaseBuilder()\n\t\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t\t.build()\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"production\")\npublic class JndiDataConfig {\n\n\t@Bean(destroyMethod=\"\")\n\tpublic DataSource dataSource() throws Exception {\n\t\tContext ctx = new InitialContext();\n\t\treturn (DataSource) ctx.lookup(\"java:comp/env/jdbc/datasource\");\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"production\")\nclass JndiDataConfig {\n\n\t@Bean(destroyMethod = \"\")\n\tfun dataSource(): DataSource {\n\t\tval ctx = InitialContext()\n\t\treturn ctx.lookup(\"java:comp/env/jdbc/datasource\") as DataSource\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"default\")\npublic class DefaultDataConfig {\n\n\t@Bean\n\tpublic DataSource dataSource() {\n\t\treturn new EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t.build();\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\n@Profile(\"default\")\nclass DefaultDataConfig {\n\n\t@Bean\n\tfun dataSource(): DataSource {\n\t\treturn EmbeddedDatabaseBuilder()\n\t\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t\t.build()\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\npublic class TransferServiceConfig {\n\n\t@Autowired DataSource dataSource;\n\n\t@Bean\n\tpublic TransferService transferService() {\n\t\treturn new DefaultTransferService(accountRepository(), feePolicy());\n\t}\n\n\t@Bean\n\tpublic AccountRepository accountRepository() {\n\t\treturn new JdbcAccountRepository(dataSource);\n\t}\n\n\t@Bean\n\tpublic FeePolicy feePolicy() {\n\t\treturn new ZeroFeePolicy();\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Configuration\nclass TransferServiceConfig {\n\n\t@Autowired\n\tlateinit var dataSource: DataSource\n\n\t@Bean\n\tfun transferService(): TransferService {\n\t\treturn DefaultTransferService(accountRepository(), feePolicy())\n\t}\n\n\t@Bean\n\tfun accountRepository(): AccountRepository {\n\t\treturn JdbcAccountRepository(dataSource)\n\t}\n\n\t@Bean\n\tfun feePolicy(): FeePolicy {\n\t\treturn ZeroFeePolicy()\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitConfig({\n\t\tTransferServiceConfig.class,\n\t\tStandaloneDataConfig.class,\n\t\tJndiDataConfig.class,\n\t\tDefaultDataConfig.class})\n@ActiveProfiles(\"dev\")\nclass TransferServiceTest {\n\n\t@Autowired\n\tTransferService transferService;\n\n\t@Test\n\tvoid testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitConfig(\n\t\tTransferServiceConfig::class,\n\t\tStandaloneDataConfig::class,\n\t\tJndiDataConfig::class,\n\t\tDefaultDataConfig::class)\n@ActiveProfiles(\"dev\")\nclass TransferServiceTest {\n\n\t@Autowired\n\tlateinit var transferService: TransferService\n\n\t@Test\n\tfun testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In this variation, we have split the XML configuration into four independent "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " classes:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TransferServiceConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": Acquires a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " through dependency injection by using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Autowired"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StandaloneDataConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": Defines a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for an embedded database suitable for developer tests."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JndiDataConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": Defines a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is retrieved from JNDI in a production environment."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultDataConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": Defines a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for a default embedded database, in case no profile is active."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As with the XML-based configuration example, we still annotate "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TransferServiceTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles(\"dev\")"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", but this time we specify all four configuration classes by using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ContextConfiguration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation. The body of the test class itself remains completely unchanged."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "It is often the case that a single set of profiles is used across multiple test classes within a given project. Thus, to avoid duplicate declarations of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation, you can declare "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " once on a base class, and subclasses automatically inherit the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " configuration from the base class. In the following example, the declaration of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (as well as other annotations) has been moved to an abstract superclass, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AbstractIntegrationTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Test configuration may also be inherited from enclosing classes. See "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " test class configuration"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/testcontext-framework/support-classes.html#testcontext-junit-jupiter-nested-test-configuration"
+          },
+          {
+            "kind": "text",
+            "value": " for details."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitConfig({\n\t\tTransferServiceConfig.class,\n\t\tStandaloneDataConfig.class,\n\t\tJndiDataConfig.class,\n\t\tDefaultDataConfig.class})\n@ActiveProfiles(\"dev\")\nabstract class AbstractIntegrationTest {\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@SpringJUnitConfig(\n\t\tTransferServiceConfig::class,\n\t\tStandaloneDataConfig::class,\n\t\tJndiDataConfig::class,\n\t\tDefaultDataConfig::class)\n@ActiveProfiles(\"dev\")\nabstract class AbstractIntegrationTest {\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile inherited from superclass\nclass TransferServiceTest extends AbstractIntegrationTest {\n\n\t@Autowired\n\tTransferService transferService;\n\n\t@Test\n\tvoid testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile inherited from superclass\nclass TransferServiceTest : AbstractIntegrationTest() {\n\n\t@Autowired\n\tlateinit var transferService: TransferService\n\n\t@Test\n\tfun testTransferService() {\n\t\t// test the transferService\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " also supports an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "inheritProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute that can be used to disable the inheritance of active profiles, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile overridden with \"production\"\n@ActiveProfiles(profiles = \"production\", inheritProfiles = false)\nclass ProductionTransferServiceTest extends AbstractIntegrationTest {\n\t// test body\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile overridden with \"production\"\n@ActiveProfiles(\"production\", inheritProfiles = false)\nclass ProductionTransferServiceTest : AbstractIntegrationTest() {\n\t// test body\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": "testcontext-ctx-management-env-profiles-ActiveProfilesResolver",
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Furthermore, it is sometimes necessary to resolve active profiles for tests programmatically instead of declaratively — for example, based on:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The current operating system."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whether tests are being run on a continuous integration build server."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The presence of certain environment variables."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The presence of custom class-level annotations."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Other concerns."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To resolve active bean definition profiles programmatically, you can implement a custom "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ActiveProfilesResolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and register it by using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "resolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ActiveProfiles"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". For further information, see the corresponding "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "javadoc"
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/ActiveProfilesResolver.html"
+          },
+          {
+            "kind": "text",
+            "value": ". The following example demonstrates how to implement and register a custom "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "OperatingSystemActiveProfilesResolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile overridden programmatically via a custom resolver\n@ActiveProfiles(\n\t\tresolver = OperatingSystemActiveProfilesResolver.class,\n\t\tinheritProfiles = false)\nclass TransferServiceTest extends AbstractIntegrationTest {\n\t// test body\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// \"dev\" profile overridden programmatically via a custom resolver\n@ActiveProfiles(\n\t\tresolver = OperatingSystemActiveProfilesResolver::class,\n\t\tinheritProfiles = false)\nclass TransferServiceTest : AbstractIntegrationTest() {\n\t// test body\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "public class OperatingSystemActiveProfilesResolver implements ActiveProfilesResolver {\n\n\t@Override\n\tpublic String[] resolve(Class<?> testClass) {\n\t\tString profile = ...;\n\t\t// determine the value of profile based on the operating system\n\t\treturn new String[] {profile};\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "class OperatingSystemActiveProfilesResolver : ActiveProfilesResolver {\n\n\toverride fun resolve(testClass: Class<*>): Array<String> {\n\t\tval profile: String = ...\n\t\t// determine the value of profile based on the operating system\n\t\treturn arrayOf(profile)\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Context Configuration with Environment Profiles"
+      }
+    ]
+  }
+}

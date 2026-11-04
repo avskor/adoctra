@@ -1,0 +1,1485 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/caching.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HTTP caching can significantly improve the performance of a web application. HTTP caching revolves around the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " response header and, subsequently, conditional request headers (such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Last-Modified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " advises private (for example, browser) and public (for example, proxy) caches on how to cache and re-use responses. An "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header is used to make a conditional request that may result in a 304 (NOT_MODIFIED) without a body, if the content has not changed. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be seen as a more sophisticated successor to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Last-Modified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section describes the HTTP caching-related options that are available in Spring Web MVC."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/caching.html#webflux-caching-cachecontrol"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CacheControl"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/http/CacheControl.html"
+              },
+              {
+                "kind": "text",
+                "value": " provides support for configuring settings related to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header and is accepted as an argument in a number of places:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "WebContentInterceptor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/servlet/mvc/WebContentInterceptor.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "WebContentGenerator"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/servlet/support/WebContentGenerator.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Controllers"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc/mvc-caching.html#mvc-caching-etag-lastmodified"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Static Resources"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc/mvc-caching.html#mvc-caching-static-resources"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "While "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RFC 7234"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://datatracker.ietf.org/doc/html/rfc7234#section-5.2.2"
+              },
+              {
+                "kind": "text",
+                "value": " describes all possible directives for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " response header, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CacheControl"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " type takes a use case-oriented approach that focuses on the common scenarios:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Cache for an hour - \"Cache-Control: max-age=3600\"\nCacheControl ccCacheOneHour = CacheControl.maxAge(1, TimeUnit.HOURS);\n\n// Prevent caching - \"Cache-Control: no-store\"\nCacheControl ccNoStore = CacheControl.noStore();\n\n// Cache for ten days in public and private caches,\n// public caches should not transform the response\n// \"Cache-Control: max-age=864000, public, no-transform\"\nCacheControl ccCustom = CacheControl.maxAge(10, TimeUnit.DAYS).noTransform().cachePublic();"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Cache for an hour - \"Cache-Control: max-age=3600\"\nval ccCacheOneHour = CacheControl.maxAge(1, TimeUnit.HOURS)\n\n// Prevent caching - \"Cache-Control: no-store\"\nval ccNoStore = CacheControl.noStore()\n\n// Cache for ten days in public and private caches,\n// public caches should not transform the response\n// \"Cache-Control: max-age=864000, public, no-transform\"\nval ccCustom = CacheControl.maxAge(10, TimeUnit.DAYS).noTransform().cachePublic()"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebContentGenerator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " also accepts a simpler "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cachePeriod"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property (defined in seconds) that works as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " value does not generate a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Cache-Control"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " response header."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "0"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " value prevents caching by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'Cache-Control: no-store'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directive."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "n > 0"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " value caches the given response for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "n"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " seconds by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'Cache-Control: max-age=n'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directive."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-caching-cachecontrol",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CacheControl"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/caching.html#webflux-caching-etag-lastmodified"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Controllers can add explicit support for HTTP caching. We recommended doing so, since the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "lastModified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " value for a resource needs to be calculated before it can be compared against conditional request headers. A controller can add an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " settings to a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ResponseEntity"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@GetMapping(\"/book/{id}\")\npublic ResponseEntity<Book> showBook(@PathVariable Long id) {\n\n\tBook book = findBook(id);\n\tString version = book.getVersion();\n\n\treturn ResponseEntity\n\t\t\t.ok()\n\t\t\t.cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))\n\t\t\t.eTag(version) // lastModified is also available\n\t\t\t.body(book);\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@GetMapping(\"/book/{id}\")\nfun showBook(@PathVariable id: Long): ResponseEntity<Book> {\n\n\tval book = findBook(id);\n\tval version = book.getVersion()\n\n\treturn ResponseEntity\n\t\t\t.ok()\n\t\t\t.cacheControl(CacheControl.maxAge(30, TimeUnit.DAYS))\n\t\t\t.eTag(version) // lastModified is also available\n\t\t\t.body(book)\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The preceding example sends a 304 (NOT_MODIFIED) response with an empty body if the comparison to the conditional request headers indicates that the content has not changed. Otherwise, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ETag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " headers are added to the response."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also make the check against conditional request headers in the controller, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@RequestMapping\npublic String myHandleMethod(WebRequest request, Model model) {\n\n\tlong eTag = ... "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\tif (request.checkNotModified(eTag)) {\n\t\treturn null; "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n\n\tmodel.addAttribute(...); "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\treturn \"myViewName\";\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Application-specific calculation."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The response has been set to 304 (NOT_MODIFIED) — no further processing."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Continue with the request processing."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@RequestMapping\nfun myHandleMethod(request: WebRequest, model: Model): String? {\n\n\tval eTag: Long = ... "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\tif (request.checkNotModified(eTag)) {\n\t\treturn null "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n\n\tmodel[...] = ... "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\treturn \"myViewName\"\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Application-specific calculation."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The response has been set to 304 (NOT_MODIFIED) — no further processing."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Continue with the request processing."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are three variants for checking conditional requests against "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "eTag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " values, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "lastModified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " values, or both. For conditional "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GET"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HEAD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " requests, you can set the response to 304 (NOT_MODIFIED). For conditional "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "POST"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PUT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DELETE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can instead set the response to 412 (PRECONDITION_FAILED), to prevent concurrent modification."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-caching-etag-lastmodified",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Controllers"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Reactive stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/caching.html#webflux-caching-static-resources"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You should serve static resources with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cache-Control"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and conditional response headers for optimal performance. See the section on configuring "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Static Resources"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-config/static-resources.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-caching-static-resources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Static Resources"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ShallowEtagHeaderFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to add “shallow” "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "eTag"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " values that are computed from the response content and, thus, save bandwidth but not CPU time. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Shallow ETag"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/filters.html#filters-shallow-etag"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-httpcaching-shallowetag",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ETag"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Filter"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "HTTP Caching"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2035 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Primary"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Fallback"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " are effective ways to use autowiring by type with several instances when one primary (or non-fallback) candidate can be determined."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When you need more control over the selection process, you can use Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation. You can associate qualifier values with specific arguments, narrowing the set of type matches so that a specific bean is chosen for each argument. In the simplest case, this can be a plain descriptive value, as shown in the following example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MovieRecommender {\n\n\t@Autowired\n\t@Qualifier(\"main\")\n\tprivate MovieCatalog movieCatalog;\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MovieRecommender {\n\n\t@Autowired\n\t@Qualifier(\"main\")\n\tprivate lateinit var movieCatalog: MovieCatalog\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can also specify the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation on individual constructor arguments or method parameters, as shown in the following example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MovieRecommender {\n\n\tprivate final MovieCatalog movieCatalog;\n\n\tprivate final CustomerPreferenceDao customerPreferenceDao;\n\n\t@Autowired\n\tpublic void prepare(@Qualifier(\"main\") MovieCatalog movieCatalog,\n\t\t\tCustomerPreferenceDao customerPreferenceDao) {\n\t\tthis.movieCatalog = movieCatalog;\n\t\tthis.customerPreferenceDao = customerPreferenceDao;\n\t}\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MovieRecommender {\n\n\tprivate lateinit var movieCatalog: MovieCatalog\n\n\tprivate lateinit var customerPreferenceDao: CustomerPreferenceDao\n\n\t@Autowired\n\tfun prepare(@Qualifier(\"main\") movieCatalog: MovieCatalog,\n\t\t\t\tcustomerPreferenceDao: CustomerPreferenceDao) {\n\t\tthis.movieCatalog = movieCatalog\n\t\tthis.customerPreferenceDao = customerPreferenceDao\n\t}\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows corresponding bean definitions."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context\n\t\thttps://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<context:annotation-config/>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier value=\"main\"/> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier value=\"action\"/> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean id=\"movieRecommender\" class=\"example.MovieRecommender\"/>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The bean with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "main"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " qualifier value is wired with the constructor argument that is qualified with the same value."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The bean with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "action"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " qualifier value is wired with the constructor argument that is qualified with the same value."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For a fallback match, the bean name is considered a default qualifier value. Thus, you can define the bean with an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "id"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "main"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instead of the nested qualifier element, leading to the same matching result. However, although you can use this convention to refer to specific beans by name, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is fundamentally about type-driven injection with optional semantic qualifiers. This means that qualifier values, even with the bean name fallback, always have narrowing semantics within the set of type matches. They do not semantically express a reference to a unique bean "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "id"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Good qualifier values are "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "main"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "EMEA"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "persistent"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", expressing characteristics of a specific component that are independent from the bean "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "id"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", which may be auto-generated in case of an anonymous bean definition such as the one in the preceding example."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Qualifiers also apply to typed collections, as discussed earlier — for example, to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Set<MovieCatalog>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". In this case, all matching beans, according to the declared qualifiers, are injected as a collection. This implies that qualifiers do not have to be unique. Rather, they constitute filtering criteria. For example, you can define multiple "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MovieCatalog"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " beans with the same qualifier value “action”, all of which are injected into a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Set<MovieCatalog>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotated with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier(\"action\")"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Letting qualifier values select against target bean names, within the type-matching candidates, does not require a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Qualifier"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation at the injection point. If there is no other resolution indicator (such as a qualifier or a primary marker), for a non-unique dependency situation, Spring matches the injection point name (that is, the field name or parameter name) against the target bean names and chooses the same-named candidate, if any (either by bean name or by associated alias)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since version 6.1, this requires the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-parameters"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Java compiler flag to be present. As of 6.2, the container applies fast shortcut resolution for bean name matches, bypassing the full type matching algorithm when the parameter name matches the bean name and no type, qualifier or primary conditions override the match. It is therefore recommendable for your parameter names to match the target bean names."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As an alternative for injection by name, consider the JSR-250 "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Resource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation which is semantically defined to identify a specific target component by its unique name, with the declared type being irrelevant for the matching process. "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " has rather different semantics: after selecting candidate beans by type, the specified "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "String"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " qualifier value is considered within those type-selected candidates only (for example, matching an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "account"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " qualifier against beans marked with the same qualifier label)."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For beans that are themselves defined as a collection, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Map"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", or array type, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Resource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is a fine solution, referring to the specific collection or array bean by unique name. That said, you can match collection, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Map"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", and array types through Spring’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " type matching algorithm as well, as long as the element type information is preserved in "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Bean"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " return type signatures or collection inheritance hierarchies. In this case, you can use qualifier values to select among same-typed collections, as outlined in the previous paragraph."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " also considers self references for injection (that is, references back to the bean that is currently injected). See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Self Injection"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/annotation-config/autowired.html#beans-autowired-annotation-self-injection"
+          },
+          {
+            "kind": "text",
+            "value": " for details."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Autowired"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " applies to fields, constructors, and multi-argument methods, allowing for narrowing through qualifier annotations at the parameter level. In contrast, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Resource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is supported only for fields and bean property setter methods with a single argument. As a consequence, you should stick with qualifiers if your injection target is a constructor or a multi-argument method."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can create your own custom qualifier annotations. To do so, define an annotation and provide the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Qualifier"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation within your definition, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target({ElementType.FIELD, ElementType.PARAMETER})\n@Retention(RetentionPolicy.RUNTIME)\n@Qualifier\npublic @interface Genre {\n\n\tString value();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)\n@Retention(AnnotationRetention.RUNTIME)\n@Qualifier\nannotation class Genre(val value: String)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Then you can provide the custom qualifier on autowired fields and parameters, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MovieRecommender {\n\n\t@Autowired\n\t@Genre(\"Action\")\n\tprivate MovieCatalog actionCatalog;\n\n\tprivate MovieCatalog comedyCatalog;\n\n\t@Autowired\n\tpublic void setComedyCatalog(@Genre(\"Comedy\") MovieCatalog comedyCatalog) {\n\t\tthis.comedyCatalog = comedyCatalog;\n\t}\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MovieRecommender {\n\n\t@Autowired\n\t@Genre(\"Action\")\n\tprivate lateinit var actionCatalog: MovieCatalog\n\n\tprivate lateinit var comedyCatalog: MovieCatalog\n\n\t@Autowired\n\tfun setComedyCatalog(@Genre(\"Comedy\") comedyCatalog: MovieCatalog) {\n\t\tthis.comedyCatalog = comedyCatalog\n\t}\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Next, you can provide the information for the candidate bean definitions. You can add "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<qualifier/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " tags as sub-elements of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<bean/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " tag and then specify the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "type"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "value"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to match your custom qualifier annotations. The type is matched against the fully-qualified class name of the annotation. Alternately, as a convenience if no risk of conflicting names exists, you can use the short class name. The following example demonstrates both approaches:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context\n\t\thttps://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<context:annotation-config/>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier type=\"Genre\" value=\"Action\"/>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier type=\"example.Genre\" value=\"Comedy\"/>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean id=\"movieRecommender\" class=\"example.MovieRecommender\"/>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Classpath Scanning and Managed Components"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/classpath-scanning.html"
+          },
+          {
+            "kind": "text",
+            "value": ", you can see an annotation-based alternative to providing the qualifier metadata in XML. Specifically, see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Providing Qualifier Metadata with Annotations"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/beans/classpath-scanning.html#beans-scanning-qualifiers"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In some cases, using an annotation without a value may suffice. This can be useful when the annotation serves a more generic purpose and can be applied across several different types of dependencies. For example, you may provide an offline catalog that can be searched when no Internet connection is available. First, define the simple annotation, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target({ElementType.FIELD, ElementType.PARAMETER})\n@Retention(RetentionPolicy.RUNTIME)\n@Qualifier\npublic @interface Offline {\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)\n@Retention(AnnotationRetention.RUNTIME)\n@Qualifier\nannotation class Offline"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Then add the annotation to the field or property to be autowired, as shown in the following example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MovieRecommender {\n\n\t@Autowired\n\t@Offline "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO2-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\tprivate MovieCatalog offlineCatalog;\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO2-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "This line adds the "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Offline"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " annotation."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MovieRecommender {\n\n\t@Autowired\n\t@Offline "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO3-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\tprivate lateinit var offlineCatalog: MovieCatalog\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO3-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "This line adds the "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Offline"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " annotation."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Now the bean definition only needs a qualifier "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "type"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as shown in the following example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<bean class=\"example.SimpleMovieCatalog\">\n\t<qualifier type=\"Offline\"/> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO4-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t<!-- inject any dependencies required by this bean -->\n</bean>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element specifies the qualifier."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can also define custom qualifier annotations that accept named attributes in addition to or instead of the simple "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "value"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute. If multiple attribute values are then specified on a field or parameter to be autowired, a bean definition must match all such attribute values to be considered an autowire candidate. As an example, consider the following annotation definition:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target({ElementType.FIELD, ElementType.PARAMETER})\n@Retention(RetentionPolicy.RUNTIME)\n@Qualifier\npublic @interface MovieQualifier {\n\n\tString genre();\n\n\tFormat format();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Target(AnnotationTarget.FIELD, AnnotationTarget.VALUE_PARAMETER)\n@Retention(AnnotationRetention.RUNTIME)\n@Qualifier\nannotation class MovieQualifier(val genre: String, val format: Format)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In this case "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Format"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is an enum, defined as follows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public enum Format {\n\tVHS, DVD, BLURAY\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "enum class Format {\n\tVHS, DVD, BLURAY\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The fields to be autowired are annotated with the custom qualifier and include values for both attributes: "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "genre"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "format"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class MovieRecommender {\n\n\t@Autowired\n\t@MovieQualifier(format=Format.VHS, genre=\"Action\")\n\tprivate MovieCatalog actionVhsCatalog;\n\n\t@Autowired\n\t@MovieQualifier(format=Format.VHS, genre=\"Comedy\")\n\tprivate MovieCatalog comedyVhsCatalog;\n\n\t@Autowired\n\t@MovieQualifier(format=Format.DVD, genre=\"Action\")\n\tprivate MovieCatalog actionDvdCatalog;\n\n\t@Autowired\n\t@MovieQualifier(format=Format.BLURAY, genre=\"Comedy\")\n\tprivate MovieCatalog comedyBluRayCatalog;\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class MovieRecommender {\n\n\t@Autowired\n\t@MovieQualifier(format = Format.VHS, genre = \"Action\")\n\tprivate lateinit var actionVhsCatalog: MovieCatalog\n\n\t@Autowired\n\t@MovieQualifier(format = Format.VHS, genre = \"Comedy\")\n\tprivate lateinit var comedyVhsCatalog: MovieCatalog\n\n\t@Autowired\n\t@MovieQualifier(format = Format.DVD, genre = \"Action\")\n\tprivate lateinit var actionDvdCatalog: MovieCatalog\n\n\t@Autowired\n\t@MovieQualifier(format = Format.BLURAY, genre = \"Comedy\")\n\tprivate lateinit var comedyBluRayCatalog: MovieCatalog\n\n\t// ...\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Finally, the bean definitions should contain matching qualifier values. This example also demonstrates that you can use bean meta attributes instead of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<qualifier/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " elements. If available, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<qualifier/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " element and its attributes take precedence, but the autowiring mechanism falls back on the values provided within the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<meta/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " tags if no such qualifier is present, as in the last two bean definitions in the following example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:context=\"http://www.springframework.org/schema/context\"\n\txsi:schemaLocation=\"http://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/context\n\t\thttps://www.springframework.org/schema/context/spring-context.xsd\">\n\n\t<context:annotation-config/>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier type=\"MovieQualifier\">\n\t\t\t<attribute key=\"format\" value=\"VHS\"/>\n\t\t\t<attribute key=\"genre\" value=\"Action\"/>\n\t\t</qualifier>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<qualifier type=\"MovieQualifier\">\n\t\t\t<attribute key=\"format\" value=\"VHS\"/>\n\t\t\t<attribute key=\"genre\" value=\"Comedy\"/>\n\t\t</qualifier>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<meta key=\"format\" value=\"DVD\"/>\n\t\t<meta key=\"genre\" value=\"Action\"/>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n\t<bean class=\"example.SimpleMovieCatalog\">\n\t\t<meta key=\"format\" value=\"BLURAY\"/>\n\t\t<meta key=\"genre\" value=\"Comedy\"/>\n\t\t<!-- inject any dependencies required by this bean -->\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "open",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Fine-tuning Annotation-based Autowiring with Qualifiers"
+      }
+    ]
+  }
+}

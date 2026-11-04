@@ -1,0 +1,703 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The most obvious question that comes to mind is “Why do I need this?” The answer is best found by exploring a very basic sample application. Assume you have a Spring MVC web application that supports CRUD operations on a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Message"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object. The application also supports paging through all messages. How would you go about testing it?"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With Spring MVC Test, we can easily test if we are able to create a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Message"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "MockHttpServletRequestBuilder createMessage = post(\"/messages/\")\n\t\t.param(\"summary\", \"Spring Rocks\")\n\t\t.param(\"text\", \"In case you didn't know, Spring Rocks!\");\n\nmockMvc.perform(createMessage)\n\t\t.andExpect(status().is3xxRedirection())\n\t\t.andExpect(redirectedUrl(\"/messages/123\"));"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Test\nfun test() {\n\tmockMvc.post(\"/messages/\") {\n\t\tparam(\"summary\", \"Spring Rocks\")\n\t\tparam(\"text\", \"In case you didn't know, Spring Rocks!\")\n\t}.andExpect {\n\t\tstatus().is3xxRedirection()\n\t\tredirectedUrl(\"/messages/123\")\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "What if we want to test the form view that lets us create the message? For example, assume our form looks like the following snippet:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<form id=\"messageForm\" action=\"/messages/\" method=\"post\">\n\t<div class=\"pull-right\"><a href=\"/messages/\">Messages</a></div>\n\n\t<label for=\"summary\">Summary</label>\n\t<input type=\"text\" class=\"required\" id=\"summary\" name=\"summary\" value=\"\" />\n\n\t<label for=\"text\">Message</label>\n\t<textarea id=\"text\" name=\"text\"></textarea>\n\n\t<div class=\"form-actions\">\n\t\t<input type=\"submit\" value=\"Create\" />\n\t</div>\n</form>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "How do we ensure that our form produce the correct request to create a new message? A naive attempt might resemble the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "mockMvc.perform(get(\"/messages/form\"))\n\t\t.andExpect(xpath(\"//input[@name='summary']\").exists())\n\t\t.andExpect(xpath(\"//textarea[@name='text']\").exists());"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "mockMvc.get(\"/messages/form\").andExpect {\n\txpath(\"//input[@name='summary']\") { exists() }\n\txpath(\"//textarea[@name='text']\") { exists() }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This test has some obvious drawbacks. If we update our controller to use the parameter "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "message"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instead of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", our form test continues to pass, even though the HTML form is out of sync with the controller. To resolve this we can combine our two tests, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": "mockmvc-server-htmlunit-mock-mvc-test",
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "String summaryParamName = \"summary\";\nString textParamName = \"text\";\nmockMvc.perform(get(\"/messages/form\"))\n\t\t.andExpect(xpath(\"//input[@name='\" + summaryParamName + \"']\").exists())\n\t\t.andExpect(xpath(\"//textarea[@name='\" + textParamName + \"']\").exists());\n\nMockHttpServletRequestBuilder createMessage = post(\"/messages/\")\n\t\t.param(summaryParamName, \"Spring Rocks\")\n\t\t.param(textParamName, \"In case you didn't know, Spring Rocks!\");\n\nmockMvc.perform(createMessage)\n\t\t.andExpect(status().is3xxRedirection())\n\t\t.andExpect(redirectedUrl(\"/messages/123\"));"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val summaryParamName = \"summary\";\nval textParamName = \"text\";\nmockMvc.get(\"/messages/form\").andExpect {\n\txpath(\"//input[@name='$summaryParamName']\") { exists() }\n\txpath(\"//textarea[@name='$textParamName']\") { exists() }\n}\nmockMvc.post(\"/messages/\") {\n\tparam(summaryParamName, \"Spring Rocks\")\n\tparam(textParamName, \"In case you didn't know, Spring Rocks!\")\n}.andExpect {\n\tstatus().is3xxRedirection()\n\tredirectedUrl(\"/messages/123\")\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This would reduce the risk of our test incorrectly passing, but there are still some problems:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "What if we have multiple forms on our page? Admittedly, we could update our XPath expressions, but they get more complicated as we take more factors into account: Are the fields the correct type? Are the fields enabled? And so on."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Another issue is that we are doing double the work we would expect. We must first verify the view, and then we submit the view with the same parameters we just verified. Ideally, this could be done all at once."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, we still cannot account for some things. For example, what if the form has JavaScript validation that we wish to test as well?"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The overall problem is that testing a web page does not involve a single interaction. Instead, it is a combination of how the user interacts with a web page and how that web page interacts with other resources. For example, the result of a form view is used as the input to a user for creating a message. In addition, our form view can potentially use additional resources that impact the behavior of the page, such as JavaScript validation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To resolve the issues mentioned earlier, we could perform end-to-end integration testing, but this has some drawbacks. Consider testing the view that lets us page through the messages. We might need the following tests:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Does our page display a notification to the user to indicate that no results are available when the messages are empty?"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Does our page properly display a single message?"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Does our page properly support paging?"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To set up these tests, we need to ensure our database contains the proper messages. This leads to a number of additional challenges:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Ensuring the proper messages are in the database can be tedious. (Consider foreign key constraints.)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Testing can become slow, since each test would need to ensure that the database is in the correct state."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since our database needs to be in a specific state, we cannot run tests in parallel."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Performing assertions on such items as auto-generated IDs, timestamps, and others can be difficult."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "These challenges do not mean that we should abandon end-to-end integration testing altogether. Instead, we can reduce the number of end-to-end integration tests by refactoring our detailed tests to use mock services that run much faster, more reliably, and without side effects. We can then implement a small number of true end-to-end integration tests that validate simple workflows to ensure that everything works together properly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-why-integration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Integration Testing to the Rescue?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So how can we achieve a balance between testing the interactions of our pages and still retain good performance within our test suite? The answer is: “By integrating MockMvc with HtmlUnit.”"
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-why-mockmvc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Enter HtmlUnit Integration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You have a number of options when you want to integrate MockMvc with HtmlUnit:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvc and HtmlUnit"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/mockmvc/htmlunit/mah.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Use this option if you want to use the raw HtmlUnit libraries."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvc and WebDriver"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/mockmvc/htmlunit/webdriver.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Use this option to ease development and reuse code between integration and end-to-end testing."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvc and Geb"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/mockmvc/htmlunit/geb.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Use this option if you want to use Groovy for testing, ease development, and reuse code between integration and end-to-end testing."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-options",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "HtmlUnit Integration Options"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Why HtmlUnit Integration?"
+      }
+    ]
+  }
+}

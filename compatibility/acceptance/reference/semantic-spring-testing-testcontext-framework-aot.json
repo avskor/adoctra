@@ -1,0 +1,904 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This chapter covers Spring’s Ahead of Time (AOT) support for integration tests using the Spring TestContext Framework."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The testing support extends Spring’s "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "core AOT support"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/aot.html"
+          },
+          {
+            "kind": "text",
+            "value": " with the following features."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Provides explicit support for test classes based on JUnit Jupiter and JUnit 4 as well as implicit support for TestNG and other testing frameworks that use Spring’s core testing annotations — as long as the tests are run using a JUnit Platform "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestEngine"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " that is registered for the current project."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Build-time detection of all integration tests in the current project that use the TestContext framework to load an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Build-time AOT processing: each unique test "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the current project will be "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "refreshed for AOT processing"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/aot.html#aot.refresh"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Runtime AOT support: when executing in AOT runtime mode, a Spring integration test will use an AOT-optimized "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that participates transparently with the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "context cache"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/testcontext-framework/ctx-management/caching.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "All tests are enabled in AOT mode by default. However, you can selectively disable an entire test class or individual test method in AOT mode by annotating it with "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DisabledInAotMode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/annotations/integration-spring/annotation-disabledinaotmode.html"
+          },
+          {
+            "kind": "text",
+            "value": ". When using JUnit Jupiter, you may selectively enable or disable tests in a GraalVM native image via Jupiter’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@EnabledInNativeImage"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DisabledInNativeImage"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotations. Note that "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DisabledInAotMode"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " also disables the annotated test class or test method when running within a GraalVM native image, analogous to JUnit Jupiter’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DisabledInNativeImage"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " annotation."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, if an error is encountered during build-time AOT processing, an exception will be thrown, and the overall process will fail immediately."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you would prefer that build-time AOT processing continue after errors are encountered, you can disable the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "failOnError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mode which results in errors being logged at "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WARN"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " level or with greater detail at "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DEBUG"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " level."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "failOnError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mode can be disabled from the command line or a build script by setting a JVM system property named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "spring.test.aot.processing.failOnError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". As an alternative, you can set the same property via the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SpringProperties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "appendix.html#appendix-spring-properties"
+              },
+              {
+                "kind": "text",
+                "value": " mechanism."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ContextHierarchy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation is not supported in AOT mode."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To provide test-specific runtime hints for use within a GraalVM native image, you have the following options."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Implement a custom "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestRuntimeHintsRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/aot/TestRuntimeHintsRegistrar.html"
+              },
+              {
+                "kind": "text",
+                "value": " and register it globally via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "META-INF/spring/aot.factories"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Implement a custom "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RuntimeHintsRegistrar"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/aot/hint/RuntimeHintsRegistrar.html"
+              },
+              {
+                "kind": "text",
+                "value": " and register it globally via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "META-INF/spring/aot.factories"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or locally on a test class via "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ImportRuntimeHints"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/annotation/ImportRuntimeHints.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Annotate a test class with "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Reflective"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/aot/hint/annotation/Reflective.html"
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@RegisterReflectionForBinding"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/aot/hint/annotation/RegisterReflectionForBinding.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Runtime Hints"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/aot.html#aot.hints"
+              },
+              {
+                "kind": "text",
+                "value": " for details on Spring’s core runtime hints and annotation support."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestRuntimeHintsRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API serves as a companion to the core "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RuntimeHintsRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API. If you need to register global hints for testing support that are not specific to particular test classes, favor implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RuntimeHintsRegistrar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " over the test-specific API."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If you implement a custom "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ContextLoader"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", it must implement "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AotContextLoader"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/aot/AotContextLoader.html"
+          },
+          {
+            "kind": "text",
+            "value": " in order to provide AOT build-time processing and AOT runtime execution support. Note, however, that all context loader implementations provided by the Spring Framework and Spring Boot already implement "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AotContextLoader"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If you implement a custom "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", it must implement "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AotTestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/context/aot/AotTestExecutionListener.html"
+          },
+          {
+            "kind": "text",
+            "value": " in order to participate in AOT processing. See the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SqlScriptsTestExecutionListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "spring-test"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " module for an example."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Ahead of Time Support for Tests"
+      }
+    ]
+  }
+}

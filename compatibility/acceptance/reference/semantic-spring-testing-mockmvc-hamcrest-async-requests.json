@@ -1,0 +1,513 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This section shows how to use MockMvc on its own to test asynchronous request handling. If using MockMvc through the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebTestClient"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/webtestclient.html"
+          },
+          {
+            "kind": "text",
+            "value": ", there is nothing special to do to make asynchronous requests work as the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebTestClient"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " automatically does what is described in this section."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Servlet asynchronous requests, "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "supported in Spring MVC"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-ann-async.html"
+          },
+          {
+            "kind": "text",
+            "value": ", work by exiting the Servlet container thread and allowing the application to compute the response asynchronously, after which an async dispatch is made to complete processing on a Servlet container thread."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In Spring MVC Test, async requests can be tested by asserting the produced async value first, then manually performing the async dispatch, and finally verifying the response. Below is an example test for controller methods that return "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DeferredResult"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Callable"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", or reactive type such as Reactor "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Mono"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ":"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// static import of MockMvcRequestBuilders.* and MockMvcResultMatchers.*\n\n@Test\nvoid test() throws Exception {\n       MvcResult mvcResult = this.mockMvc.perform(get(\"/path\"))\n               .andExpect(status().isOk()) "
+                        },
+                        {
+                          "guard": null,
+                          "icons": null,
+                          "id": "CO1-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n               .andExpect(request().asyncStarted()) "
+                        },
+                        {
+                          "guard": null,
+                          "icons": null,
+                          "id": "CO1-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n               .andExpect(request().asyncResult(\"body\")) "
+                        },
+                        {
+                          "guard": null,
+                          "icons": null,
+                          "id": "CO1-3",
+                          "kind": "callout",
+                          "number": "3",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n               .andReturn();\n\n       this.mockMvc.perform(asyncDispatch(mvcResult)) "
+                        },
+                        {
+                          "guard": null,
+                          "icons": null,
+                          "id": "CO1-4",
+                          "kind": "callout",
+                          "number": "4",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n               .andExpect(status().isOk()) "
+                        },
+                        {
+                          "guard": null,
+                          "icons": null,
+                          "id": "CO1-5",
+                          "kind": "callout",
+                          "number": "5",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n               .andExpect(content().string(\"body\"));\n   }"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Check response status is still unchanged"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Async processing must have started"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-3"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Wait and assert the async result"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-4"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Manually perform an ASYNC dispatch (as there is no running container)"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-5"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Verify the final response"
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@Test\nfun test() {\n\tvar mvcResult = mockMvc.get(\"/path\").andExpect {\n\t\tstatus { isOk() } "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\trequest { asyncStarted() } "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t// TODO Remove unused generic parameter\n\t\trequest { asyncResult<Nothing>(\"body\") } "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-3",
+                          "kind": "callout",
+                          "number": "3",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t}.andReturn()\n\n\n\tmockMvc.perform(asyncDispatch(mvcResult)) "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-4",
+                          "kind": "callout",
+                          "number": "4",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t\t.andExpect {\n\t\t\t\tstatus { isOk() } "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-5",
+                          "kind": "callout",
+                          "number": "5",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t\t\tcontent().string(\"body\")\n\t\t\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Check response status is still unchanged"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Async processing must have started"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-3"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Wait and assert the async result"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-4"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Manually perform an ASYNC dispatch (as there is no running container)"
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-5"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Verify the final response"
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Async Requests"
+      }
+    ]
+  }
+}

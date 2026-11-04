@@ -1,0 +1,4221 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Environment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/core/env/Environment.html"
+              },
+              {
+                "kind": "text",
+                "value": " interface is an abstraction integrated in the container that models two key aspects of the application environment: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "profiles"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/beans/environment.html#beans-definition-profiles"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "properties"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/beans/environment.html#beans-property-source-abstraction"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A profile is a named, logical group of bean definitions to be registered with the container only if the given profile is active. Beans may be assigned to a profile whether defined in XML or with annotations. The role of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object with relation to profiles is in determining which profiles (if any) are currently active, and which profiles (if any) should be active by default."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Properties play an important role in almost all applications and may originate from a variety of sources: properties files, JVM system properties, system environment variables, JNDI, servlet context parameters, ad-hoc "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects, and so on. The role of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object with relation to properties is to provide the user with a convenient service interface for configuring property sources and resolving properties from them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Bean definition profiles provide a mechanism in the core container that allows for registration of different beans in different environments. The word, “environment,” can mean different things to different users, and this feature can help with many use cases, including:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Working against an in-memory datasource in development versus looking up that same datasource from JNDI when in QA or production."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Registering monitoring infrastructure only when deploying an application into a performance environment."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Registering customized implementations of beans for customer A versus customer B deployments."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consider the first use case in a practical application that requires a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In a test environment, the configuration might resemble the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Bean\npublic DataSource dataSource() {\n\treturn new EmbeddedDatabaseBuilder()\n\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t.addScript(\"my-schema.sql\")\n\t\t.addScript(\"my-test-data.sql\")\n\t\t.build();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Bean\nfun dataSource(): DataSource {\n\treturn EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"my-schema.sql\")\n\t\t\t.addScript(\"my-test-data.sql\")\n\t\t\t.build()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now consider how this application can be deployed into a QA or production environment, assuming that the datasource for the application is registered with the production application server’s JNDI directory. Our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dataSource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean now looks like the following listing:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Bean(destroyMethod = \"\")\npublic DataSource dataSource() throws Exception {\n\tContext ctx = new InitialContext();\n\treturn (DataSource) ctx.lookup(\"java:comp/env/jdbc/datasource\");\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Bean(destroyMethod = \"\")\nfun dataSource(): DataSource {\n\tval ctx = InitialContext()\n\treturn ctx.lookup(\"java:comp/env/jdbc/datasource\") as DataSource\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The problem is how to switch between using these two variations based on the current environment. Over time, Spring users have devised a number of ways to get this done, usually relying on a combination of system environment variables and XML "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<import/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " statements containing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "${placeholder}"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " tokens that resolve to the correct configuration file path depending on the value of an environment variable. Bean definition profiles is a core container feature that provides a solution to this problem."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If we generalize the use case shown in the preceding example of environment-specific bean definitions, we end up with the need to register certain bean definitions in certain contexts but not in others. You could say that you want to register a certain profile of bean definitions in situation A and a different profile in situation B. We start by updating our configuration to reflect this need."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/annotation/Profile.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation lets you indicate that a component is eligible for registration when one or more specified profiles are active. Using our preceding example, we can rewrite the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dataSource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\n@Profile(\"development\")\npublic class StandaloneDataConfig {\n\n\t@Bean\n\tpublic DataSource dataSource() {\n\t\treturn new EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t.build();\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\n@Profile(\"development\")\nclass StandaloneDataConfig {\n\n\t@Bean\n\tfun dataSource(): DataSource {\n\t\treturn EmbeddedDatabaseBuilder()\n\t\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t\t.build()\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "open",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\n@Profile(\"production\")\npublic class JndiDataConfig {\n\n\t@Bean(destroyMethod = \"\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO1-1",
+                                      "kind": "callout",
+                                      "number": "1",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tpublic DataSource dataSource() throws Exception {\n\t\tContext ctx = new InitialContext();\n\t\treturn (DataSource) ctx.lookup(\"java:comp/env/jdbc/datasource\");\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                },
+                                {
+                                  "context": "colist",
+                                  "id": null,
+                                  "items": [
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO1-1"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "@Bean(destroyMethod = \"\")"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " disables default destroy method inference."
+                                        }
+                                      ],
+                                      "src": ""
+                                    }
+                                  ],
+                                  "roles": [],
+                                  "style": "arabic",
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\n@Profile(\"production\")\nclass JndiDataConfig {\n\n\t@Bean(destroyMethod = \"\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO2-1",
+                                      "kind": "callout",
+                                      "number": "1",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tfun dataSource(): DataSource {\n\t\tval ctx = InitialContext()\n\t\treturn ctx.lookup(\"java:comp/env/jdbc/datasource\") as DataSource\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                },
+                                {
+                                  "context": "colist",
+                                  "id": null,
+                                  "items": [
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO2-1"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "@Bean(destroyMethod = \"\")"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " disables default destroy method inference."
+                                        }
+                                      ],
+                                      "src": ""
+                                    }
+                                  ],
+                                  "roles": [],
+                                  "style": "arabic",
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "open",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As mentioned earlier, with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Bean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods, you typically choose to use programmatic JNDI lookups, by using either Spring’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JndiTemplate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "/"
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JndiLocatorDelegate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " helpers or the straight JNDI "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "InitialContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " usage shown earlier but not the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JndiObjectFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " variant, which would force you to declare the return type as the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " type."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The profile string may contain a simple profile name (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "production"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") or a profile expression. A profile expression allows for more complicated profile logic to be expressed (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "production & us-east"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). The following operators are supported in profile expressions:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "!"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": A logical "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "NOT"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " of the profile"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "&"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": A logical "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "AND"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " of the profiles"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "|"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": A logical "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "OR"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " of the profiles"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You cannot mix the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "&"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "|"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " operators without using parentheses. For example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "production & us-east | eu-central"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is not a valid expression. It must be expressed as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "production & (us-east | eu-central)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "meta-annotation"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/classpath-scanning.html#beans-meta-annotations"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the purpose of creating a custom composed annotation. The following example defines a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Production"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation that you can use as a drop-in replacement for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile(\"production\")"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Target(ElementType.TYPE)\n@Retention(RetentionPolicy.RUNTIME)\n@Profile(\"production\")\npublic @interface Production {\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Target(AnnotationTarget.CLASS)\n@Retention(AnnotationRetention.RUNTIME)\n@Profile(\"production\")\nannotation class Production"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "open",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Configuration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class is marked with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", all of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Bean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Import"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations associated with that class are bypassed unless one or more of the specified profiles are active. If a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Component"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Configuration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class is marked with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile({\"p1\", \"p2\"})"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", that class is not registered or processed unless profiles 'p1' or 'p2' have been activated. If a given profile is prefixed with the NOT operator ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "!"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), the annotated element is registered only if the profile is not active. For example, given "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile({\"p1\", \"!p2\"})"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", registration will occur if profile 'p1' is active or if profile 'p2' is not active."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Profile"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can also be declared at the method level to include only one particular bean of a configuration class (for example, for alternative variants of a particular bean), as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\npublic class AppConfig {\n\n\t@Bean(\"dataSource\")\n\t@Profile(\"development\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO3-1",
+                                      "kind": "callout",
+                                      "number": "1",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tpublic DataSource standaloneDataSource() {\n\t\treturn new EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t.build();\n\t}\n\n\t@Bean(\"dataSource\")\n\t@Profile(\"production\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO3-2",
+                                      "kind": "callout",
+                                      "number": "2",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tpublic DataSource jndiDataSource() throws Exception {\n\t\tContext ctx = new InitialContext();\n\t\treturn (DataSource) ctx.lookup(\"java:comp/env/jdbc/datasource\");\n\t}\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                },
+                                {
+                                  "context": "colist",
+                                  "id": null,
+                                  "items": [
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO3-1"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "The "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "standaloneDataSource"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " method is available only in the "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "development"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " profile."
+                                        }
+                                      ],
+                                      "src": ""
+                                    },
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO3-2"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "The "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "jndiDataSource"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " method is available only in the "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "production"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " profile."
+                                        }
+                                      ],
+                                      "src": ""
+                                    }
+                                  ],
+                                  "roles": [],
+                                  "style": "arabic",
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Java"
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Configuration\nclass AppConfig {\n\n\t@Bean(\"dataSource\")\n\t@Profile(\"development\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO4-1",
+                                      "kind": "callout",
+                                      "number": "1",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tfun standaloneDataSource(): DataSource {\n\t\treturn EmbeddedDatabaseBuilder()\n\t\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/test-data.sql\")\n\t\t\t\t.build()\n\t}\n\n\t@Bean(\"dataSource\")\n\t@Profile(\"production\") "
+                                    },
+                                    {
+                                      "guard": "// ",
+                                      "icons": null,
+                                      "id": "CO4-2",
+                                      "kind": "callout",
+                                      "number": "2",
+                                      "src": "",
+                                      "xml": false
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "\n\tfun jndiDataSource() =\n\t\tInitialContext().lookup(\"java:comp/env/jdbc/datasource\") as DataSource\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                },
+                                {
+                                  "context": "colist",
+                                  "id": null,
+                                  "items": [
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO4-1"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "The "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "standaloneDataSource"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " method is available only in the "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "development"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " profile."
+                                        }
+                                      ],
+                                      "src": ""
+                                    },
+                                    {
+                                      "blocks": [],
+                                      "checkbox": null,
+                                      "coids": [
+                                        "CO4-2"
+                                      ],
+                                      "icons": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "The "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "jndiDataSource"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " method is available only in the "
+                                        },
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "production"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " profile."
+                                        }
+                                      ],
+                                      "src": ""
+                                    }
+                                  ],
+                                  "roles": [],
+                                  "style": "arabic",
+                                  "title": null
+                                }
+                              ],
+                              "checkbox": null,
+                              "inlines": []
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Kotlin"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "example",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "open",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "With "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " on "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Bean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " methods, a special scenario may apply: In the case of overloaded "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Bean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " methods of the same Java method name (analogous to constructor overloading), a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " condition needs to be consistently declared on all overloaded methods. If the conditions are inconsistent, only the condition on the first declaration among the overloaded methods matters. Therefore, "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Profile"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " can not be used to select an overloaded method with a particular argument signature over another. Resolution between all factory methods for the same bean follows Spring’s constructor resolution algorithm at creation time."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you want to define alternative beans with different profile conditions, use distinct Java method names that point to the same bean name by using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Bean"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " name attribute, as shown in the preceding example. If the argument signatures are all the same (for example, all of the variants have no-arg factory methods), this is the only way to represent such an arrangement in a valid Java class in the first place (since there can only be one method of a particular name and argument signature)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "beans-definition-profiles-java",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Profile"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The XML counterpart is the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "profile"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<beans>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element. Our preceding sample configuration can be rewritten in two XML files, as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans profile=\"development\"\n\txmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jdbc=\"http://www.springframework.org/schema/jdbc\"\n\txsi:schemaLocation=\"...\">\n\n\t<jdbc:embedded-database id=\"dataSource\">\n\t\t<jdbc:script location=\"classpath:com/bank/config/sql/schema.sql\"/>\n\t\t<jdbc:script location=\"classpath:com/bank/config/sql/test-data.sql\"/>\n\t</jdbc:embedded-database>\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans profile=\"production\"\n\txmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jee=\"http://www.springframework.org/schema/jee\"\n\txsi:schemaLocation=\"...\">\n\n\t<jee:jndi-lookup id=\"dataSource\" jndi-name=\"java:comp/env/jdbc/datasource\"/>\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is also possible to avoid that split and nest "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<beans/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements within the same file, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jdbc=\"http://www.springframework.org/schema/jdbc\"\n\txmlns:jee=\"http://www.springframework.org/schema/jee\"\n\txsi:schemaLocation=\"...\">\n\n\t<!-- other bean definitions -->\n\n\t<beans profile=\"development\">\n\t\t<jdbc:embedded-database id=\"dataSource\">\n\t\t\t<jdbc:script location=\"classpath:com/bank/config/sql/schema.sql\"/>\n\t\t\t<jdbc:script location=\"classpath:com/bank/config/sql/test-data.sql\"/>\n\t\t</jdbc:embedded-database>\n\t</beans>\n\n\t<beans profile=\"production\">\n\t\t<jee:jndi-lookup id=\"dataSource\" jndi-name=\"java:comp/env/jdbc/datasource\"/>\n\t</beans>\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring-bean.xsd"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " has been constrained to allow such elements only as the last ones in the file. This should help provide flexibility without incurring clutter in the XML files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The XML counterpart does not support the profile expressions described earlier. It is possible, however, to negate a profile by using the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "!"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " operator. It is also possible to apply a logical “and” by nesting the profiles, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jdbc=\"http://www.springframework.org/schema/jdbc\"\n\txmlns:jee=\"http://www.springframework.org/schema/jee\"\n\txsi:schemaLocation=\"...\">\n\n\t<!-- other bean definitions -->\n\n\t<beans profile=\"production\">\n\t\t<beans profile=\"us-east\">\n\t\t\t<jee:jndi-lookup id=\"dataSource\" jndi-name=\"java:comp/env/jdbc/datasource\"/>\n\t\t</beans>\n\t</beans>\n</beans>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In the preceding example, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "dataSource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " bean is exposed if both the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "production"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "us-east"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " profiles are active."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "beans-definition-profiles-xml",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "XML Bean Definition Profiles"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now that we have updated our configuration, we still need to instruct Spring which profile is active. If we started our sample application right now, we would see a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NoSuchBeanDefinitionException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " thrown, because the container could not find the Spring bean named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dataSource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Activating a profile can be done in several ways, but the most straightforward is to do it programmatically against the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Environment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " API which is available through an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following example shows how to do so:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext();\nctx.getEnvironment().setActiveProfiles(\"development\");\nctx.register(SomeConfig.class, StandaloneDataConfig.class, JndiDataConfig.class);\nctx.refresh();"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val ctx = AnnotationConfigApplicationContext().apply {\n\tenvironment.setActiveProfiles(\"development\")\n\tregister(SomeConfig::class.java, StandaloneDataConfig::class.java, JndiDataConfig::class.java)\n\trefresh()\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In addition, you can also declaratively activate profiles through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.profiles.active"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property, which may be specified through system environment variables, JVM system properties, servlet context parameters in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "web.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or even as an entry in JNDI (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "PropertySource"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Abstraction"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/environment.html#beans-property-source-abstraction"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). In integration tests, active profiles can be declared by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ActiveProfiles"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring-test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " module (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "context configuration with environment profiles"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "testing/testcontext-framework/ctx-management/env-profiles.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " )."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that profiles are not an “either-or” proposition. You can activate multiple profiles at once. Programmatically, you can provide multiple profile names to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "setActiveProfiles()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, which accepts "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "String…​"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " varargs. The following example activates multiple profiles:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ctx.getEnvironment().setActiveProfiles(\"profile1\", \"profile2\");"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ctx.getEnvironment().setActiveProfiles(\"profile1\", \"profile2\")"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Declaratively, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.profiles.active"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " may accept a comma-separated list of profile names, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Dspring.profiles.active=\"profile1,profile2\""
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "beans-definition-profiles-enable",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Activating a Profile"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The default profile represents the profile that is enabled if no profile is active. Consider the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@Profile(\"default\")\npublic class DefaultDataConfig {\n\n\t@Bean\n\tpublic DataSource dataSource() {\n\t\treturn new EmbeddedDatabaseBuilder()\n\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t.build();\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@Profile(\"default\")\nclass DefaultDataConfig {\n\n\t@Bean\n\tfun dataSource(): DataSource {\n\t\treturn EmbeddedDatabaseBuilder()\n\t\t\t\t.setType(EmbeddedDatabaseType.HSQL)\n\t\t\t\t.addScript(\"classpath:com/bank/config/sql/schema.sql\")\n\t\t\t\t.build()\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "no profile is active"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#beans-definition-profiles-enable"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dataSource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is created. You can see this as a way to provide a default definition for one or more beans. If any profile is enabled, the default profile does not apply."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The name of the default profile is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You can change the name of the default profile by using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "setDefaultProfiles()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Environment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or, declaratively, by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.profiles.default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "beans-definition-profiles-default",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default Profile"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "beans-definition-profiles",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Bean Definition Profiles"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " abstraction provides search operations over a configurable hierarchy of property sources. Consider the following listing:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ApplicationContext ctx = new GenericApplicationContext();\nEnvironment env = ctx.getEnvironment();\nboolean containsMyProperty = env.containsProperty(\"my-property\");\nSystem.out.println(\"Does my environment contain the 'my-property' property? \" + containsMyProperty);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val ctx = GenericApplicationContext()\nval env = ctx.environment\nval containsMyProperty = env.containsProperty(\"my-property\")\nprintln(\"Does my environment contain the 'my-property' property? $containsMyProperty\")"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding snippet, we see a high-level way of asking Spring whether the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is defined for the current environment. To answer this question, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object performs a search over a set of "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PropertySource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/core/env/PropertySource.html"
+              },
+              {
+                "kind": "text",
+                "value": " objects. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is a simple abstraction over any source of key-value pairs, and Spring’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "StandardEnvironment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/core/env/StandardEnvironment.html"
+              },
+              {
+                "kind": "text",
+                "value": " is configured with two PropertySource objects — one representing the set of JVM system properties ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "System.getProperties()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and one representing the set of system environment variables ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "System.getenv()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "These default property sources are present for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StandardEnvironment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", for use in standalone applications. "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "StandardServletEnvironment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/context/support/StandardServletEnvironment.html"
+              },
+              {
+                "kind": "text",
+                "value": " is populated with additional default property sources including servlet config, servlet context parameters, and a "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JndiPropertySource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jndi/JndiPropertySource.html"
+              },
+              {
+                "kind": "text",
+                "value": " if JNDI is available."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Concretely, when you use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StandardEnvironment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "env.containsProperty(\"my-property\")"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " returns true if a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " system property or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " environment variable is present at runtime."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The search performed is hierarchical. By default, system properties have precedence over environment variables. So, if the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my-property"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property happens to be set in both places during a call to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "env.getProperty(\"my-property\")"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the system property value “wins” and is returned. Note that property values are not merged but rather completely overridden by a preceding entry."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For a common "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "StandardServletEnvironment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the full hierarchy is as follows, with the highest-precedence entries at the top:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ServletConfig parameters (if applicable — for example, in case of a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DispatcherServlet"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " context)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ServletContext parameters (web.xml context-param entries)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JNDI environment variables ("
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "java:comp/env/"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " entries)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JVM system properties ("
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "-D"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " command-line arguments)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JVM system environment (operating system environment variables)"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Most importantly, the entire mechanism is configurable. Perhaps you have a custom source of properties that you want to integrate into this search. To do so, implement and instantiate your own "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and add it to the set of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertySources"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for the current "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The following example shows how to do so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ConfigurableApplicationContext ctx = new GenericApplicationContext();\nMutablePropertySources sources = ctx.getEnvironment().getPropertySources();\nsources.addFirst(new MyPropertySource());"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val ctx = GenericApplicationContext()\nval sources = ctx.environment.propertySources\nsources.addFirst(MyPropertySource())"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the preceding code, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MyPropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " has been added with highest precedence in the search. If it contains a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property, the property is detected and returned, in favor of any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my-property"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property in any other "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MutablePropertySources"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/core/env/MutablePropertySources.html"
+              },
+              {
+                "kind": "text",
+                "value": " API exposes a number of methods that allow for precise manipulation of the set of property sources."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "beans-property-source-abstraction",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "PropertySource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Abstraction"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@PropertySource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/context/annotation/PropertySource.html"
+              },
+              {
+                "kind": "text",
+                "value": " annotation provides a convenient and declarative mechanism for adding a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to Spring’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Given a file called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "app.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that contains the key-value pair "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testbean.name=myTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Configuration"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class uses "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in such a way that a call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testBean.getName()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " returns "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "myTestBean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Configuration\n@PropertySource(\"classpath:/com/myco/app.properties\")\npublic class AppConfig {\n\n @Autowired\n Environment env;\n\n @Bean\n public TestBean testBean() {\n  TestBean testBean = new TestBean();\n  testBean.setName(env.getProperty(\"testbean.name\"));\n  return testBean;\n }\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Configuration\n@PropertySource(\"classpath:/com/myco/app.properties\")\nclass AppConfig {\n\n\t@Autowired\n\tprivate lateinit var env: Environment\n\n\t@Bean\n\tfun testBean() = TestBean().apply {\n\t\tname = env.getProperty(\"testbean.name\")!!\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "${…​}"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " placeholders present in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " resource location are resolved against the set of property sources already registered against the environment, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Configuration\n@PropertySource(\"classpath:/com/${my.placeholder:default/path}/app.properties\")\npublic class AppConfig {\n\n @Autowired\n Environment env;\n\n @Bean\n public TestBean testBean() {\n  TestBean testBean = new TestBean();\n  testBean.setName(env.getProperty(\"testbean.name\"));\n  return testBean;\n }\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Configuration\n@PropertySource(\"classpath:/com/\\${my.placeholder:default/path}/app.properties\")\nclass AppConfig {\n\n\t@Autowired\n\tprivate lateinit var env: Environment\n\n\t@Bean\n\tfun testBean() = TestBean().apply {\n\t\tname = env.getProperty(\"testbean.name\")!!\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Assuming that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "my.placeholder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is present in one of the property sources already registered (for example, system properties or environment variables), the placeholder is resolved to the corresponding value. If not, then "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "default/path"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is used as a default. If no default is specified and a property cannot be resolved, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "IllegalArgumentException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is thrown."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be used as a repeatable annotation. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@PropertySource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " may also be used as a meta-annotation to create custom composed annotations with attribute overrides."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "beans-using-propertysource",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@PropertySource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Historically, the value of placeholders in elements could be resolved only against JVM system properties or environment variables. This is no longer the case. Because the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " abstraction is integrated throughout the container, it is easy to route resolution of placeholders through it. This means that you may configure the resolution process in any way you like. You can change the precedence of searching through system properties and environment variables or remove them entirely. You can also add your own property sources to the mix, as appropriate."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Concretely, the following statement works regardless of where the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "customer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is defined, as long as it is available in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Environment"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<beans>\n\t<import resource=\"com/bank/service/${customer}-config.xml\"/>\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "beans-placeholder-resolution-in-statements",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Placeholder Resolution in Statements"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Environment Abstraction"
+      }
+    ]
+  }
+}

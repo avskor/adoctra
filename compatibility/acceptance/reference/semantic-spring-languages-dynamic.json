@@ -1,0 +1,3069 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring provides comprehensive support for using classes and objects that have been defined by using a dynamic language (such as Groovy) with Spring. This support lets you write any number of classes in a supported dynamic language and have the Spring container transparently instantiate, configure, and dependency inject the resulting objects."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring’s scripting support primarily targets Groovy and BeanShell. Beyond those specifically supported languages, the JSR-223 scripting mechanism is supported for integration with any JSR-223 capable language provider (as of Spring 4.2), for example, JRuby."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can find fully working examples of where this dynamic language support can be immediately useful in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Scenarios"
+                  }
+                ],
+                "kind": "xref",
+                "target": "languages/dynamic.html#dynamic-language-scenarios"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The bulk of this chapter is concerned with describing the dynamic language support in detail. Before diving into all of the ins and outs of the dynamic language support, we look at a quick example of a bean defined in a dynamic language. The dynamic language for this first bean is Groovy. (The basis of this example was taken from the Spring test suite. If you want to see equivalent examples in any of the other supported languages, take a look at the source code)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The next example shows the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface, which the Groovy bean is going to implement. Note that this interface is defined in plain Java. Dependent objects that are injected with a reference to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " do not know that the underlying implementation is a Groovy script. The following listing shows the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.scripting;\n\npublic interface Messenger {\n\n\tString getMessage();\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example defines a class that has a dependency on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.scripting;\n\npublic class DefaultBookingService implements BookingService {\n\n\tprivate Messenger messenger;\n\n\tpublic void setMessenger(Messenger messenger) {\n\t\tthis.messenger = messenger;\n\t}\n\n\tpublic void processBooking() {\n\t\t// use the injected Messenger object...\n\t}\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example implements the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface in Groovy:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "package org.springframework.scripting.groovy\n\n// Import the Messenger interface (written in Java) that is to be implemented\nimport org.springframework.scripting.Messenger\n\n// Define the implementation in Groovy in file 'Messenger.groovy'\nclass GroovyMessenger implements Messenger {\n\n\tString message\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the custom dynamic language tags to define dynamic-language-backed beans, you need to have the XML Schema preamble at the top of your Spring XML configuration file. You also need to use a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation as your IoC container. Using the dynamic-language-backed beans with a plain "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation is supported, but you have to manage the plumbing of the Spring internals to do so."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For more information on schema-based configuration, see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "XML Schema-based Configuration"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#xsd-schemas-lang"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, the following example shows the bean definitions that effect the injection of the Groovy-defined "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation into an instance of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultBookingService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:lang=\"http://www.springframework.org/schema/lang\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/lang https://www.springframework.org/schema/lang/spring-lang.xsd\">\n\n\t<!-- this is the bean definition for the Groovy-backed Messenger implementation -->\n\t<lang:groovy id=\"messenger\" script-source=\"classpath:Messenger.groovy\">\n\t\t<lang:property name=\"message\" value=\"I Can Do The Frug\" />\n\t</lang:groovy>\n\n\t<!-- an otherwise normal bean that will be injected by the Groovy-backed Messenger -->\n\t<bean id=\"bookingService\" class=\"x.y.DefaultBookingService\">\n\t\t<property name=\"messenger\" ref=\"messenger\" />\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bookingService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean (a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DefaultBookingService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") can now use its private "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " member variable as normal, because the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance that was injected into it is a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Messenger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance. There is nothing special going on here — just plain Java and plain Groovy."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Hopefully, the preceding XML snippet is self-explanatory, but do not worry unduly if it is not. Keep reading for the in-depth detail on the whys and wherefores of the preceding configuration."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "dynamic-language-a-first-example",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "A First Example"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section describes exactly how you define Spring-managed beans in any of the supported dynamic languages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that this chapter does not attempt to explain the syntax and idioms of the supported dynamic languages. For example, if you want to use Groovy to write certain of the classes in your application, we assume that you already know Groovy. If you need further details about the dynamic languages themselves, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Further Resources"
+                  }
+                ],
+                "kind": "xref",
+                "target": "languages/dynamic.html#dynamic-language-resources"
+              },
+              {
+                "kind": "text",
+                "value": " at the end of this chapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The steps involved in using dynamic-language-backed beans are as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Write the test for the dynamic language source code (naturally)."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Then write the dynamic language source code itself."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Define your dynamic-language-backed beans by using the appropriate "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:language/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element in the XML configuration (you can define such beans programmatically by using the Spring API, although you will have to consult the source code for directions on how to do this, as this chapter does not cover this type of advanced configuration). Note that this is an iterative step. You need at least one bean definition for each dynamic language source file (although multiple bean definitions can reference the same source file)."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The first two steps (testing and writing your dynamic language source files) are beyond the scope of this chapter. See the language specification and reference manual for your chosen dynamic language and crack on with developing your dynamic language source files. You first want to read the rest of this chapter, though, as Spring’s dynamic language support does make some (small) assumptions about the contents of your dynamic language source files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The final step in the list in the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "preceding section"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "languages/dynamic.html#dynamic-language-beans-concepts"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " involves defining dynamic-language-backed bean definitions, one for each bean that you want to configure (this is no different from normal JavaBean configuration). However, instead of specifying the fully qualified class name of the class that is to be instantiated and configured by the container, you can use the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:language/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element to define the dynamic language-backed bean."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Each of the supported languages has a corresponding "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:language/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "<lang:groovy/>"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " (Groovy)"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "<lang:bsh/>"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " (BeanShell)"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "<lang:std/>"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " (JSR-223, for example, with JRuby)"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The exact attributes and child elements that are available for configuration depends on exactly which language the bean has been defined in (the language-specific sections later in this chapter detail this)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "dynamic-language-beans-concepts-xml-language-element",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "The <lang:language/> element"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "One of the (and perhaps the single) most compelling value adds of the dynamic language support in Spring is the “refreshable bean” feature."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "A refreshable bean is a dynamic-language-backed bean. With a small amount of configuration, a dynamic-language-backed bean can monitor changes in its underlying source file resource and then reload itself when the dynamic language source file is changed (for example, when you edit and save changes to the file on the file system)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This lets you deploy any number of dynamic language source files as part of an application, configure the Spring container to create beans backed by dynamic language source files (using the mechanisms described in this chapter), and (later, as requirements change or some other external factor comes into play) edit a dynamic language source file and have any change they make be reflected in the bean that is backed by the changed dynamic language source file. There is no need to shut down a running application (or redeploy in the case of a web application). The dynamic-language-backed bean so amended picks up the new state and logic from the changed dynamic language source file."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "This feature is off by default."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Now we can take a look at an example to see how easy it is to start using refreshable beans. To turn on the refreshable beans feature, you have to specify exactly one additional attribute on the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:language/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element of your bean definition. So, if we stick with "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the example"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "languages/dynamic.html#dynamic-language-a-first-example"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " from earlier in this chapter, the following example shows what we would change in the Spring XML configuration to effect refreshable beans:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<beans>\n\n\t<!-- this bean is now 'refreshable' due to the presence of the 'refresh-check-delay' attribute -->\n\t<lang:groovy id=\"messenger\"\n\t\t\trefresh-check-delay=\"5000\" <!-- switches refreshing on with 5 seconds between checks -->\n\t\t\tscript-source=\"classpath:Messenger.groovy\">\n\t\t<lang:property name=\"message\" value=\"I Can Do The Frug\" />\n\t</lang:groovy>\n\n\t<bean id=\"bookingService\" class=\"x.y.DefaultBookingService\">\n\t\t<property name=\"messenger\" ref=\"messenger\" />\n\t</bean>\n\n</beans>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "That really is all you have to do. The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "refresh-check-delay"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute defined on the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "messenger"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " bean definition is the number of milliseconds after which the bean is refreshed with any changes made to the underlying dynamic language source file. You can turn off the refresh behavior by assigning a negative value to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "refresh-check-delay"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " attribute. Remember that, by default, the refresh behavior is disabled. If you do not want the refresh behavior, do not define the attribute."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If we then run the following application, we can exercise the refreshable feature. (Please excuse the “jumping-through-hoops-to-pause-the-execution” shenanigans in this next slice of code.) The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "System.in.read()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " call is only there so that the execution of the program pauses while you (the developer in this scenario) go off and edit the underlying dynamic language source file so that the refresh triggers on the dynamic-language-backed bean when the program resumes execution."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following listing shows this sample application:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "import org.springframework.context.ApplicationContext;\nimport org.springframework.context.support.ClassPathXmlApplicationContext;\nimport org.springframework.scripting.Messenger;\n\npublic final class Boot {\n\n\tpublic static void main(final String[] args) throws Exception {\n\t\tApplicationContext ctx = new ClassPathXmlApplicationContext(\"beans.xml\");\n\t\tMessenger messenger = (Messenger) ctx.getBean(\"messenger\");\n\t\tSystem.out.println(messenger.getMessage());\n\t\t// pause execution while I go off and make changes to the source file...\n\t\tSystem.in.read();\n\t\tSystem.out.println(messenger.getMessage());\n\t}\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Assume then, for the purposes of this example, that all calls to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "getMessage()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Messenger"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementations have to be changed such that the message is surrounded by quotation marks. The following listing shows the changes that you (the developer) should make to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Messenger.groovy"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " source file when the execution of the program is paused:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "package org.springframework.scripting\n\nclass GroovyMessenger implements Messenger {\n\n\tprivate String message = \"Bingo\"\n\n\tpublic String getMessage() {\n\t\t// change the implementation to surround the message in quotes\n\t\treturn \"'\" + this.message + \"'\"\n\t}\n\n\tpublic void setMessage(String message) {\n\t\tthis.message = message\n\t}\n}"
+                      }
+                    ],
+                    "language": "groovy",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When the program runs, the output before the input pause will be "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "I Can Do The Frug"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". After the change to the source file is made and saved and the program resumes execution, the result of calling the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "getMessage()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method on the dynamic-language-backed "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Messenger"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation is "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "'I Can Do The Frug'"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (notice the inclusion of the additional quotation marks)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Changes to a script do not trigger a refresh if the changes occur within the window of the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "refresh-check-delay"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " value. Changes to the script are not actually picked up until a method is called on the dynamic-language-backed bean. It is only when a method is called on a dynamic-language-backed bean that it checks to see if its underlying script source has changed. Any exceptions that relate to refreshing the script (such as encountering a compilation error or finding that the script file has been deleted) results in a fatal exception being propagated to the calling code."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The refreshable bean behavior described earlier does not apply to dynamic language source files defined with the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:inline-script/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element notation (see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Inline Dynamic Language Source Files"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "languages/dynamic.html#dynamic-language-beans-inline"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "). Additionally, it applies only to beans where changes to the underlying source file can actually be detected (for example, by code that checks the last modified date of a dynamic language source file that exists on the file system)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "dynamic-language-refreshable-beans",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Refreshable Beans"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The dynamic language support can also cater to dynamic language source files that are embedded directly in Spring bean definitions. More specifically, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:inline-script/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element lets you define dynamic language source immediately inside a Spring configuration file. An example might clarify how the inline script feature works:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<lang:groovy id=\"messenger\">\n\t<lang:inline-script>\n\n\t\tpackage org.springframework.scripting.groovy\n\n\t\timport org.springframework.scripting.Messenger\n\n\t\tclass GroovyMessenger implements Messenger {\n\t\t\tString message\n\t\t}\n\n\t</lang:inline-script>\n\t<lang:property name=\"message\" value=\"I Can Do The Frug\" />\n</lang:groovy>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If we put to one side the issues surrounding whether it is good practice to define dynamic language source inside a Spring configuration file, the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<lang:inline-script/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element can be useful in some scenarios. For instance, we might want to quickly add a Spring "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Validator"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " implementation to a Spring MVC "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Controller"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". This is but a moment’s work using inline source. (See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Scripted Validators"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "languages/dynamic.html#dynamic-language-scenarios-validators"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for such an example.)"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "dynamic-language-beans-inline",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Inline Dynamic Language Source Files"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "There is one very important thing to be aware of with regard to Spring’s dynamic language support. Namely, you can not (currently) supply constructor arguments to dynamic-language-backed beans (and, hence, constructor-injection is not available for dynamic-language-backed beans). In the interests of making this special handling of constructors and properties 100% clear, the following mixture of code and configuration does not work:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "package org.springframework.scripting.groovy\n\nimport org.springframework.scripting.Messenger\n\n// from the file 'Messenger.groovy'\nclass GroovyMessenger implements Messenger {\n\n\tGroovyMessenger() {}\n\n\t// this constructor is not available for Constructor Injection\n\tGroovyMessenger(String message) {\n\t\tthis.message = message;\n\t}\n\n\tString message\n\n\tString anotherMessage\n}"
+                      }
+                    ],
+                    "language": "groovy",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "An approach that cannot work"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<lang:groovy id=\"badMessenger\"\n\tscript-source=\"classpath:Messenger.groovy\">\n\t<!-- this next constructor argument will not be injected into the GroovyMessenger -->\n\t<!-- in fact, this isn't even allowed according to the schema -->\n\t<constructor-arg value=\"This will not work\" />\n\n\t<!-- only property values are injected into the dynamic-language-backed object -->\n\t<lang:property name=\"anotherMessage\" value=\"Passed straight through to the dynamic-language-backed object\" />\n\n</lang>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In practice this limitation is not as significant as it first appears, since setter injection is the injection style favored by the overwhelming majority of developers (we leave the discussion as to whether that is a good thing to another day)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "dynamic-language-beans-ctor-injection",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Understanding Constructor Injection in the Context of Dynamic-language-backed Beans"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-beans-concepts",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Common Concepts"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This section describes how to use beans defined in Groovy in Spring."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Groovy homepage includes the following description:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "“Groovy is an agile dynamic language for the Java 2 Platform that has many of the features that people like so much in languages like Python, Ruby and Smalltalk, making them available to Java developers using a Java-like syntax.”"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you have read this chapter straight from the top, you have already "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "seen an example"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#dynamic-language-a-first-example"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " of a Groovy-dynamic-language-backed bean. Now consider another example (again using an example from the Spring test suite):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package org.springframework.scripting;\n\npublic interface Calculator {\n\n\tint add(int x, int y);\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example implements the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Calculator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface in Groovy:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package org.springframework.scripting.groovy\n\n// from the file 'calculator.groovy'\nclass GroovyCalculator implements Calculator {\n\n\tint add(int x, int y) {\n\t\tx + y\n\t}\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following bean definition uses the calculator defined in Groovy:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<!-- from the file 'beans.xml' -->\n<beans>\n\t<lang:groovy id=\"calculator\" script-source=\"classpath:calculator.groovy\"/>\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, the following small application exercises the preceding configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package org.springframework.scripting;\n\nimport org.springframework.context.ApplicationContext;\nimport org.springframework.context.support.ClassPathXmlApplicationContext;\n\npublic class Main {\n\n\tpublic static void main(String[] args) {\n\t\tApplicationContext ctx = new ClassPathXmlApplicationContext(\"beans.xml\");\n\t\tCalculator calc = ctx.getBean(\"calculator\", Calculator.class);\n\t\tSystem.out.println(calc.add(2, 8));\n\t}\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The resulting output from running the above program is (unsurprisingly) "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "10"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". (For more interesting examples, see the dynamic language showcase project for a more complex example or see the examples "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Scenarios"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#dynamic-language-scenarios"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " later in this chapter)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You must not define more than one class per Groovy source file. While this is perfectly legal in Groovy, it is (arguably) a bad practice. In the interests of a consistent approach, you should (in the opinion of the Spring team) respect the standard Java conventions of one (public) class per source file."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " interface is a callback that lets you hook additional creation logic into the process of creating a Groovy-backed bean. For example, implementations of this interface could invoke any required initialization methods, set some default property values, or specify a custom "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MetaClass"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". The following listing shows the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " interface definition:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public interface GroovyObjectCustomizer {\n\n\tvoid customize(GroovyObject goo);\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The Spring Framework instantiates an instance of your Groovy-backed bean and then passes the created "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObject"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to the specified "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (if one has been defined). You can do whatever you like with the supplied "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObject"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " reference. We expect that most people want to set a custom "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MetaClass"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " with this callback, and the following example shows how to do so:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public final class SimpleMethodTracingCustomizer implements GroovyObjectCustomizer {\n\n\tpublic void customize(GroovyObject goo) {\n\t\tDelegatingMetaClass metaClass = new DelegatingMetaClass(goo.getMetaClass()) {\n\n\t\t\tpublic Object invokeMethod(Object object, String methodName, Object[] arguments) {\n\t\t\t\tSystem.out.println(\"Invoking '\" + methodName + \"'.\");\n\t\t\t\treturn super.invokeMethod(object, methodName, arguments);\n\t\t\t}\n\t\t};\n\t\tmetaClass.initialize();\n\t\tgoo.setMetaClass(metaClass);\n\t}\n\n}"
+                      }
+                    ],
+                    "language": "java",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "A full discussion of meta-programming in Groovy is beyond the scope of the Spring reference manual. See the relevant section of the Groovy reference manual or do a search online. Plenty of articles address this topic. Actually, making use of a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is easy if you use the Spring namespace support, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<!-- define the GroovyObjectCustomizer just like any other bean -->\n<bean id=\"tracingCustomizer\" class=\"example.SimpleMethodTracingCustomizer\"/>\n\n\t<!-- ... and plug it into the desired Groovy bean via the 'customizer-ref' attribute -->\n\t<lang:groovy id=\"calculator\"\n\t\tscript-source=\"classpath:org/springframework/scripting/groovy/Calculator.groovy\"\n\t\tcustomizer-ref=\"tracingCustomizer\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you do not use the Spring namespace support, you can still use the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " functionality, as the following example shows:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"calculator\" class=\"org.springframework.scripting.groovy.GroovyScriptFactory\">\n\t<constructor-arg value=\"classpath:org/springframework/scripting/groovy/Calculator.groovy\"/>\n\t<!-- define the GroovyObjectCustomizer (as an inner bean) -->\n\t<constructor-arg>\n\t\t<bean id=\"tracingCustomizer\" class=\"example.SimpleMethodTracingCustomizer\"/>\n\t</constructor-arg>\n</bean>\n\n<bean class=\"org.springframework.scripting.support.ScriptFactoryPostProcessor\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "admonition",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You may also specify a Groovy "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CompilationCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (such as an "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ImportCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ") or even a full Groovy "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CompilerConfiguration"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " object in the same place as Spring’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyObjectCustomizer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Furthermore, you may set a common "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyClassLoader"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " with custom configuration for your beans at the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ConfigurableApplicationContext.setClassLoader"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " level; this also leads to shared "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyClassLoader"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " usage and is therefore recommendable in case of a large number of scripted beans (avoiding an isolated "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "GroovyClassLoader"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instance per bean)."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  }
+                ],
+                "context": "section",
+                "id": "dynamic-language-beans-groovy-customizer",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Customizing Groovy Objects by Using a Callback"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-beans-groovy",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Groovy Beans"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This section describes how to use BeanShell beans in Spring."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanShell homepage"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://beanshell.github.io/intro.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " includes the following description:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanShell is a small, free, embeddable Java source interpreter with dynamic language\nfeatures, written in Java. BeanShell dynamically runs standard Java syntax and\nextends it with common scripting conveniences such as loose types, commands, and method\nclosures like those in Perl and JavaScript."
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In contrast to Groovy, BeanShell-backed bean definitions require some (small) additional configuration. The implementation of the BeanShell dynamic language support in Spring is interesting, because Spring creates a JDK dynamic proxy that implements all of the interfaces that are specified in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "script-interfaces"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<lang:bsh>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element (this is why you must supply at least one interface in the value of the attribute, and, consequently, program to interfaces when you use BeanShell-backed beans). This means that every method call on a BeanShell-backed object goes through the JDK dynamic proxy invocation mechanism."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now we can show a fully working example of using a BeanShell-based bean that implements the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Messenger"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface that was defined earlier in this chapter. We again show the definition of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Messenger"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package org.springframework.scripting;\n\npublic interface Messenger {\n\n\tString getMessage();\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows the BeanShell “implementation” (we use the term loosely here) of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Messenger"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String message;\n\nString getMessage() {\n\treturn message;\n}\n\nvoid setMessage(String aMessage) {\n\tmessage = aMessage;\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows the Spring XML that defines an “instance” of the above “class” (again, we use these terms very loosely here):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<lang:bsh id=\"messageService\" script-source=\"classpath:BshMessenger.bsh\"\n\tscript-interfaces=\"org.springframework.scripting.Messenger\">\n\n\t<lang:property name=\"message\" value=\"Hello World!\" />\n</lang:bsh>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Scenarios"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#dynamic-language-scenarios"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for some scenarios where you might want to use BeanShell-based beans."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-beans-bsh",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "BeanShell Beans"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "dynamic-language-beans",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Defining Beans that Are Backed by Dynamic Languages"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The possible scenarios where defining Spring managed beans in a scripting language would be beneficial are many and varied. This section describes two possible use cases for the dynamic language support in Spring."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "One group of classes that can benefit from using dynamic-language-backed beans is that of Spring MVC controllers. In pure Spring MVC applications, the navigational flow through a web application is, to a large extent, determined by code encapsulated within your Spring MVC controllers. As the navigational flow and other presentation layer logic of a web application needs to be updated to respond to support issues or changing business requirements, it may well be easier to effect any such required changes by editing one or more dynamic language source files and seeing those changes being immediately reflected in the state of a running application."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Remember that, in the lightweight architectural model espoused by projects such as Spring, you typically aim to have a really thin presentation layer, with all the meaty business logic of an application being contained in the domain and service layer classes. Developing Spring MVC controllers as dynamic-language-backed beans lets you change presentation layer logic by editing and saving text files. Any changes to such dynamic language source files is (depending on the configuration) automatically reflected in the beans that are backed by dynamic language source files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To effect this automatic “pickup” of any changes to dynamic-language-backed beans, you have to enable the “refreshable beans” functionality. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Refreshable Beans"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#dynamic-language-refreshable-beans"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a full treatment of this feature."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.web.servlet.mvc.Controller"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implemented by using the Groovy dynamic language:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package org.springframework.showcase.fortune.web\n\nimport org.springframework.showcase.fortune.service.FortuneService\nimport org.springframework.showcase.fortune.domain.Fortune\nimport org.springframework.web.servlet.ModelAndView\nimport org.springframework.web.servlet.mvc.Controller\n\nimport jakarta.servlet.http.HttpServletRequest\nimport jakarta.servlet.http.HttpServletResponse\n\n// from the file '/WEB-INF/groovy/FortuneController.groovy'\nclass FortuneController implements Controller {\n\n\t@Property FortuneService fortuneService\n\n\tModelAndView handleRequest(HttpServletRequest request,\n\t\t\tHttpServletResponse httpServletResponse) {\n\t\treturn new ModelAndView(\"tell\", \"fortune\", this.fortuneService.tellFortune())\n\t}\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<lang:groovy id=\"fortune\"\n\t\trefresh-check-delay=\"3000\"\n\t\tscript-source=\"/WEB-INF/groovy/FortuneController.groovy\">\n\t<lang:property name=\"fortuneService\" ref=\"fortuneService\"/>\n</lang:groovy>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-scenarios-controllers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Scripted Spring MVC Controllers"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Another area of application development with Spring that may benefit from the flexibility afforded by dynamic-language-backed beans is that of validation. It can be easier to express complex validation logic by using a loosely typed dynamic language (that may also have support for inline regular expressions) as opposed to regular Java."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Again, developing validators as dynamic-language-backed beans lets you change validation logic by editing and saving a simple text file. Any such changes is (depending on the configuration) automatically reflected in the execution of a running application and would not require the restart of an application."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To effect the automatic “pickup” of any changes to dynamic-language-backed beans, you have to enable the 'refreshable beans' feature. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Refreshable Beans"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html#dynamic-language-refreshable-beans"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a full and detailed treatment of this feature."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.validation.Validator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implemented by using the Groovy dynamic language (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Validation using Spring’s Validator interface"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/validation/validator.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a discussion of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Validator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "import org.springframework.validation.Validator\nimport org.springframework.validation.Errors\nimport org.springframework.beans.TestBean\n\nclass TestBeanValidator implements Validator {\n\n\tboolean supports(Class clazz) {\n\t\treturn TestBean.class.isAssignableFrom(clazz)\n\t}\n\n\tvoid validate(Object bean, Errors errors) {\n\t\tif(bean.name?.trim()?.size() > 0) {\n\t\t\treturn\n\t\t}\n\t\terrors.reject(\"whitespace\", \"Cannot be composed wholly of whitespace.\")\n\t}\n}"
+                  }
+                ],
+                "language": "groovy",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-scenarios-validators",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Scripted Validators"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "dynamic-language-scenarios",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Scenarios"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This last section contains some additional details related to the dynamic language support."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use the Spring AOP framework to advise scripted beans. The Spring AOP framework actually is unaware that a bean that is being advised might be a scripted bean, so all of the AOP use cases and functionality that you use (or aim to use) work with scripted beans. When you advise scripted beans, you cannot use class-based proxies. You must use "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "interface-based proxies"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/aop/proxying.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You are not limited to advising scripted beans. You can also write aspects themselves in a supported dynamic language and use such beans to advise other Spring beans. This really would be an advanced use of the dynamic language support though."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-final-notes-aop",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "AOP — Advising Scripted Beans"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In case it is not immediately obvious, scripted beans can be scoped in the same way as any other bean. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "scope"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute on the various "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<lang:language/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements lets you control the scope of the underlying scripted bean, as it does with a regular bean. (The default scope is "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "singleton"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/factory-scopes.html#beans-factory-scopes-singleton"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", as it is with “regular” beans.)"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example uses the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "scope"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute to define a Groovy bean scoped as a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "prototype"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/factory-scopes.html#beans-factory-scopes-prototype"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:lang=\"http://www.springframework.org/schema/lang\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/lang https://www.springframework.org/schema/lang/spring-lang.xsd\">\n\n\t<lang:groovy id=\"messenger\" script-source=\"classpath:Messenger.groovy\" scope=\"prototype\">\n\t\t<lang:property name=\"message\" value=\"I Can Do The RoboCop\" />\n\t</lang:groovy>\n\n\t<bean id=\"bookingService\" class=\"x.y.DefaultBookingService\">\n\t\t<property name=\"messenger\" ref=\"messenger\" />\n\t</bean>\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Bean Scopes"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/factory-scopes.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The IoC Container"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-xslt.html#mvc-view-xslt-beandefs"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a full discussion of the scoping support in the Spring Framework."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "dynamic-language-final-notes-scopes",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Scoping"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements in Spring XML configuration deal with exposing objects that have been written in a dynamic language (such as Groovy or BeanShell) as beans in the Spring container."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "These elements (and the dynamic language support) are comprehensively covered in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Dynamic Language Support"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/dynamic.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". See that section for full details on this support and the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file. The text in the following snippet references the correct schema so that the tags in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lang"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " namespace are available to you:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:lang=\"http://www.springframework.org/schema/lang\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/lang https://www.springframework.org/schema/lang/spring-lang.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-schemas-lang",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "lang"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " XML schema"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "dynamic-language-final-notes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional Details"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following links go to further resources about the various dynamic languages referenced in this chapter:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Groovy"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.groovy-lang.org/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " homepage"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanShell"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://beanshell.github.io/intro.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " homepage"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JRuby"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.jruby.org"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " homepage"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "dynamic-language-resources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Further Resources"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Dynamic Language Support"
+      }
+    ]
+  }
+}

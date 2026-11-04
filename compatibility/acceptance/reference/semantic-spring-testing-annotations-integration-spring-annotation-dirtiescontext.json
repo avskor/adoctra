@@ -1,0 +1,1519 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DirtiesContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " indicates that the underlying Spring "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " has been dirtied during the execution of a test (that is, the test modified or corrupted it in some manner — for example, by changing the state of a singleton bean) and should be closed. When an application context is marked as dirty, it is removed from the testing framework’s cache and closed. As a consequence, the underlying Spring container is rebuilt for any subsequent test that requires a context with the same configuration metadata."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DirtiesContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " as both a class-level and a method-level annotation within the same test class or test class hierarchy. In such scenarios, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is marked as dirty before or after any such annotated method as well as before or after the current test class, depending on the configured "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "methodMode"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "classMode"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". When "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DirtiesContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is declared at both the class level and the method level, the configured modes from both annotations will be honored. For example, if the class mode is set to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BEFORE_EACH_TEST_METHOD"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and the method mode is set to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AFTER_METHOD"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", the context will be marked as dirty both before and after the given test method."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following examples explain when the context would be dirtied for various configuration scenarios:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = BEFORE_CLASS) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass FreshContextTests {\n\t// some tests that require a new Spring container\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before the current test class."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = BEFORE_CLASS) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass FreshContextTests {\n\t// some tests that require a new Spring container\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before the current test class."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before the current test class, when declared on a class with class mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BEFORE_CLASS"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass ContextDirtyingTests {\n\t// some tests that result in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after the current test class."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass ContextDirtyingTests {\n\t// some tests that result in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after the current test class."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After the current test class, when declared on a class with class mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AFTER_CLASS"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (i.e., the default class mode)."
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = BEFORE_EACH_TEST_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO5-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass FreshContextTests {\n\t// some tests that require a new Spring container\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO5-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before each test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = BEFORE_EACH_TEST_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO6-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass FreshContextTests {\n\t// some tests that require a new Spring container\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO6-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before each test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before each test method in the current test class, when declared on a class with class mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BEFORE_EACH_TEST_METHOD."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = AFTER_EACH_TEST_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO7-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass ContextDirtyingTests {\n\t// some tests that result in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO7-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after each test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(classMode = AFTER_EACH_TEST_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO8-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\nclass ContextDirtyingTests {\n\t// some tests that result in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO8-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after each test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After each test method in the current test class, when declared on a class with class mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AFTER_EACH_TEST_METHOD."
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(methodMode = BEFORE_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO9-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@Test\nvoid testProcessWhichRequiresFreshAppCtx() {\n\t// some logic that requires a new Spring container\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO9-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before the current test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext(methodMode = BEFORE_METHOD) "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO10-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@Test\nfun testProcessWhichRequiresFreshAppCtx() {\n\t// some logic that requires a new Spring container\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO10-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context before the current test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before the current test, when declared on a method with the method mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BEFORE_METHOD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO11-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@Test\nvoid testProcessWhichDirtiesAppCtx() {\n\t// some logic that results in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO11-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after the current test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DirtiesContext "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO12-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n@Test\nfun testProcessWhichDirtiesAppCtx() {\n\t// some logic that results in the Spring container being dirtied\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO12-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Dirty the context after the current test method."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After the current test, when declared on a method with the method mode set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AFTER_METHOD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (i.e., the default method mode)."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If you use "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DirtiesContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in a test whose context is configured as part of a context hierarchy with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ContextHierarchy"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", you can use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "hierarchyMode"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " flag to control how the context cache is cleared. By default, an exhaustive algorithm is used to clear the context cache, including not only the current level but also all other context hierarchies that share an ancestor context common to the current test. All "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instances that reside in a sub-hierarchy of the common ancestor context are removed from the context cache and closed. If the exhaustive algorithm is overkill for a particular use case, you can specify the simpler current level algorithm, as the following example shows."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ContextHierarchy({\n\t@ContextConfiguration(\"/parent-config.xml\"),\n\t@ContextConfiguration(\"/child-config.xml\")\n})\nclass BaseTests {\n\t// class body...\n}\n\nclass ExtendedTests extends BaseTests {\n\n\t@Test\n\t@DirtiesContext(hierarchyMode = CURRENT_LEVEL) "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO13-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\tvoid test() {\n\t\t// some logic that results in the child context being dirtied\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO13-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Use the current-level algorithm."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ContextHierarchy(\n\tContextConfiguration(\"/parent-config.xml\"),\n\tContextConfiguration(\"/child-config.xml\"))\nopen class BaseTests {\n\t// class body...\n}\n\nclass ExtendedTests : BaseTests() {\n\n\t@Test\n\t@DirtiesContext(hierarchyMode = CURRENT_LEVEL) "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO14-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\tfun test() {\n\t\t// some logic that results in the child context being dirtied\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO14-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Use the current-level algorithm."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For further details regarding the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "EXHAUSTIVE"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CURRENT_LEVEL"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " algorithms, see the "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DirtiesContext.HierarchyMode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/test/annotation/DirtiesContext.HierarchyMode.html"
+          },
+          {
+            "kind": "text",
+            "value": " javadoc."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@DirtiesContext"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      }
+    ]
+  }
+}

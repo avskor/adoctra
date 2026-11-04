@@ -1,0 +1,3224 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": "xsd-custom-introduction",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since version 2.0, Spring has featured a mechanism for adding schema-based extensions to the basic Spring XML format for defining and configuring beans. This section covers how to write your own custom XML bean definition parsers and integrate such parsers into the Spring IoC container."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To facilitate authoring configuration files that use a schema-aware XML editor, Spring’s extensible XML configuration mechanism is based on XML Schema. If you are not familiar with Spring’s current XML configuration extensions that come with the standard Spring distribution, you should first read the previous section on "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XML Schemas"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/appendix/xsd-schemas.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To create new XML configuration extensions:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Author"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-schema"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " an XML schema to describe your custom element(s)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Code"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-namespacehandler"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespaceHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Code"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-parser"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " one or more "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionParser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations (this is where the real work is done)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-registration"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " your new artifacts with Spring."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For a unified example, we create an XML extension (a custom XML element) that lets us configure objects of the type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package). When we are done, we will be able to define bean definitions of type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<myns:dateformat id=\"dateFormat\"\n\tpattern=\"yyyy-MM-dd HH:mm\"\n\tlenient=\"true\"/>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "(We include much more detailed examples follow later in this appendix. The intent of this first simple example is to walk you through the basic steps of making a custom extension.)"
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Creating an XML configuration extension for use with Spring’s IoC container starts with authoring an XML Schema to describe the extension. For our example, we use the following schema to configure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<!-- myns.xsd (inside package org/springframework/samples/xml) -->\n\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<xsd:schema xmlns=\"http://www.mycompany.example/schema/myns\"\n\t\txmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n\t\txmlns:beans=\"http://www.springframework.org/schema/beans\"\n\t\ttargetNamespace=\"http://www.mycompany.example/schema/myns\"\n\t\telementFormDefault=\"qualified\"\n\t\tattributeFormDefault=\"unqualified\">\n\n\t<xsd:import namespace=\"http://www.springframework.org/schema/beans\"/>\n\n\t<xsd:element name=\"dateformat\">\n\t\t<xsd:complexType>\n\t\t\t<xsd:complexContent>\n\t\t\t\t<xsd:extension base=\"beans:identifiedType\"> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t\t\t\t\t<xsd:attribute name=\"lenient\" type=\"xsd:boolean\"/>\n\t\t\t\t\t<xsd:attribute name=\"pattern\" type=\"xsd:string\" use=\"required\"/>\n\t\t\t\t</xsd:extension>\n\t\t\t</xsd:complexContent>\n\t\t</xsd:complexType>\n\t</xsd:element>\n</xsd:schema>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The indicated line contains an extension base for all identifiable tags (meaning they have an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute that we can use as the bean identifier in the container). We can use this attribute because we imported the Spring-provided "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "beans"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " namespace."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The preceding schema lets us configure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " objects directly in an XML application context file by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<myns:dateformat/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<myns:dateformat id=\"dateFormat\"\n\tpattern=\"yyyy-MM-dd HH:mm\"\n\tlenient=\"true\"/>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that, after we have created the infrastructure classes, the preceding snippet of XML is essentially the same as the following XML snippet:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<bean id=\"dateFormat\" class=\"java.text.SimpleDateFormat\">\n\t<constructor-arg value=\"yyyy-MM-dd HH:mm\"/>\n\t<property name=\"lenient\" value=\"true\"/>\n</bean>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The second of the two preceding snippets creates a bean in the container (identified by the name "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") with a couple of properties set."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The schema-based approach to creating configuration format allows for tight integration with an IDE that has a schema-aware XML editor. By using a properly authored schema, you can use autocompletion to let a user choose between several configuration options defined in the enumeration."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-schema",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Authoring the Schema"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the schema, we need a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to parse all elements of this specific namespace that Spring encounters while parsing configuration files. For this example, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " should take care of the parsing of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "myns:dateformat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface features three methods:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "init()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Allows for initialization of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespaceHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and is called by Spring before the handler is used."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition parse(Element, ParserContext)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Called when Spring encounters a top-level element (not nested inside a bean definition or a different namespace). This method can itself register bean definitions, return a bean definition, or both."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionHolder decorate(Node, BeanDefinitionHolder, ParserContext)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ": Called when Spring encounters an attribute or nested element of a different namespace. The decoration of one or more bean definitions is used (for example) with the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "scopes that Spring supports"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/beans/factory-scopes.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". We start by highlighting a simple example, without using decoration, after which we show decoration in a somewhat more advanced example."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although you can code your own "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for the entire namespace (and hence provide code that parses each and every element in the namespace), it is often the case that each top-level XML element in a Spring XML configuration file results in a single bean definition (as in our case, where a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<myns:dateformat/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element results in a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SimpleDateFormat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean definition). Spring features a number of convenience classes that support this scenario. In the following example, we use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandlerSupport"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "package org.springframework.samples.xml;\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport;\n\npublic class MyNamespaceHandler extends NamespaceHandlerSupport {\n\n\tpublic void init() {\n\t\tregisterBeanDefinitionParser(\"dateformat\", new SimpleDateFormatBeanDefinitionParser());\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "package org.springframework.samples.xml\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport\n\nclass MyNamespaceHandler : NamespaceHandlerSupport {\n\n\toverride fun init() {\n\t\tregisterBeanDefinitionParser(\"dateformat\", SimpleDateFormatBeanDefinitionParser())\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may notice that there is not actually a whole lot of parsing logic in this class. Indeed, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandlerSupport"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class has a built-in notion of delegation. It supports the registration of any number of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinitionParser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances, to which it delegates to when it needs to parse an element in its namespace. This clean separation of concerns lets a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " handle the orchestration of the parsing of all of the custom elements in its namespace while delegating to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinitionParsers"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to do the grunt work of the XML parsing. This means that each "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinitionParser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " contains only the logic for parsing a single custom element, as we can see in the next step."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-namespacehandler",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Coding a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "NamespaceHandler"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinitionParser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is used if the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NamespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " encounters an XML element of the type that has been mapped to the specific bean definition parser ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dateformat"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in this case). In other words, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinitionParser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is responsible for parsing one distinct top-level XML element defined in the schema. In the parser, we' have access to the XML element (and thus to its subelements, too) so that we can parse our custom XML content, as you can see in the following example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "package org.springframework.samples.xml;\n\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder;\nimport org.springframework.beans.factory.xml.AbstractSingleBeanDefinitionParser;\nimport org.springframework.util.StringUtils;\nimport org.w3c.dom.Element;\n\nimport java.text.SimpleDateFormat;\n\npublic class SimpleDateFormatBeanDefinitionParser extends AbstractSingleBeanDefinitionParser { "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO2-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n\tprotected Class getBeanClass(Element element) {\n\t\treturn SimpleDateFormat.class; "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO2-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t}\n\n\tprotected void doParse(Element element, BeanDefinitionBuilder bean) {\n\t\t// this will never be null since the schema explicitly requires that a value be supplied\n\t\tString pattern = element.getAttribute(\"pattern\");\n\t\tbean.addConstructorArgValue(pattern);\n\n\t\t// this however is an optional property\n\t\tString lenient = element.getAttribute(\"lenient\");\n\t\tif (StringUtils.hasText(lenient)) {\n\t\t\tbean.addPropertyValue(\"lenient\", Boolean.valueOf(lenient));\n\t\t}\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO2-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "We use the Spring-provided "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "AbstractSingleBeanDefinitionParser"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " to handle a lot of the basic grunt work of creating a single "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "BeanDefinition"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "."
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO2-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "We supply the "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "AbstractSingleBeanDefinitionParser"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " superclass with the type that our single "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "BeanDefinition"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " represents."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "package org.springframework.samples.xml\n\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder\nimport org.springframework.beans.factory.xml.AbstractSingleBeanDefinitionParser\nimport org.springframework.util.StringUtils\nimport org.w3c.dom.Element\n\nimport java.text.SimpleDateFormat\n\nclass SimpleDateFormatBeanDefinitionParser : AbstractSingleBeanDefinitionParser() { "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO3-1",
+                              "kind": "callout",
+                              "number": "1",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\n\toverride fun getBeanClass(element: Element): Class<*>? { "
+                            },
+                            {
+                              "guard": "// ",
+                              "icons": null,
+                              "id": "CO3-2",
+                              "kind": "callout",
+                              "number": "2",
+                              "src": "",
+                              "xml": false
+                            },
+                            {
+                              "kind": "text",
+                              "value": "\n\t\treturn SimpleDateFormat::class.java\n\t}\n\n\toverride fun doParse(element: Element, bean: BeanDefinitionBuilder) {\n\t\t// this will never be null since the schema explicitly requires that a value be supplied\n\t\tval pattern = element.getAttribute(\"pattern\")\n\t\tbean.addConstructorArgValue(pattern)\n\n\t\t// this however is an optional property\n\t\tval lenient = element.getAttribute(\"lenient\")\n\t\tif (StringUtils.hasText(lenient)) {\n\t\t\tbean.addPropertyValue(\"lenient\", java.lang.Boolean.valueOf(lenient))\n\t\t}\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        },
+                        {
+                          "context": "colist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO3-1"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "We use the Spring-provided "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "AbstractSingleBeanDefinitionParser"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " to handle a lot of the basic grunt work of creating a single "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "BeanDefinition"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "."
+                                }
+                              ],
+                              "src": ""
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "coids": [
+                                "CO3-2"
+                              ],
+                              "icons": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "We supply the "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "AbstractSingleBeanDefinitionParser"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " superclass with the type that our single "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "BeanDefinition"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " represents."
+                                }
+                              ],
+                              "src": ""
+                            }
+                          ],
+                          "roles": [],
+                          "style": "arabic",
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this simple case, this is all that we need to do. The creation of our single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "BeanDefinition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is handled by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractSingleBeanDefinitionParser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " superclass, as is the extraction and setting of the bean definition’s unique identifier."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-parser",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "BeanDefinitionParser"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The coding is finished. All that remains to be done is to make the Spring XML parsing infrastructure aware of our custom element. We do so by registering our custom "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "namespaceHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and custom XSD file in two special-purpose properties files. These properties files are both placed in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "META-INF"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " directory in your application and can, for example, be distributed alongside your binary classes in a JAR file. The Spring XML parsing infrastructure automatically picks up your new extension by consuming these special properties files, the formats of which are detailed in the next two sections."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The properties file called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.handlers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " contains a mapping of XML Schema URIs to namespace handler classes. For our example, we need to write the following:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "http\\://www.mycompany.example/schema/myns=org.springframework.samples.xml.MyNamespaceHandler"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "(The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " character is a valid delimiter in the Java properties format, so "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " character in the URI needs to be escaped with a backslash.)"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The first part (the key) of the key-value pair is the URI associated with your custom namespace extension and needs to exactly match exactly the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "targetNamespace"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute, as specified in your custom XSD schema."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-custom-registration-spring-handlers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Writing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "META-INF/spring.handlers"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The properties file called "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "spring.schemas"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " contains a mapping of XML Schema locations (referred to, along with the schema declaration, in XML files that use the schema as part of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "xsi:schemaLocation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute) to classpath resources. This file is needed to prevent Spring from absolutely having to use a default "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "EntityResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that requires Internet access to retrieve the schema file. If you specify the mapping in this properties file, Spring searches for the schema (in this case, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "myns.xsd"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.samples.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package) on the classpath. The following snippet shows the line we need to add for our custom schema:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "http\\://www.mycompany.example/schema/myns/myns.xsd=org/springframework/samples/xml/myns.xsd"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "(Remember that the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " character must be escaped.)"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You are encouraged to deploy your XSD file (or files) right alongside the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespaceHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionParser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " classes on the classpath."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-custom-registration-spring-schemas",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Writing 'META-INF/spring.schemas'"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-registration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering the Handler and the Schema"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using a custom extension that you yourself have implemented is no different from using one of the “custom” extensions that Spring provides. The following example uses the custom "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<dateformat/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element developed in the previous steps in a Spring XML configuration file:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:myns=\"http://www.mycompany.example/schema/myns\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.mycompany.example/schema/myns http://www.mycompany.com/schema/myns/myns.xsd\">\n\n\t<!-- as a top-level bean -->\n\t<myns:dateformat id=\"defaultDateFormat\" pattern=\"yyyy-MM-dd HH:mm\" lenient=\"true\"/> "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO4-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n\t<bean id=\"jobDetailTemplate\" abstract=\"true\">\n\t\t<property name=\"dateFormat\">\n\t\t\t<!-- as an inner bean -->\n\t\t\t<myns:dateformat pattern=\"HH:mm MM-dd-yyyy\"/>\n\t\t</property>\n\t</bean>\n\n</beans>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Our custom bean."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-using",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using a Custom Extension in Your Spring XML Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section presents some more detailed examples of custom XML extensions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The example presented in this section shows how you to write the various artifacts required to satisfy a target of the following configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:foo=\"http://www.foo.example/schema/component\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.foo.example/schema/component http://www.foo.example/schema/component/component.xsd\">\n\n\t<foo:component id=\"bionic-family\" name=\"Bionic-1\">\n\t\t<foo:component name=\"Mother-1\">\n\t\t\t<foo:component name=\"Karate-1\"/>\n\t\t\t<foo:component name=\"Sport-1\"/>\n\t\t</foo:component>\n\t\t<foo:component name=\"Rock-1\"/>\n\t</foo:component>\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preceding configuration nests custom extensions within each other. The class that is actually configured by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<foo:component/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element is the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Component"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class (shown in the next example). Notice how the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Component"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class does not expose a setter method for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "components"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. This makes it hard (or rather impossible) to configure a bean definition for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Component"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class by using setter injection. The following listing shows the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Component"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport java.util.ArrayList;\nimport java.util.List;\n\npublic class Component {\n\n\tprivate String name;\n\tprivate List<Component> components = new ArrayList<Component> ();\n\n\t// there is no setter method for the 'components'\n\tpublic void addComponent(Component component) {\n\t\tthis.components.add(component);\n\t}\n\n\tpublic List<Component> getComponents() {\n\t\treturn components;\n\t}\n\n\tpublic String getName() {\n\t\treturn name;\n\t}\n\n\tpublic void setName(String name) {\n\t\tthis.name = name;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport java.util.ArrayList\n\nclass Component {\n\n\tvar name: String? = null\n\tprivate val components = ArrayList<Component>()\n\n\t// there is no setter method for the 'components'\n\tfun addComponent(component: Component) {\n\t\tthis.components.add(component)\n\t}\n\n\tfun getComponents(): List<Component> {\n\t\treturn components\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The typical solution to this issue is to create a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that exposes a setter property for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "components"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. The following listing shows such a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport org.springframework.beans.factory.FactoryBean;\n\nimport java.util.List;\n\npublic class ComponentFactoryBean implements FactoryBean<Component> {\n\n\tprivate Component parent;\n\tprivate List<Component> children;\n\n\tpublic void setParent(Component parent) {\n\t\tthis.parent = parent;\n\t}\n\n\tpublic void setChildren(List<Component> children) {\n\t\tthis.children = children;\n\t}\n\n\tpublic Component getObject() throws Exception {\n\t\tif (this.children != null && this.children.size() > 0) {\n\t\t\tfor (Component child : children) {\n\t\t\t\tthis.parent.addComponent(child);\n\t\t\t}\n\t\t}\n\t\treturn this.parent;\n\t}\n\n\tpublic Class<Component> getObjectType() {\n\t\treturn Component.class;\n\t}\n\n\tpublic boolean isSingleton() {\n\t\treturn true;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport org.springframework.beans.factory.FactoryBean\nimport org.springframework.stereotype.Component\n\nclass ComponentFactoryBean : FactoryBean<Component> {\n\n\tprivate var parent: Component? = null\n\tprivate var children: List<Component>? = null\n\n\tfun setParent(parent: Component) {\n\t\tthis.parent = parent\n\t}\n\n\tfun setChildren(children: List<Component>) {\n\t\tthis.children = children\n\t}\n\n\toverride fun getObject(): Component? {\n\t\tif (this.children != null && this.children!!.isNotEmpty()) {\n\t\t\tfor (child in children!!) {\n\t\t\t\tthis.parent!!.addComponent(child)\n\t\t\t}\n\t\t}\n\t\treturn this.parent\n\t}\n\n\toverride fun getObjectType(): Class<Component>? {\n\t\treturn Component::class.java\n\t}\n\n\toverride fun isSingleton(): Boolean {\n\t\treturn true\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This works nicely, but it exposes a lot of Spring plumbing to the end user. What we are going to do is write a custom extension that hides away all of this Spring plumbing. If we stick to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "the steps described previously"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-introduction"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", we start off by creating the XSD schema to define the structure of our custom tag, as the following listing shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<xsd:schema xmlns=\"http://www.foo.example/schema/component\"\n\t\txmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n\t\ttargetNamespace=\"http://www.foo.example/schema/component\"\n\t\telementFormDefault=\"qualified\"\n\t\tattributeFormDefault=\"unqualified\">\n\n\t<xsd:element name=\"component\">\n\t\t<xsd:complexType>\n\t\t\t<xsd:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n\t\t\t\t<xsd:element ref=\"component\"/>\n\t\t\t</xsd:choice>\n\t\t\t<xsd:attribute name=\"id\" type=\"xsd:ID\"/>\n\t\t\t<xsd:attribute name=\"name\" use=\"required\" type=\"xsd:string\"/>\n\t\t</xsd:complexType>\n\t</xsd:element>\n\n</xsd:schema>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Again following "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "the process described earlier"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/appendix/xml-custom.html#core.appendix.xsd-custom-introduction"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", we then create a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespaceHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport;\n\npublic class ComponentNamespaceHandler extends NamespaceHandlerSupport {\n\n\tpublic void init() {\n\t\tregisterBeanDefinitionParser(\"component\", new ComponentBeanDefinitionParser());\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport\n\nclass ComponentNamespaceHandler : NamespaceHandlerSupport() {\n\n\toverride fun init() {\n\t\tregisterBeanDefinitionParser(\"component\", ComponentBeanDefinitionParser())\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next up is the custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionParser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Remember that we are creating a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that describes a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ComponentFactoryBean"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following listing shows our custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionParser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport org.springframework.beans.factory.config.BeanDefinition;\nimport org.springframework.beans.factory.support.AbstractBeanDefinition;\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder;\nimport org.springframework.beans.factory.support.ManagedList;\nimport org.springframework.beans.factory.xml.AbstractBeanDefinitionParser;\nimport org.springframework.beans.factory.xml.ParserContext;\nimport org.springframework.util.xml.DomUtils;\nimport org.w3c.dom.Element;\n\nimport java.util.List;\n\npublic class ComponentBeanDefinitionParser extends AbstractBeanDefinitionParser {\n\n\tprotected AbstractBeanDefinition parseInternal(Element element, ParserContext parserContext) {\n\t\treturn parseComponentElement(element);\n\t}\n\n\tprivate static AbstractBeanDefinition parseComponentElement(Element element) {\n\t\tBeanDefinitionBuilder factory = BeanDefinitionBuilder.rootBeanDefinition(ComponentFactoryBean.class);\n\t\tfactory.addPropertyValue(\"parent\", parseComponent(element));\n\n\t\tList<Element> childElements = DomUtils.getChildElementsByTagName(element, \"component\");\n\t\tif (childElements != null && childElements.size() > 0) {\n\t\t\tparseChildComponents(childElements, factory);\n\t\t}\n\n\t\treturn factory.getBeanDefinition();\n\t}\n\n\tprivate static BeanDefinition parseComponent(Element element) {\n\t\tBeanDefinitionBuilder component = BeanDefinitionBuilder.rootBeanDefinition(Component.class);\n\t\tcomponent.addPropertyValue(\"name\", element.getAttribute(\"name\"));\n\t\treturn component.getBeanDefinition();\n\t}\n\n\tprivate static void parseChildComponents(List<Element> childElements, BeanDefinitionBuilder factory) {\n\t\tManagedList<BeanDefinition> children = new ManagedList<>(childElements.size());\n\t\tfor (Element element : childElements) {\n\t\t\tchildren.add(parseComponentElement(element));\n\t\t}\n\t\tfactory.addPropertyValue(\"children\", children);\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport org.springframework.beans.factory.config.BeanDefinition\nimport org.springframework.beans.factory.support.AbstractBeanDefinition\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder\nimport org.springframework.beans.factory.support.ManagedList\nimport org.springframework.beans.factory.xml.AbstractBeanDefinitionParser\nimport org.springframework.beans.factory.xml.ParserContext\nimport org.springframework.util.xml.DomUtils\nimport org.w3c.dom.Element\n\nimport java.util.List\n\nclass ComponentBeanDefinitionParser : AbstractBeanDefinitionParser() {\n\n\toverride fun parseInternal(element: Element, parserContext: ParserContext): AbstractBeanDefinition? {\n\t\treturn parseComponentElement(element)\n\t}\n\n\tprivate fun parseComponentElement(element: Element): AbstractBeanDefinition {\n\t\tval factory = BeanDefinitionBuilder.rootBeanDefinition(ComponentFactoryBean::class.java)\n\t\tfactory.addPropertyValue(\"parent\", parseComponent(element))\n\n\t\tval childElements = DomUtils.getChildElementsByTagName(element, \"component\")\n\t\tif (childElements != null && childElements.size > 0) {\n\t\t\tparseChildComponents(childElements, factory)\n\t\t}\n\n\t\treturn factory.getBeanDefinition()\n\t}\n\n\tprivate fun parseComponent(element: Element): BeanDefinition {\n\t\tval component = BeanDefinitionBuilder.rootBeanDefinition(Component::class.java)\n\t\tcomponent.addPropertyValue(\"name\", element.getAttribute(\"name\"))\n\t\treturn component.beanDefinition\n\t}\n\n\tprivate fun parseChildComponents(childElements: List<Element>, factory: BeanDefinitionBuilder) {\n\t\tval children = ManagedList<BeanDefinition>(childElements.size)\n\t\tfor (element in childElements) {\n\t\t\tchildren.add(parseComponentElement(element))\n\t\t}\n\t\tfactory.addPropertyValue(\"children\", children)\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, the various artifacts need to be registered with the Spring XML infrastructure, by modifying the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "META-INF/spring.handlers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "META-INF/spring.schemas"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " files, as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "# in 'META-INF/spring.handlers'\nhttp\\://www.foo.example/schema/component=com.foo.ComponentNamespaceHandler"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "# in 'META-INF/spring.schemas'\nhttp\\://www.foo.example/schema/component/component.xsd=com/foo/component.xsd"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-custom-custom-nested",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Nesting Custom Elements within Custom Elements"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Writing your own custom parser and the associated artifacts is not hard. However, it is sometimes not the right thing to do. Consider a scenario where you need to add metadata to already existing bean definitions. In this case, you certainly do not want to have to write your own entire custom extension. Rather, you merely want to add an additional attribute to the existing bean definition element."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By way of another example, suppose that you define a bean definition for a service object that (unknown to it) accesses a clustered "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JCache"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.jcp.org/en/jsr/detail?id=107"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and you want to ensure that the named JCache instance is eagerly started within the surrounding cluster. The following listing shows such a definition:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<bean id=\"checkingAccountService\" class=\"com.foo.DefaultCheckingAccountService\"\n\t\tjcache:cache-name=\"checking.account\">\n\t<!-- other dependencies here... -->\n</bean>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We can then create another "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " when the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'jcache:cache-name'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute is parsed. This "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " then initializes the named JCache for us. We can also modify the existing "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "'checkingAccountService'"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " so that it has a dependency on this new JCache-initializing "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following listing shows our "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JCacheInitializer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\npublic class JCacheInitializer {\n\n\tprivate final String name;\n\n\tpublic JCacheInitializer(String name) {\n\t\tthis.name = name;\n\t}\n\n\tpublic void initialize() {\n\t\t// lots of JCache API calls to initialize the named cache...\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nclass JCacheInitializer(private val name: String) {\n\n\tfun initialize() {\n\t\t// lots of JCache API calls to initialize the named cache...\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now we can move onto the custom extension. First, we need to author the XSD schema that describes the custom attribute, as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n\n<xsd:schema xmlns=\"http://www.foo.example/schema/jcache\"\n\t\txmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\n\t\ttargetNamespace=\"http://www.foo.example/schema/jcache\"\n\t\telementFormDefault=\"qualified\">\n\n\t<xsd:attribute name=\"cache-name\" type=\"xsd:string\"/>\n\n</xsd:schema>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next, we need to create the associated "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespaceHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport;\n\npublic class JCacheNamespaceHandler extends NamespaceHandlerSupport {\n\n\tpublic void init() {\n\t\tsuper.registerBeanDefinitionDecoratorForAttribute(\"cache-name\",\n\t\t\tnew JCacheInitializingBeanDefinitionDecorator());\n\t}\n\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport org.springframework.beans.factory.xml.NamespaceHandlerSupport\n\nclass JCacheNamespaceHandler : NamespaceHandlerSupport() {\n\n\toverride fun init() {\n\t\tsuper.registerBeanDefinitionDecoratorForAttribute(\"cache-name\",\n\t\t\t\tJCacheInitializingBeanDefinitionDecorator())\n\t}\n\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next, we need to create the parser. Note that, in this case, because we are going to parse an XML attribute, we write a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionDecorator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " rather than a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionParser"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following listing shows our "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanDefinitionDecorator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo;\n\nimport org.springframework.beans.factory.config.BeanDefinitionHolder;\nimport org.springframework.beans.factory.support.AbstractBeanDefinition;\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder;\nimport org.springframework.beans.factory.xml.BeanDefinitionDecorator;\nimport org.springframework.beans.factory.xml.ParserContext;\nimport org.w3c.dom.Attr;\nimport org.w3c.dom.Node;\n\nimport java.util.ArrayList;\nimport java.util.Arrays;\nimport java.util.List;\n\npublic class JCacheInitializingBeanDefinitionDecorator implements BeanDefinitionDecorator {\n\n\tprivate static final String[] EMPTY_STRING_ARRAY = new String[0];\n\n\tpublic BeanDefinitionHolder decorate(Node source, BeanDefinitionHolder holder,\n\t\t\tParserContext ctx) {\n\t\tString initializerBeanName = registerJCacheInitializer(source, ctx);\n\t\tcreateDependencyOnJCacheInitializer(holder, initializerBeanName);\n\t\treturn holder;\n\t}\n\n\tprivate void createDependencyOnJCacheInitializer(BeanDefinitionHolder holder,\n\t\t\tString initializerBeanName) {\n\t\tAbstractBeanDefinition definition = ((AbstractBeanDefinition) holder.getBeanDefinition());\n\t\tString[] dependsOn = definition.getDependsOn();\n\t\tif (dependsOn == null) {\n\t\t\tdependsOn = new String[]{initializerBeanName};\n\t\t} else {\n\t\t\tList dependencies = new ArrayList(Arrays.asList(dependsOn));\n\t\t\tdependencies.add(initializerBeanName);\n\t\t\tdependsOn = (String[]) dependencies.toArray(EMPTY_STRING_ARRAY);\n\t\t}\n\t\tdefinition.setDependsOn(dependsOn);\n\t}\n\n\tprivate String registerJCacheInitializer(Node source, ParserContext ctx) {\n\t\tString cacheName = ((Attr) source).getValue();\n\t\tString beanName = cacheName + \"-initializer\";\n\t\tif (!ctx.getRegistry().containsBeanDefinition(beanName)) {\n\t\t\tBeanDefinitionBuilder initializer = BeanDefinitionBuilder.rootBeanDefinition(JCacheInitializer.class);\n\t\t\tinitializer.addConstructorArg(cacheName);\n\t\t\tctx.getRegistry().registerBeanDefinition(beanName, initializer.getBeanDefinition());\n\t\t}\n\t\treturn beanName;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package com.foo\n\nimport org.springframework.beans.factory.config.BeanDefinitionHolder\nimport org.springframework.beans.factory.support.AbstractBeanDefinition\nimport org.springframework.beans.factory.support.BeanDefinitionBuilder\nimport org.springframework.beans.factory.xml.BeanDefinitionDecorator\nimport org.springframework.beans.factory.xml.ParserContext\nimport org.w3c.dom.Attr\nimport org.w3c.dom.Node\n\nimport java.util.ArrayList\n\nclass JCacheInitializingBeanDefinitionDecorator : BeanDefinitionDecorator {\n\n\toverride fun decorate(source: Node, holder: BeanDefinitionHolder,\n\t\t\t\t\t\tctx: ParserContext): BeanDefinitionHolder {\n\t\tval initializerBeanName = registerJCacheInitializer(source, ctx)\n\t\tcreateDependencyOnJCacheInitializer(holder, initializerBeanName)\n\t\treturn holder\n\t}\n\n\tprivate fun createDependencyOnJCacheInitializer(holder: BeanDefinitionHolder,\n\t\t\t\t\t\t\t\t\t\t\t\t\tinitializerBeanName: String) {\n\t\tval definition = holder.beanDefinition as AbstractBeanDefinition\n\t\tvar dependsOn = definition.dependsOn\n\t\tdependsOn = if (dependsOn == null) {\n\t\t\tarrayOf(initializerBeanName)\n\t\t} else {\n\t\t\tval dependencies = ArrayList(listOf(*dependsOn))\n\t\t\tdependencies.add(initializerBeanName)\n\t\t\tdependencies.toTypedArray()\n\t\t}\n\t\tdefinition.setDependsOn(*dependsOn)\n\t}\n\n\tprivate fun registerJCacheInitializer(source: Node, ctx: ParserContext): String {\n\t\tval cacheName = (source as Attr).value\n\t\tval beanName = \"$cacheName-initializer\"\n\t\tif (!ctx.registry.containsBeanDefinition(beanName)) {\n\t\t\tval initializer = BeanDefinitionBuilder.rootBeanDefinition(JCacheInitializer::class.java)\n\t\t\tinitializer.addConstructorArg(cacheName)\n\t\t\tctx.registry.registerBeanDefinition(beanName, initializer.getBeanDefinition())\n\t\t}\n\t\treturn beanName\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, we need to register the various artifacts with the Spring XML infrastructure by modifying the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "META-INF/spring.handlers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "META-INF/spring.schemas"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " files, as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "# in 'META-INF/spring.handlers'\nhttp\\://www.foo.example/schema/jcache=com.foo.JCacheNamespaceHandler"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "# in 'META-INF/spring.schemas'\nhttp\\://www.foo.example/schema/jcache/jcache.xsd=com/foo/jcache.xsd"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "xsd-custom-custom-just-attributes",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Custom Attributes on “Normal” Elements"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "xsd-custom-meat",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "More Detailed Examples"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "XML Schema Authoring"
+      }
+    ]
+  }
+}

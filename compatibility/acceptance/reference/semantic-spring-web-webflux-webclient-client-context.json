@@ -1,0 +1,156 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Attributes"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webflux-webclient/client-attributes.html"
+          },
+          {
+            "kind": "text",
+            "value": " provide a convenient way to pass information to the filter chain but they only influence the current request. If you want to pass information that propagates to additional requests that are nested, for example, via "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "flatMap"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", or executed after, for example, via "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "concatMap"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", then you’ll need to use the Reactor "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Context"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The Reactor "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Context"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " needs to be populated at the end of a reactive chain in order to apply to all operations. For example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "WebClient client = WebClient.builder()\n\t\t.filter((request, next) ->\n\t\t\t\tMono.deferContextual(contextView -> {\n\t\t\t\t\tString value = contextView.get(\"foo\");\n\t\t\t\t\t// ...\n\t\t\t\t}))\n\t\t.build();\n\nclient.get().uri(\"https://example.org/\")\n\t\t.retrieve()\n\t\t.bodyToMono(String.class)\n\t\t.flatMap(body -> {\n\t\t\t\t// perform nested request (context propagates automatically)...\n\t\t})\n\t\t.contextWrite(context -> context.put(\"foo\", ...));"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Context"
+      }
+    ]
+  }
+}

@@ -1,0 +1,481 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Servlet stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-controller/ann-methods/matrix-variables.html"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "RFC 3986"
+              }
+            ],
+            "kind": "link",
+            "target": "https://datatracker.ietf.org/doc/html/rfc3986#section-3.3"
+          },
+          {
+            "kind": "text",
+            "value": " discusses name-value pairs in path segments. In Spring WebFlux, we refer to those as “matrix variables” based on an "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "“old post”"
+              }
+            ],
+            "kind": "link",
+            "target": "https://www.w3.org/DesignIssues/MatrixURIs.html"
+          },
+          {
+            "kind": "text",
+            "value": " by Tim Berners-Lee, but they can be also be referred to as URI path parameters."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Matrix variables can appear in any path segment, with each variable separated by a semicolon and multiple values separated by commas — for example, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "\"/cars;color=red,green;year=2012\""
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Multiple values can also be specified through repeated variable names — for example, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "\"color=red;color=green;color=blue\""
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Unlike Spring MVC, in WebFlux, the presence or absence of matrix variables in a URL does not affect request mappings. In other words, you are not required to use a URI variable to mask variable content. That said, if you want to access matrix variables from a controller method, you need to add a URI variable to the path segment where matrix variables are expected. The following example shows how to do so:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /pets/42;q=11;r=22\n\n@GetMapping(\"/pets/{petId}\")\npublic void findPet(@PathVariable String petId, @MatrixVariable int q) {\n\n\t// petId == 42\n\t// q == 11\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /pets/42;q=11;r=22\n\n@GetMapping(\"/pets/{petId}\")\nfun findPet(@PathVariable petId: String, @MatrixVariable q: Int) {\n\n\t// petId == 42\n\t// q == 11\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Given that all path segments can contain matrix variables, you may sometimes need to disambiguate which path variable the matrix variable is expected to be in, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /owners/42;q=11/pets/21;q=22\n\n@GetMapping(\"/owners/{ownerId}/pets/{petId}\")\npublic void findPet(\n\t\t@MatrixVariable(name=\"q\", pathVar=\"ownerId\") int q1,\n\t\t@MatrixVariable(name=\"q\", pathVar=\"petId\") int q2) {\n\n\t// q1 == 11\n\t// q2 == 22\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@GetMapping(\"/owners/{ownerId}/pets/{petId}\")\nfun findPet(\n\t\t@MatrixVariable(name = \"q\", pathVar = \"ownerId\") q1: Int,\n\t\t@MatrixVariable(name = \"q\", pathVar = \"petId\") q2: Int) {\n\n\t// q1 == 11\n\t// q2 == 22\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can define a matrix variable may be defined as optional and specify a default value as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /pets/42\n\n@GetMapping(\"/pets/{petId}\")\npublic void findPet(@MatrixVariable(required=false, defaultValue=\"1\") int q) {\n\n\t// q == 1\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /pets/42\n\n@GetMapping(\"/pets/{petId}\")\nfun findPet(@MatrixVariable(required = false, defaultValue = \"1\") q: Int) {\n\n\t// q == 1\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To get all matrix variables, use a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MultiValueMap"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /owners/42;q=11;r=12/pets/21;q=22;s=23\n\n@GetMapping(\"/owners/{ownerId}/pets/{petId}\")\npublic void findPet(\n\t\t@MatrixVariable MultiValueMap<String, String> matrixVars,\n\t\t@MatrixVariable(pathVar=\"petId\") MultiValueMap<String, String> petMatrixVars) {\n\n\t// matrixVars: [\"q\" : [11,22], \"r\" : 12, \"s\" : 23]\n\t// petMatrixVars: [\"q\" : 22, \"s\" : 23]\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "// GET /owners/42;q=11;r=12/pets/21;q=22;s=23\n\n@GetMapping(\"/owners/{ownerId}/pets/{petId}\")\nfun findPet(\n\t\t@MatrixVariable matrixVars: MultiValueMap<String, String>,\n\t\t@MatrixVariable(pathVar=\"petId\") petMatrixVars: MultiValueMap<String, String>) {\n\n\t// matrixVars: [\"q\" : [11,22], \"r\" : 12, \"s\" : 23]\n\t// petMatrixVars: [\"q\" : 22, \"s\" : 23]\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Matrix Variables"
+      }
+    ]
+  }
+}

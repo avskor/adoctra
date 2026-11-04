@@ -1,0 +1,548 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring Framework supports registering beans in a functional way by using lambdas as an alternative to XML or Java configuration ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Bean"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). In a nutshell, it lets you register beans with a lambda that acts as a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FactoryBean"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". This mechanism is very efficient, as it does not require any reflection or CGLIB proxies."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In Java, you can, for example, write the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "class Foo {}\n\nclass Bar {\n\tprivate final Foo foo;\n\tpublic Bar(Foo foo) {\n\t\tthis.foo = foo;\n\t}\n}\n\nGenericApplicationContext context = new GenericApplicationContext();\ncontext.registerBean(Foo.class);\ncontext.registerBean(Bar.class, () -> new Bar(context.getBean(Foo.class)));"
+          }
+        ],
+        "language": "java",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In Kotlin, with reified type parameters and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "GenericApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " Kotlin extensions, you can instead write the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "class Foo\n\nclass Bar(private val foo: Foo)\n\nval context = GenericApplicationContext().apply {\n\tregisterBean<Foo>()\n\tregisterBean { Bar(it.getBean()) }\n}"
+          }
+        ],
+        "language": "kotlin",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When the class "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Bar"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " has a single constructor, you can even just specify the bean class, the constructor parameters will be autowired by type:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "val context = GenericApplicationContext().apply {\n\tregisterBean<Foo>()\n\tregisterBean<Bar>()\n}"
+          }
+        ],
+        "language": "kotlin",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In order to allow a more declarative approach and cleaner syntax, Spring Framework provides a "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Kotlin bean definition DSL"
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/kdoc-api/spring-context/org.springframework.context.support/-bean-definition-dsl/index.html"
+          },
+          {
+            "kind": "text",
+            "value": " It declares an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContextInitializer"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " through a clean declarative API, which lets you deal with profiles and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Environment"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for customizing how beans are registered."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In the following example notice that:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Type inference usually allows to avoid specifying the type for bean references like "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ref(\"bazBean\")"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It is possible to use Kotlin top level functions to declare beans using callable references like "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bean(::myRouter)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in this example"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When specifying "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bean<Bar>()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bean(::myRouter)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", parameters are autowired by type"
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FooBar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean will be registered only if the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "foobar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " profile is active"
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "class Foo\nclass Bar(private val foo: Foo)\nclass Baz(var message: String = \"\")\nclass FooBar(private val baz: Baz)\n\nval myBeans = beans {\n\tbean<Foo>()\n\tbean<Bar>()\n\tbean(\"bazBean\") {\n\t\tBaz().apply {\n\t\t\tmessage = \"Hello world\"\n\t\t}\n\t}\n\tprofile(\"foobar\") {\n\t\tbean { FooBar(ref(\"bazBean\")) }\n\t}\n\tbean(::myRouter)\n}\n\nfun myRouter(foo: Foo, bar: Bar, baz: Baz) = router {\n\t// ...\n}"
+          }
+        ],
+        "language": "kotlin",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This DSL is programmatic, meaning it allows custom registration logic of beans through an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "if"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " expression, a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "for"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " loop, or any other Kotlin constructs."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can then use this "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "beans()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " function to register beans on the application context, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "val context = GenericApplicationContext().apply {\n\tmyBeans.initialize(this)\n\trefresh()\n}"
+          }
+        ],
+        "language": "kotlin",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring Boot is based on JavaConfig and "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "does not yet provide specific support for functional bean definition"
+              }
+            ],
+            "kind": "link",
+            "target": "https://github.com/spring-projects/spring-boot/issues/8115"
+          },
+          {
+            "kind": "text",
+            "value": ", but you can experimentally use functional bean definitions through Spring Boot’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContextInitializer"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " support. See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this Stack Overflow answer"
+              }
+            ],
+            "kind": "link",
+            "target": "https://stackoverflow.com/questions/45935931/how-to-use-functional-bean-definition-kotlin-dsl-with-spring-boot-and-spring-w/46033685#46033685"
+          },
+          {
+            "kind": "text",
+            "value": " for more details and up-to-date information. See also the experimental Kofu DSL developed in "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring Fu incubator"
+              }
+            ],
+            "kind": "link",
+            "target": "https://github.com/spring-projects-experimental/spring-fu"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Bean Definition DSL"
+      }
+    ]
+  }
+}

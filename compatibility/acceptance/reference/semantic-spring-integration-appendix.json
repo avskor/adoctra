@@ -1,0 +1,1366 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This part of the appendix lists XML schemas related to integration technologies."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements deal with issues related to Jakarta EE (Enterprise Edition) configuration, such as looking up a JNDI object and defining EJB references."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file. The text in the following snippet references the correct schema so that the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jee"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " namespace are available to you:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jee=\"http://www.springframework.org/schema/jee\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/jee\n\t\thttps://www.springframework.org/schema/jee/spring-jee.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up a data source without the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " schema:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"dataSource\" class=\"org.springframework.jndi.JndiObjectFactoryBean\">\n\t<property name=\"jndiName\" value=\"jdbc/MyDataSource\"/>\n</bean>\n<bean id=\"userDao\" class=\"com.foo.JdbcUserDao\">\n\t<!-- Spring will do the cast automatically (as usual) -->\n\t<property name=\"dataSource\" ref=\"dataSource\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up a data source with the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " schema:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup id=\"dataSource\" jndi-name=\"jdbc/MyDataSource\"/>\n\n<bean id=\"userDao\" class=\"com.foo.JdbcUserDao\">\n\t<!-- Spring will do the cast automatically (as usual) -->\n\t<property name=\"dataSource\" ref=\"dataSource\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-jndi-lookup",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "<jee:jndi-lookup/> (simple)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up an environment variable without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"simple\" class=\"org.springframework.jndi.JndiObjectFactoryBean\">\n\t<property name=\"jndiName\" value=\"jdbc/MyDataSource\"/>\n\t<property name=\"jndiEnvironment\">\n\t\t<props>\n\t\t\t<prop key=\"ping\">pong</prop>\n\t\t</props>\n\t</property>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up an environment variable with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup id=\"simple\" jndi-name=\"jdbc/MyDataSource\">\n\t<jee:environment>ping=pong</jee:environment>\n</jee:jndi-lookup>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-jndi-lookup-environment-single",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (with Single JNDI Environment Setting)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up multiple environment variables without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"simple\" class=\"org.springframework.jndi.JndiObjectFactoryBean\">\n\t<property name=\"jndiName\" value=\"jdbc/MyDataSource\"/>\n\t<property name=\"jndiEnvironment\">\n\t\t<props>\n\t\t\t<prop key=\"sing\">song</prop>\n\t\t\t<prop key=\"ping\">pong</prop>\n\t\t</props>\n\t</property>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up multiple environment variables with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup id=\"simple\" jndi-name=\"jdbc/MyDataSource\">\n\t<!-- newline-separated, key-value pairs for the environment (standard Properties format) -->\n\t<jee:environment>\n\t\tsing=song\n\t\tping=pong\n\t</jee:environment>\n</jee:jndi-lookup>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-jndi-lookup-environment-multiple",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (with Multiple JNDI Environment Settings)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up a data source and a number of different properties without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"simple\" class=\"org.springframework.jndi.JndiObjectFactoryBean\">\n\t<property name=\"jndiName\" value=\"jdbc/MyDataSource\"/>\n\t<property name=\"cache\" value=\"true\"/>\n\t<property name=\"resourceRef\" value=\"true\"/>\n\t<property name=\"lookupOnStartup\" value=\"false\"/>\n\t<property name=\"expectedType\" value=\"com.myapp.DefaultThing\"/>\n\t<property name=\"proxyInterface\" value=\"com.myapp.Thing\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to use JNDI to look up a data source and a number of different properties with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup id=\"simple\"\n\t\tjndi-name=\"jdbc/MyDataSource\"\n\t\tcache=\"true\"\n\t\tresource-ref=\"true\"\n\t\tlookup-on-startup=\"false\"\n\t\texpected-type=\"com.myapp.DefaultThing\"\n\t\tproxy-interface=\"com.myapp.Thing\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-jndi-lookup-complex",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:jndi-lookup/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (Complex)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<jee:local-slsb/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element configures a reference to a local EJB Stateless Session Bean."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a local EJB Stateless Session Bean without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"simple\"\n\t\tclass=\"org.springframework.ejb.access.LocalStatelessSessionProxyFactoryBean\">\n\t<property name=\"jndiName\" value=\"ejb/RentalServiceBean\"/>\n\t<property name=\"businessInterface\" value=\"com.foo.service.RentalService\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a local EJB Stateless Session Bean with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:local-slsb id=\"simpleSlsb\" jndi-name=\"ejb/RentalServiceBean\"\n\t\tbusiness-interface=\"com.foo.service.RentalService\"/>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-local-slsb",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:local-slsb/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (Simple)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<jee:local-slsb/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element configures a reference to a local EJB Stateless Session Bean."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a local EJB Stateless Session Bean and a number of properties without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"complexLocalEjb\"\n\t\tclass=\"org.springframework.ejb.access.LocalStatelessSessionProxyFactoryBean\">\n\t<property name=\"jndiName\" value=\"ejb/RentalServiceBean\"/>\n\t<property name=\"businessInterface\" value=\"com.example.service.RentalService\"/>\n\t<property name=\"cacheHome\" value=\"true\"/>\n\t<property name=\"lookupHomeOnStartup\" value=\"true\"/>\n\t<property name=\"resourceRef\" value=\"true\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a local EJB Stateless Session Bean and a number of properties with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:local-slsb id=\"complexLocalEjb\"\n\t\tjndi-name=\"ejb/RentalServiceBean\"\n\t\tbusiness-interface=\"com.foo.service.RentalService\"\n\t\tcache-home=\"true\"\n\t\tlookup-home-on-startup=\"true\"\n\t\tresource-ref=\"true\">"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-local-slsb-complex",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:local-slsb/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (Complex)"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<jee:remote-slsb/>"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " element configures a reference to a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "remote"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " EJB Stateless Session Bean."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a remote EJB Stateless Session Bean without "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bean id=\"complexRemoteEjb\"\n\t\tclass=\"org.springframework.ejb.access.SimpleRemoteStatelessSessionProxyFactoryBean\">\n\t<property name=\"jndiName\" value=\"ejb/MyRemoteBean\"/>\n\t<property name=\"businessInterface\" value=\"com.foo.service.RentalService\"/>\n\t<property name=\"cacheHome\" value=\"true\"/>\n\t<property name=\"lookupHomeOnStartup\" value=\"true\"/>\n\t<property name=\"resourceRef\" value=\"true\"/>\n\t<property name=\"homeInterface\" value=\"com.foo.service.RentalService\"/>\n\t<property name=\"refreshHomeOnConnectFailure\" value=\"true\"/>\n</bean>"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example shows how to configures a reference to a remote EJB Stateless Session Bean with "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jee"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<jee:remote-slsb id=\"complexRemoteEjb\"\n\t\tjndi-name=\"ejb/MyRemoteBean\"\n\t\tbusiness-interface=\"com.foo.service.RentalService\"\n\t\tcache-home=\"true\"\n\t\tlookup-home-on-startup=\"true\"\n\t\tresource-ref=\"true\"\n\t\thome-interface=\"com.foo.service.RentalService\"\n\t\trefresh-home-on-connect-failure=\"true\">"
+                      }
+                    ],
+                    "language": "xml",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "appendix.xsd-schemas-jee-remote-slsb",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "<jee:remote-slsb/>"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "appendix.xsd-schemas-jee",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jee"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Schema"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jms"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements deal with configuring JMS-related beans, such as Spring’s "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Message Listener Containers"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/jms/using.html#jms-mdp"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". These elements are detailed in the section of the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JMS chapter"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/jms.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " entitled "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JMS Namespace Support"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/jms/namespace.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " . See that chapter for full details on this support and the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jms"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements themselves."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the interest of completeness, to use the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jms"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file. The text in the following snippet references the correct schema so that the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jms"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " namespace are available to you:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jms=\"http://www.springframework.org/schema/jms\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/jms\n\t\thttps://www.springframework.org/schema/jms/spring-jms.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "appendix.xsd-schemas-jms",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jms"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Schema"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This element is detailed in "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configuring Annotation-based MBean Export"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/jmx/naming.html#jmx-context-mbeanexport"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "appendix.xsd-schemas-context-mbe",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<context:mbean-export/>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cache"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements to enable support for Spring’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@CacheEvict"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@CachePut"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Caching"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations. It it also supports declarative XML-based caching. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Enabling Caching Annotations"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/cache/annotations.html#cache-annotation-enable"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Declarative XML-based Caching"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "integration/cache/declarative-xml.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cache"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " schema, you need to have the following preamble at the top of your Spring XML configuration file. The text in the following snippet references the correct schema so that the elements in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cache"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " namespace are available to you:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:cache=\"http://www.springframework.org/schema/cache\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/cache\n\t\thttps://www.springframework.org/schema/cache/spring-cache.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "appendix.xsd-schemas-cache",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cache"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Schema"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "appendix.xsd-schemas",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "XML Schemas"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Appendix"
+      }
+    ]
+  }
+}

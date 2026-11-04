@@ -1,0 +1,415 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Suppose you want to run both transactional operations and some basic profiling advice. How do you effect this in the context of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<tx:annotation-driven/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "?"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When you invoke the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "updateFoo(Foo)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method, you want to see the following actions:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The configured profiling aspect starts."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The transactional advice runs."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The method on the advised object runs."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The transaction commits."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The profiling aspect reports the exact duration of the whole transactional method invocation."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This chapter is not concerned with explaining AOP in any great detail (except as it applies to transactions). See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AOP"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/aop.html"
+          },
+          {
+            "kind": "text",
+            "value": " for detailed coverage of the AOP configuration and AOP in general."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following code shows the simple profiling aspect discussed earlier:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y;\n\nimport org.aspectj.lang.ProceedingJoinPoint;\nimport org.springframework.util.StopWatch;\nimport org.springframework.core.Ordered;\n\npublic class SimpleProfiler implements Ordered {\n\n\tprivate int order;\n\n\t// allows us to control the ordering of advice\n\tpublic int getOrder() {\n\t\treturn this.order;\n\t}\n\n\tpublic void setOrder(int order) {\n\t\tthis.order = order;\n\t}\n\n\t// this method is the around advice\n\tpublic Object profile(ProceedingJoinPoint call) throws Throwable {\n\t\tObject returnValue;\n\t\tStopWatch clock = new StopWatch(getClass().getName());\n\t\ttry {\n\t\t\tclock.start(call.toShortString());\n\t\t\treturnValue = call.proceed();\n\t\t} finally {\n\t\t\tclock.stop();\n\t\t\tSystem.out.println(clock.prettyPrint());\n\t\t}\n\t\treturn returnValue;\n\t}\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "package x.y\n\nimport org.aspectj.lang.ProceedingJoinPoint\nimport org.springframework.util.StopWatch\nimport org.springframework.core.Ordered\n\nclass SimpleProfiler : Ordered {\n\n\tprivate var order: Int = 0\n\n\t// allows us to control the ordering of advice\n\toverride fun getOrder(): Int {\n\t\treturn this.order\n\t}\n\n\tfun setOrder(order: Int) {\n\t\tthis.order = order\n\t}\n\n\t// this method is the around advice\n\tfun profile(call: ProceedingJoinPoint): Any {\n\t\tvar returnValue: Any\n\t\tval clock = StopWatch(javaClass.name)\n\t\ttry {\n\t\t\tclock.start(call.toShortString())\n\t\t\treturnValue = call.proceed()\n\t\t} finally {\n\t\t\tclock.stop()\n\t\t\tprintln(clock.prettyPrint())\n\t\t}\n\t\treturn returnValue\n\t}\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The ordering of advice is controlled through the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Ordered"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " interface. For full details on advice ordering, see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Advice ordering"
+              }
+            ],
+            "kind": "xref",
+            "target": "core/aop/ataspectj/advice.html#aop-ataspectj-advice-ordering"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following configuration creates a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean that has profiling and transactional aspects applied to it in the desired order:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txmlns:tx=\"http://www.springframework.org/schema/tx\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/tx\n\t\thttps://www.springframework.org/schema/tx/spring-tx.xsd\n\t\thttp://www.springframework.org/schema/aop\n\t\thttps://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<bean id=\"fooService\" class=\"x.y.service.DefaultFooService\"/>\n\n\t<!-- this is the aspect -->\n\t<bean id=\"profiler\" class=\"x.y.SimpleProfiler\">\n\t\t<!-- run before the transactional advice (hence the lower order number) -->\n\t\t<property name=\"order\" value=\"1\"/>\n\t</bean>\n\n\t<tx:annotation-driven transaction-manager=\"txManager\" order=\"200\"/>\n\n\t<aop:config>\n\t\t\t<!-- this advice runs around the transactional advice -->\n\t\t\t<aop:aspect id=\"profilingAspect\" ref=\"profiler\">\n\t\t\t\t<aop:pointcut id=\"serviceMethodWithReturnValue\"\n\t\t\t\t\t\texpression=\"execution(!void x.y..*Service.*(..))\"/>\n\t\t\t\t<aop:around method=\"profile\" pointcut-ref=\"serviceMethodWithReturnValue\"/>\n\t\t\t</aop:aspect>\n\t</aop:config>\n\n\t<bean id=\"dataSource\" class=\"org.apache.commons.dbcp.BasicDataSource\" destroy-method=\"close\">\n\t\t<property name=\"driverClassName\" value=\"oracle.jdbc.driver.OracleDriver\"/>\n\t\t<property name=\"url\" value=\"jdbc:oracle:thin:@rj-t42:1521:elvis\"/>\n\t\t<property name=\"username\" value=\"scott\"/>\n\t\t<property name=\"password\" value=\"tiger\"/>\n\t</bean>\n\n\t<bean id=\"txManager\" class=\"org.springframework.jdbc.datasource.DataSourceTransactionManager\">\n\t\t<property name=\"dataSource\" ref=\"dataSource\"/>\n\t</bean>\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can configure any number of additional aspects in similar fashion."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example creates the same setup as the previous two examples but uses the purely XML declarative approach:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txmlns:tx=\"http://www.springframework.org/schema/tx\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/tx\n\t\thttps://www.springframework.org/schema/tx/spring-tx.xsd\n\t\thttp://www.springframework.org/schema/aop\n\t\thttps://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<bean id=\"fooService\" class=\"x.y.service.DefaultFooService\"/>\n\n\t<!-- the profiling advice -->\n\t<bean id=\"profiler\" class=\"x.y.SimpleProfiler\">\n\t\t<!-- run before the transactional advice (hence the lower order number) -->\n\t\t<property name=\"order\" value=\"1\"/>\n\t</bean>\n\n\t<aop:config>\n\t\t<aop:pointcut id=\"entryPointMethod\" expression=\"execution(* x.y..*Service.*(..))\"/>\n\t\t<!-- runs after the profiling advice (cf. the order attribute) -->\n\n\t\t<aop:advisor advice-ref=\"txAdvice\" pointcut-ref=\"entryPointMethod\" order=\"2\"/>\n\t\t<!-- order value is higher than the profiling aspect -->\n\n\t\t<aop:aspect id=\"profilingAspect\" ref=\"profiler\">\n\t\t\t<aop:pointcut id=\"serviceMethodWithReturnValue\"\n\t\t\t\t\texpression=\"execution(!void x.y..*Service.*(..))\"/>\n\t\t\t<aop:around method=\"profile\" pointcut-ref=\"serviceMethodWithReturnValue\"/>\n\t\t</aop:aspect>\n\n\t</aop:config>\n\n\t<tx:advice id=\"txAdvice\" transaction-manager=\"txManager\">\n\t\t<tx:attributes>\n\t\t\t<tx:method name=\"get*\" read-only=\"true\"/>\n\t\t\t<tx:method name=\"*\"/>\n\t\t</tx:attributes>\n\t</tx:advice>\n\n\t<!-- other <bean/> definitions such as a DataSource and a TransactionManager here -->\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The result of the preceding configuration is a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fooService"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean that has profiling and transactional aspects applied to it in that order. If you want the profiling advice to run after the transactional advice on the way in and before the transactional advice on the way out, you can swap the value of the profiling aspect bean’s "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "order"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " property so that it is higher than the transactional advice’s order value."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can configure additional aspects in similar fashion."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Advising Transactional Operations"
+      }
+    ]
+  }
+}

@@ -1,0 +1,601 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the previous section, we saw how to use MockMvc with WebDriver. In this section, we use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Geb"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.gebish.org/"
+              },
+              {
+                "kind": "text",
+                "value": " to make our tests even Groovy-er."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Geb is backed by WebDriver, so it offers many of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "same benefits"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/webdriver.html#spring-mvc-test-server-htmlunit-webdriver-why"
+              },
+              {
+                "kind": "text",
+                "value": " that we get from WebDriver. However, Geb makes things even easier by taking care of some of the boilerplate code for us."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-geb-why",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Why Geb and MockMvc?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can easily initialize a Geb "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Browser"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with a Selenium WebDriver that uses MockMvc, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "def setup() {\n\tbrowser.driver = MockMvcHtmlUnitDriverBuilder\n\t\t.webAppContextSetup(context)\n\t\t.build()\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This is a simple example of using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvcHtmlUnitDriverBuilder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For more advanced usage, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Advanced "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvcHtmlUnitDriverBuilder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/webdriver.html#spring-mvc-test-server-htmlunit-webdriver-advanced-builder"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This ensures that any URL referencing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "localhost"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the server is directed to our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance without the need for a real HTTP connection. Any other URL is requested by using a network connection as normal. This lets us easily test the use of CDNs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-geb-setup",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "MockMvc and Geb Setup"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now we can use Geb as we normally would but without the need to deploy our application to a Servlet container. For example, we can request the view to create a message with the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "to CreateMessagePage"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can then fill out the form and submit it to create a message, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "when:\nform.summary = expectedSummary\nform.text = expectedMessage\nsubmit.click(ViewMessagePage)"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Any unrecognized method calls or property accesses or references that are not found are forwarded to the current page object. This removes a lot of the boilerplate code we needed when using WebDriver directly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As with direct WebDriver usage, this improves on the design of our "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HtmlUnit test"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/mah.html#spring-mvc-test-server-htmlunit-mah-usage"
+              },
+              {
+                "kind": "text",
+                "value": " by using the Page Object Pattern. As mentioned previously, we can use the Page Object Pattern with HtmlUnit and WebDriver, but it is even easier with Geb. Consider our new Groovy-based "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CreateMessagePage"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class CreateMessagePage extends Page {\n\tstatic url = 'messages/form'\n\tstatic at = { assert title == 'Messages : Create'; true }\n\tstatic content =  {\n\t\tsubmit { $('input[type=submit]') }\n\t\tform { $('form') }\n\t\terrors(required:false) { $('label.error, .alert-error')?.text() }\n\t}\n}"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CreateMessagePage"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extends "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". We do not go over the details of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", but, in summary, it contains common functionality for all of our pages. We define a URL in which this page can be found. This lets us navigate to the page, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "to CreateMessagePage"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We also have an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "at"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " closure that determines if we are at the specified page. It should return "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if we are on the correct page. This is why we can assert that we are on the correct page, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "then:\nat CreateMessagePage\nerrors.contains('This field is required.')"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We use an assertion in the closure so that we can determine where things went wrong if we were at the wrong page."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, we create a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " closure that specifies all the areas of interest within the page. We can use a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jQuery-ish Navigator API"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.gebish.org/manual/current/#the-jquery-ish-navigator-api"
+              },
+              {
+                "kind": "text",
+                "value": " to select the content in which we are interested."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, we can verify that a new message was created successfully, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "then:\nat ViewMessagePage\nsuccess == 'Successfully created a new message'\nid\ndate\nsummary == expectedSummary\nmessage == expectedMessage"
+              }
+            ],
+            "language": "groovy",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For further details on how to get the most out of Geb, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Book of Geb"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.gebish.org/manual/current/"
+              },
+              {
+                "kind": "text",
+                "value": " user’s manual."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-geb-usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "MockMvc and Geb Usage"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "MockMvc and Geb"
+      }
+    ]
+  }
+}

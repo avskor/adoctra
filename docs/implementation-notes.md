@@ -2883,3 +2883,22 @@ Without `--screenshots`, `measure.mjs` deletes each pair's PNGs once compared
 (`keep` in the job): /tmp here is a RAM-backed tmpfs, and a full run's
 screenshots exhausted it (ENOSPC, then browser crashes). visual-v1: 2160 of
 2160 match (1080 cases); Rouge 4309 listings / 788 documents.
+
+**Full Spring Framework docs** (2026-11-04): 455 pages (`--component
+framework-docs`), 449 new; all passed body, structure and semantics on the
+first run (Spring's examples use its `include-code::` Antora macro, plain text
+to both processors; only 8 real `include::partial$`). Body 1237 (1206
+documents), structure 1213, semantics 1197 (+152 = 1349).
+Rouge 6731 listings / 1237 documents. Spring found a byte difference: a
+listing with custom `subs` rendered its own `…` as `&#8230;` (render_parts'
+`escape_text`); the selected stages already give generated characters as
+`Raw` entities, so `render_verbatim` now writes `Text` parts with `escape`
+(`render_parts_as`), as Ruby; paragraphs keep `escape_text` (golden
+blocks/custom_subs_literal_chars).
+Spring visual: in an admonition a list item's blocks inherit the cell's 17px
+(`.admonition-content … > li > :is(div, ul, …) { font-size: inherit }`); a
+nested admonition's label inherits size/spacing and, as the last block,
+loses its margin (Ruby's table margin, zeroed by `:last-child>:last-child`).
+Fixture `golden/visual/nested_admonitions.adoc` (DOM: minimal corpus
+`admonitions-nested`). Affected cases were found from adoctra's HTML of all
+visual cases (3) and re-recorded; visual-v1 3062 of 3062 (1531 cases).

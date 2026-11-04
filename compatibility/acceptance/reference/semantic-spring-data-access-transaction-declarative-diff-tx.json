@@ -1,0 +1,154 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Consider the scenario where you have a number of service layer objects, and you want to apply a totally different transactional configuration to each of them. You can do so by defining distinct "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<aop:advisor/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " elements with differing "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "pointcut"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "advice-ref"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute values."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As a point of comparison, first assume that all of your service layer classes are defined in a root "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "x.y.service"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " package. To make all beans that are instances of classes defined in that package (or in subpackages) and that have names ending in "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Service"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " have the default transactional configuration, you could write the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txmlns:tx=\"http://www.springframework.org/schema/tx\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/tx\n\t\thttps://www.springframework.org/schema/tx/spring-tx.xsd\n\t\thttp://www.springframework.org/schema/aop\n\t\thttps://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<aop:config>\n\n\t\t<aop:pointcut id=\"serviceOperation\"\n\t\t\t\texpression=\"execution(* x.y.service..*Service.*(..))\"/>\n\n\t\t<aop:advisor pointcut-ref=\"serviceOperation\" advice-ref=\"txAdvice\"/>\n\n\t</aop:config>\n\n\t<!-- these two beans will be transactional... -->\n\t<bean id=\"fooService\" class=\"x.y.service.DefaultFooService\"/>\n\t<bean id=\"barService\" class=\"x.y.service.extras.SimpleBarService\"/>\n\n\t<!-- ... and these two beans won't -->\n\t<bean id=\"anotherService\" class=\"org.xyz.SomeService\"/> <!-- (not in the right package) -->\n\t<bean id=\"barManager\" class=\"x.y.service.SimpleBarManager\"/> <!-- (doesn't end in 'Service') -->\n\n\t<tx:advice id=\"txAdvice\">\n\t\t<tx:attributes>\n\t\t\t<tx:method name=\"get*\" read-only=\"true\"/>\n\t\t\t<tx:method name=\"*\"/>\n\t\t</tx:attributes>\n\t</tx:advice>\n\n\t<!-- other transaction infrastructure beans such as a TransactionManager omitted... -->\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows how to configure two distinct beans with totally different transactional settings:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:aop=\"http://www.springframework.org/schema/aop\"\n\txmlns:tx=\"http://www.springframework.org/schema/tx\"\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/tx\n\t\thttps://www.springframework.org/schema/tx/spring-tx.xsd\n\t\thttp://www.springframework.org/schema/aop\n\t\thttps://www.springframework.org/schema/aop/spring-aop.xsd\">\n\n\t<aop:config>\n\n\t\t<aop:pointcut id=\"defaultServiceOperation\"\n\t\t\t\texpression=\"execution(* x.y.service.*Service.*(..))\"/>\n\n\t\t<aop:pointcut id=\"noTxServiceOperation\"\n\t\t\t\texpression=\"execution(* x.y.service.ddl.DefaultDdlManager.*(..))\"/>\n\n\t\t<aop:advisor pointcut-ref=\"defaultServiceOperation\" advice-ref=\"defaultTxAdvice\"/>\n\n\t\t<aop:advisor pointcut-ref=\"noTxServiceOperation\" advice-ref=\"noTxAdvice\"/>\n\n\t</aop:config>\n\n\t<!-- this bean will be transactional (see the 'defaultServiceOperation' pointcut) -->\n\t<bean id=\"fooService\" class=\"x.y.service.DefaultFooService\"/>\n\n\t<!-- this bean will also be transactional, but with totally different transactional settings -->\n\t<bean id=\"anotherFooService\" class=\"x.y.service.ddl.DefaultDdlManager\"/>\n\n\t<tx:advice id=\"defaultTxAdvice\">\n\t\t<tx:attributes>\n\t\t\t<tx:method name=\"get*\" read-only=\"true\"/>\n\t\t\t<tx:method name=\"*\"/>\n\t\t</tx:attributes>\n\t</tx:advice>\n\n\t<tx:advice id=\"noTxAdvice\">\n\t\t<tx:attributes>\n\t\t\t<tx:method name=\"*\" propagation=\"NEVER\"/>\n\t\t</tx:attributes>\n\t</tx:advice>\n\n\t<!-- other transaction infrastructure beans such as a TransactionManager omitted... -->\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Configuring Different Transactional Semantics for Different Beans"
+      }
+    ]
+  }
+}

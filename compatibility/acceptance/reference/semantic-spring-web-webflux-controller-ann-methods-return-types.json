@@ -1,0 +1,1313 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Servlet stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-controller/ann-methods/return-types.html"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following table shows the supported controller method return values. Note that reactive types from libraries such as Reactor, RxJava, "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "or other"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webflux-reactive-libraries.html"
+          },
+          {
+            "kind": "text",
+            "value": " are generally supported for all return values."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For return types like "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Flux"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", when multiple values are expected, elements are streamed as they come and are not buffered. This is the default behavior, as keeping a potentially large amount of elements in memory is not efficient. If the media type implies an infinite stream (for example, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "application/json+stream"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "), values are written and flushed individually. Otherwise, values are written individually and the flushing happens separately."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If an error happens while an element is encoded to JSON, the response might have been written to and committed already and it is impossible at that point to render a proper error response. In some cases, applications can choose to trade memory efficiency for better handling such errors by buffering elements and encoding them all at once. Controllers can then return a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Flux<List<B>>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "; Reactor provides a dedicated operator for that, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Flux#collectList()"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResponseBody"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The return value is encoded through "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HttpMessageWriter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances and written to the response. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ResponseBody"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-methods/responsebody.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HttpEntity<B>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResponseEntity<B>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The return value specifies the full response, including HTTP headers, and the body is encoded through "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HttpMessageWriter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances and written to the response. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ResponseEntity"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/controller/ann-methods/responseentity.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HttpHeaders"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "For returning a response with headers and no body."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ErrorResponse"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "To render an RFC 9457 error response with details in the body, see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Error Responses"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/ann-rest-exceptions.html"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ProblemDetail"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "To render an RFC 9457 error response with details in the body, see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Error Responses"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/ann-rest-exceptions.html"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "String"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A view name to be resolved with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ViewResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances and used together with the implicit model — determined through command objects and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ModelAttribute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods. The handler method can also programmatically enrich the model by declaring a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Model"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " argument (described "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "earlier"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/dispatcher-handler.html#webflux-viewresolution-handling"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "View"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "View"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance to use for rendering together with the implicit model — determined through command objects and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ModelAttribute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods. The handler method can also programmatically enrich the model by declaring a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Model"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " argument (described "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "earlier"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/dispatcher-handler.html#webflux-viewresolution-handling"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Map"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.springframework.ui.Model"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Attributes to be added to the implicit model, with the view name implicitly determined based on the request path."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ModelAttribute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "An attribute to be added to the model, with the view name implicitly determined based on the request path."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "value": " Note that "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ModelAttribute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is optional. See “Any other return value” later in this table."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Rendering"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "An API for model and view rendering scenarios."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FragmentsRendering"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Flux<Fragment>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Collection<Fragment>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "For rendering one or more fragments each with its own view and model. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HTML Fragments"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-view.html#webflux-view-fragments"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for more details."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "void"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A method with a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "void"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", possibly asynchronous (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Mono<Void>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), return type (or a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "null"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " return value) is considered to have fully handled the response if it also has a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ServerHttpResponse"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ServerWebExchange"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " argument, or an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResponseStatus"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation. The same is also true if the controller has made a positive ETag or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "lastModified"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " timestamp check. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Controllers"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/caching.html#webflux-caching-etag-lastmodified"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "value": " If none of the above is true, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "void"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " return type can also indicate “no response body” for REST controllers or default view name selection for HTML controllers."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Flux<ServerSentEvent>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Observable<ServerSentEvent>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or other reactive type"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Emit server-sent events. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ServerSentEvent"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " wrapper can be omitted when only data needs to be written (however, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "text/event-stream"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " must be requested or declared in the mapping through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "produces"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Other return values"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "If a return value remains unresolved in any other way, it is treated as a model attribute, unless it is a simple type as determined by "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BeanUtils#isSimpleProperty"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/beans/BeanUtils.html#isSimpleProperty-java.lang.Class-"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", in which case it remains unresolved."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": null,
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "33.3333"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "66.6667"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Controller method return value"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": null,
+        "options": [
+          "header"
+        ],
+        "roles": [],
+        "stripes": "odd",
+        "title": null,
+        "width": 100
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Return Values"
+      }
+    ]
+  }
+}

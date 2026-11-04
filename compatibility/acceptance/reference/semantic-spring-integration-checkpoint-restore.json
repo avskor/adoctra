@@ -1,0 +1,547 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring Framework integrates with checkpoint/restore as implemented by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Project CRaC"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/CRaC/docs"
+              },
+              {
+                "kind": "text",
+                "value": " in order to allow implementing systems capable of reducing the startup and warmup times of Spring-based Java applications with the JVM."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using this feature requires:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A checkpoint/restore enabled JVM (Linux only for now)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The presence of the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.crac:crac"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/CRaC/org.crac"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " library (version "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "1.4.0"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and above are supported) in the classpath."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Specifying the required "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command-line parameters like "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-XX:CRaCCheckpointTo=PATH"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-XX:CRaCRestoreFrom=PATH"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The files generated in the path specified by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-XX:CRaCCheckpointTo=PATH"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " when a checkpoint is requested contain a representation of the memory of the running JVM, which may contain secrets and other sensitive data. Using this feature should be done with the assumption that any value \"seen\" by the JVM, such as configuration properties coming from the environment, will be stored in those CRaC files. As a consequence, the security implications of where and how those files are generated, stored, and accessed should be carefully assessed."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Conceptually, checkpoint and restore align with the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Lifecycle"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " contract"
+                  }
+                ],
+                "kind": "xref",
+                "target": "core/beans/factory-nature.html#beans-factory-lifecycle-processor"
+              },
+              {
+                "kind": "text",
+                "value": " for individual beans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A checkpoint can be created on demand, for example using a command like "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "jcmd application.jar JDK.checkpoint"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Before the creation of the checkpoint, Spring stops all the running beans, giving them a chance to close resources if needed by implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Lifecycle.stop"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". After restore, the same beans are restarted, with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Lifecycle.start"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " allowing beans to reopen resources when relevant. For libraries that do not depend on Spring, custom checkpoint/restore integration can be provided by implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.crac.Resource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and registering the related instance."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Leveraging checkpoint/restore of a running application typically requires additional lifecycle management to gracefully stop and start using resources like files or sockets and stop active threads."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Be aware that when defining scheduling tasks at a fixed rate, for example with an annotation like "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Scheduled(fixedRate = 5000)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", all missed executions between checkpoint and restore will be performed when the JVM is restored with on-demand checkpoint/restore. If this is not the behavior you want, it is recommended to schedule tasks at a fixed delay (for example with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Scheduled(fixedDelay = 5000)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or with a cron expression as those are calculated after every task execution."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the checkpoint is created on a warmed-up JVM, the restored JVM will be equally warmed-up, allowing potentially peak performance immediately. This method typically requires access to remote services, and thus requires some level of platform integration."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "_on_demand_checkpointrestore_of_a_running_application",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "On-demand checkpoint/restore of a running application"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Dspring.context.checkpoint=onRefresh"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " JVM system property is set, a checkpoint is created automatically at startup during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LifecycleProcessor.onRefresh"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " phase. After this phase has completed, all non-lazy initialized singletons have been instantiated, and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InitializingBean#afterPropertiesSet"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " callbacks have been invoked; but the lifecycle has not started, and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ContextRefreshedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " has not yet been published."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For testing purposes, it is also possible to leverage the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-Dspring.context.exit=onRefresh"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " JVM system property which triggers similar behavior, but instead of creating a checkpoint, it exits your Spring application at the same lifecycle phase without requiring the Project CraC dependency/JVM or Linux. This can be useful to check if connections to remote services are required when the beans are not started, and potentially refine the configuration to avoid that."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As mentioned above, and especially in use cases where the CRaC files are shipped as part of a deployable artifact (a container image for example), operate with the assumption that any sensitive data \"seen\" by the JVM ends up in the CRaC files, and assess carefully the related security implications."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Automatic checkpoint/restore is a way to \"fast-forward\" the startup of the application to a phase where the application context is about to start, but it does not allow to have a fully warmed-up JVM."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "_automatic_checkpointrestore_at_startup",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Automatic checkpoint/restore at startup"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "JVM Checkpoint Restore"
+      }
+    ]
+  }
+}

@@ -1,0 +1,2569 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the previous sections, we have seen how to use MockMvc in conjunction with the raw HtmlUnit APIs. In this section, we use additional abstractions within the Selenium "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebDriver"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.seleniumhq.org/projects/webdriver/"
+              },
+              {
+                "kind": "text",
+                "value": " to make things even easier."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can already use HtmlUnit and MockMvc, so why would we want to use WebDriver? The Selenium WebDriver provides a very elegant API that lets us easily organize our code. To better show how it works, we explore an example in this section."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Despite being a part of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Selenium"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.seleniumhq.org/"
+              },
+              {
+                "kind": "text",
+                "value": ", WebDriver does not require a Selenium Server to run your tests."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Suppose we need to ensure that a message is created properly. The tests involve finding the HTML form input elements, filling them out, and making various assertions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This approach results in numerous separate tests because we want to test error conditions as well. For example, we want to ensure that we get an error if we fill out only part of the form. If we fill out the entire form, the newly created message should be displayed afterwards."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If one of the fields were named “summary”, we might have something that resembles the following repeated in multiple places within our tests:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "HtmlTextInput summaryInput = currentPage.getHtmlElementById(\"summary\");\nsummaryInput.setValueAttribute(summary);"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "val summaryInput = currentPage.getHtmlElementById(\"summary\")\nsummaryInput.setValueAttribute(summary)"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So what happens if we change the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "smmry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "? Doing so would force us to update all of our tests to incorporate this change. This violates the DRY principle, so we should ideally extract this code into its own method, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public HtmlPage createMessage(HtmlPage currentPage, String summary, String text) {\n\tsetSummary(currentPage, summary);\n\t// ...\n}\n\npublic void setSummary(HtmlPage currentPage, String summary) {\n\tHtmlTextInput summaryInput = currentPage.getHtmlElementById(\"summary\");\n\tsummaryInput.setValueAttribute(summary);\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fun createMessage(currentPage: HtmlPage, summary:String, text:String) :HtmlPage{\n\tsetSummary(currentPage, summary);\n\t// ...\n}\n\nfun setSummary(currentPage:HtmlPage , summary: String) {\n\tval summaryInput = currentPage.getHtmlElementById(\"summary\")\n\tsummaryInput.setValueAttribute(summary)\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Doing so ensures that we do not have to update all of our tests if we change the UI."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We might even take this a step further and place this logic within an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Object"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that represents the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HtmlPage"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " we are currently on, as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class CreateMessagePage {\n\n\tfinal HtmlPage currentPage;\n\n\tfinal HtmlTextInput summaryInput;\n\n\tfinal HtmlSubmitInput submit;\n\n\tpublic CreateMessagePage(HtmlPage currentPage) {\n\t\tthis.currentPage = currentPage;\n\t\tthis.summaryInput = currentPage.getHtmlElementById(\"summary\");\n\t\tthis.submit = currentPage.getHtmlElementById(\"submit\");\n\t}\n\n\tpublic <T> T createMessage(String summary, String text) throws Exception {\n\t\tsetSummary(summary);\n\n\t\tHtmlPage result = submit.click();\n\t\tboolean error = CreateMessagePage.at(result);\n\n\t\treturn (T) (error ? new CreateMessagePage(result) : new ViewMessagePage(result));\n\t}\n\n\tpublic void setSummary(String summary) throws Exception {\n\t\tsummaryInput.setValueAttribute(summary);\n\t}\n\n\tpublic static boolean at(HtmlPage page) {\n\t\treturn \"Create Message\".equals(page.getTitleText());\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "\tclass CreateMessagePage(private val currentPage: HtmlPage) {\n\n\t\tval summaryInput: HtmlTextInput = currentPage.getHtmlElementById(\"summary\")\n\n\t\tval submit: HtmlSubmitInput = currentPage.getHtmlElementById(\"submit\")\n\n\t\tfun <T> createMessage(summary: String, text: String): T {\n\t\t\tsetSummary(summary)\n\n\t\t\tval result = submit.click()\n\t\t\tval error = at(result)\n\n\t\t\treturn (if (error) CreateMessagePage(result) else ViewMessagePage(result)) as T\n\t\t}\n\n\t\tfun setSummary(summary: String) {\n\t\t\tsummaryInput.setValueAttribute(summary)\n\t\t}\n\n\t\tfun at(page: HtmlPage): Boolean {\n\t\t\treturn \"Create Message\" == page.getTitleText()\n\t\t}\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Formerly, this pattern was known as the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Page Object Pattern"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/SeleniumHQ/selenium/wiki/PageObjects"
+              },
+              {
+                "kind": "text",
+                "value": ". While we can certainly do this with HtmlUnit, WebDriver provides some tools that we explore in the following sections to make this pattern much easier to implement."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-webdriver-why",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Why WebDriver and MockMvc?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To use Selenium WebDriver with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", make sure that your project includes a test dependency on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.seleniumhq.selenium:selenium-htmlunit3-driver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can easily create a Selenium WebDriver that integrates with MockMvc by using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvcHtmlUnitDriverBuilder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "WebDriver driver;\n\n@BeforeEach\nvoid setup(WebApplicationContext context) {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t.webAppContextSetup(context)\n\t\t\t.build();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "lateinit var driver: WebDriver\n\n@BeforeEach\nfun setup(context: WebApplicationContext) {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t.webAppContextSetup(context)\n\t\t\t.build()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This is a simple example of using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvcHtmlUnitDriverBuilder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For more advanced usage, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Advanced "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MockMvcHtmlUnitDriverBuilder"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/webdriver.html#spring-mvc-test-server-htmlunit-webdriver-advanced-builder"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The preceding example ensures that any URL that references "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "localhost"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the server is directed to our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance without the need for a real HTTP connection. Any other URL is requested by using a network connection, as normal. This lets us easily test the use of CDNs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-webdriver-setup",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "MockMvc and WebDriver Setup"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now we can use WebDriver as we normally would but without the need to deploy our application to a Servlet container. For example, we can request the view to create a message with the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "CreateMessagePage page = CreateMessagePage.to(driver);"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val page = CreateMessagePage.to(driver)"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can then fill out the form and submit it to create a message, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ViewMessagePage viewMessagePage =\n\t\tpage.createMessage(ViewMessagePage.class, expectedSummary, expectedText);"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val viewMessagePage =\n\tpage.createMessage(ViewMessagePage::class, expectedSummary, expectedText)"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This improves on the design of our "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HtmlUnit test"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/mah.html#spring-mvc-test-server-htmlunit-mah-usage"
+              },
+              {
+                "kind": "text",
+                "value": " by leveraging the Page Object Pattern. As we mentioned in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Why WebDriver and MockMvc?"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/htmlunit/webdriver.html#spring-mvc-test-server-htmlunit-webdriver-why"
+              },
+              {
+                "kind": "text",
+                "value": ", we can use the Page Object Pattern with HtmlUnit, but it is much easier with WebDriver. Consider the following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CreateMessagePage"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public class CreateMessagePage extends AbstractPage { "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\tprivate WebElement summary;\n\tprivate WebElement text;\n\n\t@FindBy(css = \"input[type=submit]\") "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO1-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\tprivate WebElement submit;\n\n\tpublic CreateMessagePage(WebDriver driver) {\n\t\tsuper(driver);\n\t}\n\n\tpublic <T> T createMessage(Class<T> resultPage, String summary, String details) {\n\t\tthis.summary.sendKeys(summary);\n\t\tthis.text.sendKeys(details);\n\t\tthis.submit.click();\n\t\treturn PageFactory.initElements(driver, resultPage);\n\t}\n\n\tpublic static CreateMessagePage to(WebDriver driver) {\n\t\tdriver.get(\"http://localhost:9990/mail/messages/form\");\n\t\treturn PageFactory.initElements(driver, CreateMessagePage.class);\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "CreateMessagePage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " extends the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "AbstractPage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". We do not go over the details of "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "AbstractPage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ", but, in summary, it contains common functionality for all of our pages. For example, if our application has a navigational bar, global error messages, and other features, we can place this logic in a shared location."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "We have a member variable for each of the parts of the HTML page in which we are interested. These are of type "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". WebDriver’s "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "PageFactory"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://github.com/SeleniumHQ/selenium/wiki/PageFactory"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " lets us remove a lot of code from the HtmlUnit version of "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "CreateMessagePage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " by automatically resolving each "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". The "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "PageFactory#initElements(WebDriver,Class<T>)"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://seleniumhq.github.io/selenium/docs/api/java/org/openqa/selenium/support/PageFactory.html#initElements-org.openqa.selenium.WebDriver-java.lang.Class-"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " method automatically resolves each "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " by using the field name and looking it up by the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "id"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " or "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "name"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " of the element within the HTML page."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO1-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "We can use the "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "@FindBy"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " annotation"
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://github.com/SeleniumHQ/selenium/wiki/PageFactory#making-the-example-work-using-annotations"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " to override the default lookup behavior. Our example shows how to use the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "@FindBy"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " annotation to look up our submit button with a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "css"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " selector ("
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "input[type=submit]"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ")."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class CreateMessagePage(private val driver: WebDriver) : AbstractPage(driver) { "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\tprivate lateinit var summary: WebElement\n\tprivate lateinit var text: WebElement\n\n\t@FindBy(css = \"input[type=submit]\") "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO2-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\tprivate lateinit var submit: WebElement\n\n\tfun <T> createMessage(resultPage: Class<T>, summary: String, details: String): T {\n\t\tthis.summary.sendKeys(summary)\n\t\ttext.sendKeys(details)\n\t\tsubmit.click()\n\t\treturn PageFactory.initElements(driver, resultPage)\n\t}\n\tcompanion object {\n\t\tfun to(driver: WebDriver): CreateMessagePage {\n\t\t\tdriver.get(\"http://localhost:9990/mail/messages/form\")\n\t\t\treturn PageFactory.initElements(driver, CreateMessagePage::class.java)\n\t\t}\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "CreateMessagePage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " extends the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "AbstractPage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". We do not go over the details of "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "AbstractPage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ", but, in summary, it contains common functionality for all of our pages. For example, if our application has a navigational bar, global error messages, and other features, we can place this logic in a shared location."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "We have a member variable for each of the parts of the HTML page in which we are interested. These are of type "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". WebDriver’s "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "PageFactory"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://github.com/SeleniumHQ/selenium/wiki/PageFactory"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " lets us remove a lot of code from the HtmlUnit version of "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "CreateMessagePage"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " by automatically resolving each "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". The "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "PageFactory#initElements(WebDriver,Class<T>)"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://seleniumhq.github.io/selenium/docs/api/java/org/openqa/selenium/support/PageFactory.html#initElements-org.openqa.selenium.WebDriver-java.lang.Class-"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " method automatically resolves each "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "WebElement"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " by using the field name and looking it up by the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "id"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " or "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "name"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " of the element within the HTML page."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO2-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "We can use the "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "@FindBy"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        },
+                                        {
+                                          "kind": "text",
+                                          "value": " annotation"
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://github.com/SeleniumHQ/selenium/wiki/PageFactory#making-the-example-work-using-annotations"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " to override the default lookup behavior. Our example shows how to use the "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "@FindBy"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " annotation to look up our submit button with a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "css"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " selector ("
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "input[type=submit]"
+                                        }
+                                      ],
+                                      "kind": "strong",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ")."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, we can verify that a new message was created successfully. The following assertions use the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertJ"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://assertj.github.io/doc"
+              },
+              {
+                "kind": "text",
+                "value": " assertion library:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "assertThat(viewMessagePage.getMessage()).isEqualTo(expectedMessage);\nassertThat(viewMessagePage.getSuccess()).isEqualTo(\"Successfully created a new message\");"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "assertThat(viewMessagePage.message).isEqualTo(expectedMessage)\nassertThat(viewMessagePage.success).isEqualTo(\"Successfully created a new message\")"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can see that our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ViewMessagePage"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lets us interact with our custom domain model. For example, it exposes a method that returns a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Message"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public Message getMessage() throws ParseException {\n\tMessage message = new Message();\n\tmessage.setId(getId());\n\tmessage.setCreated(getCreated());\n\tmessage.setSummary(getSummary());\n\tmessage.setText(getText());\n\treturn message;\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "fun getMessage() = Message(getId(), getCreated(), getSummary(), getText())"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can then use the rich domain objects in our assertions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Lastly, we must not forget to close the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebDriver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance when the test is complete, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@AfterEach\nvoid destroy() {\n\tif (driver != null) {\n\t\tdriver.close();\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@AfterEach\nfun destroy() {\n\tif (driver != null) {\n\t\tdriver.close()\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "open",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For additional information on using WebDriver, see the Selenium "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebDriver documentation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/SeleniumHQ/selenium/wiki/Getting-Started"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-webdriver-usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "MockMvc and WebDriver Usage"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the examples so far, we have used "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvcHtmlUnitDriverBuilder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the simplest way possible, by building a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebDriver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " based on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " loaded for us by the Spring TestContext Framework. This approach is repeated here, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "WebDriver driver;\n\n@BeforeEach\nvoid setup(WebApplicationContext context) {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t.webAppContextSetup(context)\n\t\t\t.build();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "lateinit var driver: WebDriver\n\n@BeforeEach\nfun setup(context: WebApplicationContext) {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t.webAppContextSetup(context)\n\t\t\t.build()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can also specify additional configuration options, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "WebDriver driver;\n\n@BeforeEach\nvoid setup() {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t// demonstrates applying a MockMvcConfigurer (Spring Security)\n\t\t\t.webAppContextSetup(context, springSecurity())\n\t\t\t// for illustration only - defaults to \"\"\n\t\t\t.contextPath(\"\")\n\t\t\t// By default MockMvc is used for localhost only;\n\t\t\t// the following will use MockMvc for example.com and example.org as well\n\t\t\t.useMockMvcForHosts(\"example.com\",\"example.org\")\n\t\t\t.build();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "lateinit var driver: WebDriver\n\n@BeforeEach\nfun setup() {\n\tdriver = MockMvcHtmlUnitDriverBuilder\n\t\t\t// demonstrates applying a MockMvcConfigurer (Spring Security)\n\t\t\t.webAppContextSetup(context, springSecurity())\n\t\t\t// for illustration only - defaults to \"\"\n\t\t\t.contextPath(\"\")\n\t\t\t// By default MockMvc is used for localhost only;\n\t\t\t// the following will use MockMvc for example.com and example.org as well\n\t\t\t.useMockMvcForHosts(\"example.com\",\"example.org\")\n\t\t\t.build()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As an alternative, we can perform the exact same setup by configuring the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance separately and supplying it to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvcHtmlUnitDriverBuilder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "MockMvc mockMvc = MockMvcBuilders\n\t\t.webAppContextSetup(context)\n\t\t.apply(springSecurity())\n\t\t.build();\n\ndriver = MockMvcHtmlUnitDriverBuilder\n\t\t.mockMvcSetup(mockMvc)\n\t\t// for illustration only - defaults to \"\"\n\t\t.contextPath(\"\")\n\t\t// By default MockMvc is used for localhost only;\n\t\t// the following will use MockMvc for example.com and example.org as well\n\t\t.useMockMvcForHosts(\"example.com\",\"example.org\")\n\t\t.build();"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "// Not possible in Kotlin until {kotlin-issues}/KT-22208 is fixed"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This is more verbose, but, by building the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebDriver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance, we have the full power of MockMvc at our fingertips."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For additional information on creating a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configuring MockMvc"
+                  }
+                ],
+                "kind": "xref",
+                "target": "testing/mockmvc/hamcrest/setup.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-server-htmlunit-webdriver-advanced-builder",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Advanced "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MockMvcHtmlUnitDriverBuilder"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "MockMvc and WebDriver"
+      }
+    ]
+  }
+}

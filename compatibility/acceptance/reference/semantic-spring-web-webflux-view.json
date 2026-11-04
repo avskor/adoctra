@@ -1,0 +1,3019 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The rendering of views in Spring WebFlux is pluggable. Whether you decide to use Thymeleaf, FreeMarker, or some other view technology is primarily a matter of a configuration change. This chapter covers the view technologies integrated with Spring WebFlux."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more context on view rendering, please see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "View Resolution"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/dispatcher-handler.html#webflux-viewresolution"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The views of a Spring WebFlux application live within internal trust boundaries of the application. Views have access to beans in the application context, and as such, we do not recommend use the Spring WebFlux template support in applications where the templates are editable by external sources, since this can have security implications."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-thymeleaf.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Thymeleaf is a modern server-side Java template engine that emphasizes natural HTML templates that can be previewed in a browser by double-clicking, which is very helpful for independent work on UI templates (for example, by a designer) without the need for a running server. Thymeleaf offers an extensive set of features, and it is actively developed and maintained. For a more complete introduction, see the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Thymeleaf"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.thymeleaf.org/"
+              },
+              {
+                "kind": "text",
+                "value": " project home page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Thymeleaf integration with Spring WebFlux is managed by the Thymeleaf project. The configuration involves a few bean declarations, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringResourceTemplateResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SpringWebFluxTemplateEngine"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ThymeleafReactiveViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For more details, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Thymeleaf+Spring"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.thymeleaf.org/documentation.html"
+              },
+              {
+                "kind": "text",
+                "value": " and the WebFlux integration "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "announcement"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://web.archive.org/web/20210623051330/http%3A//forum.thymeleaf.org/Thymeleaf-3-0-8-JUST-PUBLISHED-td4030687.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "webflux-view-thymeleaf",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Thymeleaf"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-freemarker.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Apache FreeMarker"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://freemarker.apache.org/"
+              },
+              {
+                "kind": "text",
+                "value": " is a template engine for generating any kind of text output from HTML to email and others. The Spring Framework has built-in integration for using Spring WebFlux with FreeMarker templates."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-freemarker.html#mvc-view-freemarker-contextconfig"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows how to configure FreeMarker as a view technology:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\npublic class WebConfig implements WebFluxConfigurer {\n\n\t@Override\n\tpublic void configureViewResolvers(ViewResolverRegistry registry) {\n\t\tregistry.freeMarker();\n\t}\n\n\t// Configure FreeMarker...\n\n\t@Bean\n\tpublic FreeMarkerConfigurer freeMarkerConfigurer() {\n\t\tFreeMarkerConfigurer configurer = new FreeMarkerConfigurer();\n\t\tconfigurer.setTemplateLoaderPath(\"classpath:/templates/freemarker\");\n\t\treturn configurer;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\nclass WebConfig : WebFluxConfigurer {\n\n\toverride fun configureViewResolvers(registry: ViewResolverRegistry) {\n\t\tregistry.freeMarker()\n\t}\n\n\t// Configure FreeMarker...\n\n\t@Bean\n\tfun freeMarkerConfigurer() = FreeMarkerConfigurer().apply {\n\t\tsetTemplateLoaderPath(\"classpath:/templates/freemarker\")\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Your templates need to be stored in the directory specified by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FreeMarkerConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", shown in the preceding example. Given the preceding configuration, if your controller returns the view name, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "welcome"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the resolver looks for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "classpath:/templates/freemarker/welcome.ftl"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " template."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-view-freemarker-contextconfig",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "View Configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-freemarker.html#mvc-views-freemarker"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can pass FreeMarker 'Settings' and 'SharedVariables' directly to the FreeMarker "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configuration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object (which is managed by Spring) by setting the appropriate bean properties on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FreeMarkerConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " bean. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "freemarkerSettings"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property requires a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object, and the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "freemarkerVariables"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property requires a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Map"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following example shows how to use a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FreeMarkerConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\npublic class WebConfig implements WebFluxConfigurer {\n\n\t// ...\n\n\t@Bean\n\tpublic FreeMarkerConfigurer freeMarkerConfigurer() {\n\t\tMap<String, Object> variables = new HashMap<>();\n\t\tvariables.put(\"xml_escape\", new XmlEscape());\n\n\t\tFreeMarkerConfigurer configurer = new FreeMarkerConfigurer();\n\t\tconfigurer.setTemplateLoaderPath(\"classpath:/templates\");\n\t\tconfigurer.setFreemarkerVariables(variables);\n\t\treturn configurer;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\nclass WebConfig : WebFluxConfigurer {\n\n\t// ...\n\n\t@Bean\n\tfun freeMarkerConfigurer() = FreeMarkerConfigurer().apply {\n\t\tsetTemplateLoaderPath(\"classpath:/templates\")\n\t\tsetFreemarkerVariables(mapOf(\"xml_escape\" to XmlEscape()))\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See the FreeMarker documentation for details of settings and variables as they apply to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configuration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-views-freemarker",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "FreeMarker Configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-freemarker.html#mvc-view-freemarker-forms"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring provides a tag library for use in JSPs that contains, among others, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<spring:bind/>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element. This element primarily lets forms display values from form-backing objects and show the results of failed validations from a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Validator"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the web or business tier. Spring also has support for the same functionality in FreeMarker, with additional convenience macros for generating form input elements themselves."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "See equivalent in the Servlet stack"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "web/webmvc-view/mvc-freemarker.html#mvc-view-bind-macros"
+                          }
+                        ],
+                        "kind": "span",
+                        "roles": [
+                          "small"
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "A standard set of macros are maintained within the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "spring-webflux.jar"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " file for FreeMarker, so they are always available to a suitably configured application."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Some of the macros defined in the Spring templating libraries are considered internal (private), but no such scoping exists in the macro definitions, making all macros visible to calling code and user templates. The following sections concentrate only on the macros you need to directly call from within your templates. If you wish to view the macro code directly, the file is called "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "spring.ftl"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and is in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.springframework.web.reactive.result.view.freemarker"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " package."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For additional details on binding support, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Simple Binding"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-freemarker.html#mvc-view-simple-binding"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for Spring MVC."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "webflux-view-bind-macros",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "The Bind Macros"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For details on Spring’s form macro support for FreeMarker templates, consult the following sections of the Spring MVC documentation."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Input Macros"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "web/webmvc-view/mvc-freemarker.html#mvc-views-form-macros"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Input Fields"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "web/webmvc-view/mvc-freemarker.html#mvc-views-form-macros-input"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Selection Fields"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "web/webmvc-view/mvc-freemarker.html#mvc-views-form-macros-select"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "HTML Escaping"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "web/webmvc-view/mvc-freemarker.html#mvc-views-form-macros-html-escaping"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "webflux-views-form-macros",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Form Macros"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "webflux-view-freemarker-forms",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Form Handling"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "webflux-view-freemarker",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "FreeMarker"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-script.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring Framework has a built-in integration for using Spring WebFlux with any templating library that can run on top of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JSR-223"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.jcp.org/en/jsr/detail?id=223"
+              },
+              {
+                "kind": "text",
+                "value": " Java scripting engine. The following table shows the templating libraries that we have tested on different script engines:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Handlebars"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://handlebarsjs.com/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Nashorn"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.java.net/projects/nashorn/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Mustache"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://mustache.github.io/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Nashorn"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.java.net/projects/nashorn/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "React"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://facebook.github.io/react/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Nashorn"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.java.net/projects/nashorn/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "EJS"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.embeddedjs.com/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Nashorn"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.java.net/projects/nashorn/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ERB"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.stuartellis.name/articles/erb/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JRuby"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.jruby.org"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "String templates"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.python.org/2/library/string.html#template-strings"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Jython"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.jython.org/"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Kotlin Script templating"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/sdeleuze/kotlin-script-templating"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Kotlin"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://kotlinlang.org"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Scripting Library"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Scripting Engine"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [
+              "header"
+            ],
+            "roles": [],
+            "stripes": "odd",
+            "title": null,
+            "width": 100
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The basic rule for integrating any other script engine is that it must implement the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptEngine"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Invocable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interfaces."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-script.html#mvc-view-script-dependencies"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You need to have the script engine on your classpath, the details of which vary by script engine:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Nashorn"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://openjdk.java.net/projects/nashorn/"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " JavaScript engine is provided with Java 8+. Using the latest update release available is highly recommended."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "JRuby"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.jruby.org"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " should be added as a dependency for Ruby support."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Jython"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.jython.org"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " should be added as a dependency for Python support."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.jetbrains.kotlin:kotlin-script-util"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " dependency and a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "META-INF/services/javax.script.ScriptEngineFactory"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " file containing a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "org.jetbrains.kotlin.script.jsr223.KotlinJsr223JvmLocalScriptEngineFactory"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " line should be added for Kotlin script support. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "this example"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/sdeleuze/kotlin-script-templating"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for more detail."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You need to have the script templating library. One way to do that for JavaScript is through "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebJars"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.webjars.org/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-view-script-dependencies",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Requirements"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/webmvc-view/mvc-script.html#mvc-view-script-integrate"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can declare a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ScriptTemplateConfigurer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " bean to specify the script engine to use, the script files to load, what function to call to render templates, and so on. The following example uses Mustache templates and the Nashorn JavaScript engine:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\npublic class WebConfig implements WebFluxConfigurer {\n\n\t@Override\n\tpublic void configureViewResolvers(ViewResolverRegistry registry) {\n\t\tregistry.scriptTemplate();\n\t}\n\n\t@Bean\n\tpublic ScriptTemplateConfigurer configurer() {\n\t\tScriptTemplateConfigurer configurer = new ScriptTemplateConfigurer();\n\t\tconfigurer.setEngineName(\"nashorn\");\n\t\tconfigurer.setScripts(\"mustache.js\");\n\t\tconfigurer.setRenderObject(\"Mustache\");\n\t\tconfigurer.setRenderFunction(\"render\");\n\t\treturn configurer;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\nclass WebConfig : WebFluxConfigurer {\n\n\toverride fun configureViewResolvers(registry: ViewResolverRegistry) {\n\t\tregistry.scriptTemplate()\n\t}\n\n\t@Bean\n\tfun configurer() = ScriptTemplateConfigurer().apply {\n\t\tengineName = \"nashorn\"\n\t\tsetScripts(\"mustache.js\")\n\t\trenderObject = \"Mustache\"\n\t\trenderFunction = \"render\"\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "render"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " function is called with the following parameters:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "String template"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": The template content"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Map model"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": The view model"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "RenderingContext renderingContext"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": The "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "RenderingContext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/servlet/view/script/RenderingContext.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " that gives access to the application context, the locale, the template loader, and the URL (since 5.0)"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Mustache.render()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is natively compatible with this signature, so you can call it directly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If your templating technology requires some customization, you can provide a script that implements a custom render function. For example, "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Handlerbars"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://handlebarsjs.com"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " needs to compile templates before using them and requires a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "polyfill"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://en.wikipedia.org/wiki/Polyfill"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in order to emulate some browser facilities not available in the server-side script engine. The following example shows how to set a custom render function:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\npublic class WebConfig implements WebFluxConfigurer {\n\n\t@Override\n\tpublic void configureViewResolvers(ViewResolverRegistry registry) {\n\t\tregistry.scriptTemplate();\n\t}\n\n\t@Bean\n\tpublic ScriptTemplateConfigurer configurer() {\n\t\tScriptTemplateConfigurer configurer = new ScriptTemplateConfigurer();\n\t\tconfigurer.setEngineName(\"nashorn\");\n\t\tconfigurer.setScripts(\"polyfill.js\", \"handlebars.js\", \"render.js\");\n\t\tconfigurer.setRenderFunction(\"render\");\n\t\tconfigurer.setSharedEngine(false);\n\t\treturn configurer;\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\n@EnableWebFlux\nclass WebConfig : WebFluxConfigurer {\n\n\toverride fun configureViewResolvers(registry: ViewResolverRegistry) {\n\t\tregistry.scriptTemplate()\n\t}\n\n\t@Bean\n\tfun configurer() = ScriptTemplateConfigurer().apply {\n\t\tengineName = \"nashorn\"\n\t\tsetScripts(\"polyfill.js\", \"handlebars.js\", \"render.js\")\n\t\trenderFunction = \"render\"\n\t\tisSharedEngine = false\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sharedEngine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "false"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is required when using non-thread-safe script engines with templating libraries not designed for concurrency, such as Handlebars or React running on Nashorn. In that case, Java SE 8 update 60 is required, due to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "this bug"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://bugs.openjdk.java.net/browse/JDK-8076099"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", but it is generally recommended to use a recent Java SE patch release in any case."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "polyfill.js"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " defines only the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "window"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " object needed by Handlebars to run properly, as the following snippet shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "var window = {};"
+                  }
+                ],
+                "language": "javascript",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This basic "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "render.js"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation compiles the template before using it. A production ready implementation should also store and reused cached templates or pre-compiled templates. This can be done on the script side, as well as any customization you need (managing template engine configuration for example). The following example shows how compile a template:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "function render(template, model) {\n\tvar compiledTemplate = Handlebars.compile(template);\n\treturn compiledTemplate(model);\n}"
+                  }
+                ],
+                "language": "javascript",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Check out the Spring Framework unit tests, "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Java"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/spring-projects/spring-framework/tree/main/spring-webflux/src/test/java/org/springframework/web/reactive/result/view/script"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "resources"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/spring-projects/spring-framework/tree/main/spring-webflux/src/test/resources/org/springframework/web/reactive/result/view/script"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", for more configuration examples."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-view-script-integrate",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Script Templates"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "webflux-view-script",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Script Views"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-fragments.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HTMX"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://htmx.org/"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Hotwire Turbo"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://turbo.hotwired.dev/"
+              },
+              {
+                "kind": "text",
+                "value": " emphasize an HTML-over-the-wire approach where clients receive server updates in HTML rather than in JSON. This allows the benefits of an SPA (single page app) without having to write much or even any JavaScript. For a good overview and to learn more, please visit their respective websites."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In Spring WebFlux, view rendering typically involves specifying one view and one model. However, in HTML-over-the-wire a common capability is to send multiple HTML fragments that the browser can use to update different parts of the page. For this, controller methods can return "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Collection<Fragment>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@GetMapping\nList<Fragment> handle() {\n\treturn List.of(Fragment.create(\"posts\"), Fragment.create(\"comments\"));\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@GetMapping\nfun handle(): List<Fragment> {\n\treturn listOf(Fragment.create(\"posts\"), Fragment.create(\"comments\"))\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The same can be done also by returning the dedicated type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FragmentsRendering"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@GetMapping\nFragmentsRendering handle() {\n\treturn FragmentsRendering.with(\"posts\").fragment(\"comments\").build();\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@GetMapping\nfun handle(): FragmentsRendering {\n\treturn FragmentsRendering.with(\"posts\").fragment(\"comments\").build()\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each fragment can have an independent model, and that model inherits attributes from the shared model for the request."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HTMX and Hotwire Turbo support streaming updates over SSE (server-sent events). A controller can create "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FragmentsRendering"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Flux<Fragment>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or with any other reactive producer adaptable to a Reactive Streams "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Publisher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ReactiveAdapterRegistry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". It is also possible to return "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Flux<Fragment>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " directly without the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FragmentsRendering"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " wrapper."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "webflux-view-fragments",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "HTML Fragment"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-view/mvc-jackson.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Content Negotiation"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/dispatcher-handler.html#webflux-multiple-representations"
+              },
+              {
+                "kind": "text",
+                "value": " purposes, it is useful to be able to alternate between rendering a model with an HTML template or as other formats (such as JSON or XML), depending on the content type requested by the client. To support doing so, Spring WebFlux provides the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpMessageWriterView"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which you can use to plug in any of the available "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Codecs"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/reactive-spring.html#webflux-codecs"
+              },
+              {
+                "kind": "text",
+                "value": " from "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "spring-web"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jackson2JsonEncoder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jackson2SmileEncoder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jaxb2XmlEncoder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unlike other view technologies, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpMessageWriterView"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " does not require a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " but is instead "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configured"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/config.html#webflux-config-view-resolvers"
+              },
+              {
+                "kind": "text",
+                "value": " as a default view. You can configure one or more such default views, wrapping different "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpMessageWriter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Encoder"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances. The one that matches the requested content type is used at runtime."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In most cases, a model contains multiple attributes. To determine which one to serialize, you can configure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpMessageWriterView"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with the name of the model attribute to use for rendering. If the model contains only one attribute, that one is used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "webflux-view-httpmessagewriter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "JSON and XML"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "View Technologies"
+      }
+    ]
+  }
+}

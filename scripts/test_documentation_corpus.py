@@ -9,11 +9,11 @@ import acceptance
 import import_docs
 
 # Pages per origin: the full Asciidoctor, AsciiDoc language, Asciidoctor PDF,
-# Antora, JUnit and Debezium documentation (every
+# Antora, JUnit, Debezium and Spring Framework documentation (every
 # `<component>/modules/*/pages/**/*.adoc` of the pinned revision, imported by
-# import_docs.py) and a selection of Spring Framework pages.
+# import_docs.py).
 PAGES = {"asciidoctor-docs-2.0.23": 78, "asciidoc-lang-0.3.0": 202, "asciidoctor-pdf-2.3.27": 96,
-         "antora-3.2.2": 205, "junit-6.1.3": 64, "debezium-3.7.0": 83, "spring-framework-6.2.0": 6}
+         "antora-3.2.2": 205, "junit-6.1.3": 64, "debezium-3.7.0": 83, "spring-framework-6.2.0": 455}
 # Directories an origin's Antora collector copies into its component.
 COLLECT = {"junit-6.1.3": [("src/test", "modules/ROOT/examples")]}
 # Pages outside the body profile: Ruby's HTML has crossing tags (a `*...*`

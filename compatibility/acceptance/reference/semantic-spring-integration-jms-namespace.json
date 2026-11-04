@@ -1,0 +1,4004 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Spring provides an XML namespace for simplifying JMS configuration. To use the JMS namespace elements, you need to reference the JMS schema, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<beans xmlns=\"http://www.springframework.org/schema/beans\"\n\txmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n\txmlns:jms=\"http://www.springframework.org/schema/jms\" "
+          },
+          {
+            "guard": null,
+            "icons": null,
+            "id": "CO1-1",
+            "kind": "callout",
+            "number": "1",
+            "src": "",
+            "xml": false
+          },
+          {
+            "kind": "text",
+            "value": "\n\txsi:schemaLocation=\"\n\t\thttp://www.springframework.org/schema/beans\n\t\thttps://www.springframework.org/schema/beans/spring-beans.xsd\n\t\thttp://www.springframework.org/schema/jms\n\t\thttps://www.springframework.org/schema/jms/spring-jms.xsd\">\n\n\t<!-- bean definitions here -->\n\n</beans>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "colist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "coids": [
+              "CO1-1"
+            ],
+            "icons": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Referencing the JMS schema."
+              }
+            ],
+            "src": ""
+          }
+        ],
+        "roles": [],
+        "style": "arabic",
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The namespace consists of three top-level elements: "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<annotation-driven/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<listener-container/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<jca-listener-container/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<annotation-driven/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " enables the use of "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "annotation-driven listener endpoints"
+              }
+            ],
+            "kind": "xref",
+            "target": "integration/jms/annotated.html"
+          },
+          {
+            "kind": "text",
+            "value": " . "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<listener-container/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<jca-listener-container/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " define shared listener container configuration and can contain "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<listener/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " child elements. The following example shows a basic configuration for two listeners:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<jms:listener-container>\n\n\t<jms:listener destination=\"queue.orders\" ref=\"orderService\" method=\"placeOrder\"/>\n\n\t<jms:listener destination=\"queue.confirmations\" ref=\"confirmationLogger\" method=\"log\"/>\n\n</jms:listener-container>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The preceding example is equivalent to creating two distinct listener container bean definitions and two distinct "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "MessageListenerAdapter"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " bean definitions, as shown in "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MessageListenerAdapter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "integration/jms/receiving.html#jms-receiving-async-message-listener-adapter"
+          },
+          {
+            "kind": "text",
+            "value": ". In addition to the attributes shown in the preceding example, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "listener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " element can contain several optional ones. The following table describes all of the available attributes:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A bean name for the hosting listener container. If not specified, a bean name is automatically generated."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (required)"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The destination name for this listener, resolved through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DestinationResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ref"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (required)"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The bean name of the handler object."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "method"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The name of the handler method to invoke. If the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ref"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute points to a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MessageListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SessionAwareMessageListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", you can omit this attribute."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "response-destination"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The name of the default response destination to which to send response messages. This is applied in case of a request message that does not carry a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JMSReplyTo"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " field. The type of this destination is determined by the listener-container’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "response-destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute. Note that this applies only to a listener method with a return value, for which each result object is converted into a response message."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscription"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The name of the durable subscription, if any."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "selector"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "An optional message selector for this listener."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "concurrency"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The number of concurrent sessions or consumers to start for this listener. This value can either be a simple number indicating the maximum number (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") or a range indicating the lower as well as the upper limit (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "3-5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Note that a specified minimum is only a hint and might be ignored at runtime. The default is the value provided by the container."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Table 1. "
+          }
+        ],
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "14.2857"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "85.7143"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Attribute"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": "jms-namespace-listener-tbl",
+        "options": [],
+        "roles": [],
+        "stripes": "odd",
+        "title": [
+          {
+            "kind": "text",
+            "value": "Attributes of the JMS <listener> element"
+          }
+        ],
+        "width": 100
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<listener-container/>"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " element also accepts several optional attributes. This allows for customization of the various strategies (for example, "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "taskExecutor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "destinationResolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ") as well as basic JMS settings and resource references. By using these attributes, you can define highly-customized listener containers while still benefiting from the convenience of the namespace."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can automatically expose such settings as a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JmsListenerContainerFactory"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " by specifying the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "id"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " of the bean to expose through the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "factory-id"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<jms:listener-container connection-factory=\"myConnectionFactory\"\n\t\ttask-executor=\"myTaskExecutor\"\n\t\tdestination-resolver=\"myDestinationResolver\"\n\t\ttransaction-manager=\"myTransactionManager\"\n\t\tconcurrency=\"10\">\n\n\t<jms:listener destination=\"queue.orders\" ref=\"orderService\" method=\"placeOrder\"/>\n\n\t<jms:listener destination=\"queue.confirmations\" ref=\"confirmationLogger\" method=\"log\"/>\n\n</jms:listener-container>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following table describes all available attributes. See the class-level javadoc of the "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AbstractMessageListenerContainer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "link",
+            "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jms/listener/AbstractMessageListenerContainer.html"
+          },
+          {
+            "kind": "text",
+            "value": " and its concrete subclasses for more details on the individual properties. The javadoc also provides a discussion of transaction choices and message redelivery scenarios."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "container-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The type of this listener container. The available options are "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "simple"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default102"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "simple102"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (the default option is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "container-class"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A custom listener container implementation class as a fully qualified class name. The default is Spring’s standard "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DefaultMessageListenerContainer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SimpleMessageListenerContainer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", according to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "container-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "factory-id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Exposes the settings defined by this element as a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JmsListenerContainerFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with the specified "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " so that they can be reused with other endpoints."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "connection-factory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the JMS "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ConnectionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " bean (the default bean name is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "connectionFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "task-executor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TaskExecutor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the JMS listener invokers."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-resolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DestinationResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy for resolving JMS "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Destination"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instances."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "message-converter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MessageConverter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy for converting JMS Messages to listener method arguments. The default is a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SimpleMessageConverter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "error-handler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ErrorHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy for handling any uncaught exceptions that may occur during the execution of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MessageListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS destination type for this listener: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "durableTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sharedTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sharedDurableTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This potentially enables the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pubSubDomain"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscriptionDurable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscriptionShared"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " properties of the container. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (which disables those three properties)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "response-destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS destination type for responses: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The default is the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "client-id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS client ID for this listener container. You must specify it when you use durable subscriptions."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cache"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The cache level for JMS resources: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "none"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "connection"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "consumer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". By default ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), the cache level is effectively "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "consumer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", unless an external transaction manager has been specified — in which case, the effective default will be "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "none"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (assuming Jakarta EE-style transaction management, where the given ConnectionFactory is an XA-aware pool)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "acknowledge"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The native JMS acknowledge mode: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "client"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dups-ok"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transacted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". A value of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transacted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " activates a locally transacted "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". As an alternative, you can specify the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transaction-manager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute, described later in table. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transaction-manager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to an external "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PlatformTransactionManager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (typically an XA-based transaction coordinator, such as Spring’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JtaTransactionManager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). If not specified, native acknowledging is used (see the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "acknowledge"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "concurrency"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The number of concurrent sessions or consumers to start for each listener. It can either be a simple number indicating the maximum number (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") or a range indicating the lower as well as the upper limit (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "3-5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Note that a specified minimum is just a hint and might be ignored at runtime. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You should keep concurrency limited to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in case of a topic listener or if queue ordering is important. Consider raising it for general queues."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "prefetch"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The maximum number of messages to load into a single session. Note that raising this number might lead to starvation of concurrent consumers."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "receive-timeout"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The timeout (in milliseconds) to use for receive calls. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "1000"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (one second). "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " indicates no timeout."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "back-off"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Specifies the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BackOff"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance to use to compute the interval between recovery attempts. If the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BackOffExecution"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementation returns "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BackOffExecution#STOP"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the listener container does not further try to recover. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "recovery-interval"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " value is ignored when this property is set. The default is a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FixedBackOff"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with an interval of 5000 milliseconds (that is, five seconds)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "recovery-interval"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Specifies the interval between recovery attempts, in milliseconds. It offers a convenient way to create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "FixedBackOff"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with the specified interval. For more recovery options, consider specifying a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "BackOff"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance instead. The default is 5000 milliseconds (that is, five seconds)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "phase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The lifecycle phase within which this container should start and stop. The lower the value, the earlier this container starts and the later it stops. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Integer.MAX_VALUE"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", meaning that the container starts as late as possible and stops as soon as possible."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Table 2. "
+          }
+        ],
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "14.2857"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "85.7143"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Attribute"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": "jms-namespace-listener-container-tbl",
+        "options": [],
+        "roles": [],
+        "stripes": "odd",
+        "title": [
+          {
+            "kind": "text",
+            "value": "Attributes of the JMS <listener-container> element"
+          }
+        ],
+        "width": 100
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Configuring a JCA-based listener container with the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "jms"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " schema support is very similar, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "<jms:jca-listener-container resource-adapter=\"myResourceAdapter\"\n\t\tdestination-resolver=\"myDestinationResolver\"\n\t\ttransaction-manager=\"myTransactionManager\"\n\t\tconcurrency=\"10\">\n\n\t<jms:listener destination=\"queue.orders\" ref=\"myMessageListener\"/>\n\n</jms:jca-listener-container>"
+          }
+        ],
+        "language": "xml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following table describes the available configuration options for the JCA variant:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "factory-id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Exposes the settings defined by this element as a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JmsListenerContainerFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with the specified "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " so that they can be reused with other endpoints."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "resource-adapter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the JCA "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceAdapter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " bean (the default bean name is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "resourceAdapter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "activation-spec-factory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JmsActivationSpecFactory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The default is to autodetect the JMS provider and its "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ActivationSpec"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " class (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "DefaultJmsActivationSpecFactory"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/jms/listener/endpoint/DefaultJmsActivationSpecFactory.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-resolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DestinationResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy for resolving JMS "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Destinations"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "message-converter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MessageConverter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy for converting JMS Messages to listener method arguments. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SimpleMessageConverter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS destination type for this listener: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "durableTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sharedTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sharedDurableTopic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This potentially enables the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pubSubDomain"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscriptionDurable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscriptionShared"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " properties of the container. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (which disables those three properties)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "response-destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS destination type for responses: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "queue"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The default is the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "destination-type"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "client-id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The JMS client ID for this listener container. It needs to be specified when using durable subscriptions."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "acknowledge"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The native JMS acknowledge mode: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "client"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dups-ok"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transacted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". A value of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transacted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " activates a locally transacted "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Session"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". As an alternative, you can specify the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transaction-manager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute described later. The default is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transaction-manager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "A reference to a Spring "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "JtaTransactionManager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jakarta.transaction.TransactionManager"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for kicking off an XA transaction for each incoming message. If not specified, native acknowledging is used (see the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "acknowledge"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute)."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "concurrency"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The number of concurrent sessions or consumers to start for each listener. It can either be a simple number indicating the maximum number (for example "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") or a range indicating the lower as well as the upper limit (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "3-5"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Note that a specified minimum is only a hint and is typically ignored at runtime when you use a JCA listener container. The default is 1."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "prefetch"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "The maximum number of messages to load into a single session. Note that raising this number might lead to starvation of concurrent consumers."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Table 3. "
+          }
+        ],
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "14.2857"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "85.7143"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Attribute"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": "jms-namespace-jca-listener-container-tbl",
+        "options": [],
+        "roles": [],
+        "stripes": "odd",
+        "title": [
+          {
+            "kind": "text",
+            "value": "Attributes of the JMS <jca-listener-container/> element"
+          }
+        ],
+        "width": 100
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "JMS Namespace Support"
+      }
+    ]
+  }
+}

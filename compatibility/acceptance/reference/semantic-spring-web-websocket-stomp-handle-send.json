@@ -1,0 +1,99 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "What if you want to send messages to connected clients from any part of the application? Any application component can send messages to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "brokerChannel"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". The easiest way to do so is to inject a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SimpMessagingTemplate"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and use it to send messages. Typically, you would inject it by type, as the following example shows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@Controller\npublic class GreetingController {\n\n\tprivate SimpMessagingTemplate template;\n\n\t@Autowired\n\tpublic GreetingController(SimpMessagingTemplate template) {\n\t\tthis.template = template;\n\t}\n\n\t@RequestMapping(path=\"/greetings\", method=POST)\n\tpublic void greet(String greeting) {\n\t\tString text = \"[\" + getTimestamp() + \"]:\" + greeting;\n\t\tthis.template.convertAndSend(\"/topic/greetings\", text);\n\t}\n\n}"
+          }
+        ],
+        "language": "java",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "However, you can also qualify it by its name ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "brokerMessagingTemplate"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "), if another bean of the same type exists."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Sending Messages"
+      }
+    ]
+  }
+}

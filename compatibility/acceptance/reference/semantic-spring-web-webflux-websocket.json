@@ -1,0 +1,3084 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This part of the reference documentation covers support for reactive-stack WebSocket messaging."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The WebSocket protocol, "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RFC 6455"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://datatracker.ietf.org/doc/html/rfc6455"
+              },
+              {
+                "kind": "text",
+                "value": ", provides a standardized way to establish a full-duplex, two-way communication channel between client and server over a single TCP connection. It is a different TCP protocol from HTTP but is designed to work over HTTP, using ports 80 and 443 and allowing re-use of existing firewall rules."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A WebSocket interaction begins with an HTTP request that uses the HTTP "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Upgrade"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " header to upgrade or, in this case, to switch to the WebSocket protocol. The following example shows such an interaction:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "GET /spring-websocket-portfolio/portfolio HTTP/1.1\nHost: localhost:8080\nUpgrade: websocket "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nConnection: Upgrade "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nSec-WebSocket-Key: Uc9l9TMkWGbHFD2qnFHltg==\nSec-WebSocket-Protocol: v10.stomp, v11.stomp\nSec-WebSocket-Version: 13\nOrigin: http://localhost:8080"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Upgrade"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " header."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Upgrade"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " connection."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of the usual 200 status code, a server with WebSocket support returns output similar to the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HTTP/1.1 101 Switching Protocols "
+              },
+              {
+                "guard": null,
+                "icons": null,
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nUpgrade: websocket\nConnection: Upgrade\nSec-WebSocket-Accept: 1qVdfYHU9hPOl4JYYNXF623Gzn0=\nSec-WebSocket-Protocol: v10.stomp"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Protocol switch"
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After a successful handshake, the TCP socket underlying the HTTP upgrade request remains open for both the client and the server to continue to send and receive messages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A complete introduction of how WebSockets work is beyond the scope of this document. See RFC 6455, the WebSocket chapter of HTML5, or any of the many introductions and tutorials on the Web."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that, if a WebSocket server is running behind a web server (for example, nginx), you likely need to configure it to pass WebSocket upgrade requests on to the WebSocket server. Likewise, if the application runs in a cloud environment, check the instructions of the cloud provider related to WebSocket support."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Even though WebSocket is designed to be HTTP-compatible and starts with an HTTP request, it is important to understand that the two protocols lead to very different architectures and application programming models."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In HTTP and REST, an application is modeled as many URLs. To interact with the application, clients access those URLs, request-response style. Servers route requests to the appropriate handler based on the HTTP URL, method, and headers."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By contrast, in WebSockets, there is usually only one URL for the initial connect. Subsequently, all application messages flow on that same TCP connection. This points to an entirely different asynchronous, event-driven, messaging architecture."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebSocket is also a low-level transport protocol, which, unlike HTTP, does not prescribe any semantics to the content of messages. That means that there is no way to route or process a message unless the client and the server agree on message semantics."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebSocket clients and servers can negotiate the use of a higher-level, messaging protocol (for example, STOMP), through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Sec-WebSocket-Protocol"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " header on the HTTP handshake request. In the absence of that, they need to come up with their own conventions."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "http-versus-websocket",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "HTTP Versus WebSocket"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebSockets can make a web page be dynamic and interactive. However, in many cases, a combination of AJAX and HTTP streaming or long polling can provide a simple and effective solution."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For example, news, mail, and social feeds need to update dynamically, but it may be perfectly okay to do so every few minutes. Collaboration, games, and financial apps, on the other hand, need to be much closer to real-time."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Latency alone is not a deciding factor. If the volume of messages is relatively low (for example, monitoring network failures) HTTP streaming or polling can provide an effective solution. It is the combination of low latency, high frequency, and high volume that make the best case for the use of WebSocket."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Keep in mind also that over the Internet, restrictive proxies that are outside of your control may preclude WebSocket interactions, either because they are not configured to pass on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Upgrade"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " header or because they close long-lived connections that appear idle. This means that the use of WebSocket for internal applications within the firewall is a more straightforward decision than it is for public facing applications."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "when-to-use-websockets",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "When to Use WebSockets"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "introduction-to-websocket",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Introduction to WebSocket"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See equivalent in the Servlet stack"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/websocket/stomp/server-config.html"
+                  }
+                ],
+                "kind": "span",
+                "roles": [
+                  "small"
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Spring Framework provides a WebSocket API that you can use to write client- and server-side applications that handle WebSocket messages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/websocket/server.html#websocket-server-handler"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To create a WebSocket server, you can first create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The following example shows how to do so:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import org.springframework.web.reactive.socket.WebSocketHandler;\nimport org.springframework.web.reactive.socket.WebSocketSession;\n\npublic class MyWebSocketHandler implements WebSocketHandler {\n\n\t@Override\n\tpublic Mono<Void> handle(WebSocketSession session) {\n\t\t// ...\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import org.springframework.web.reactive.socket.WebSocketHandler\nimport org.springframework.web.reactive.socket.WebSocketSession\n\nclass MyWebSocketHandler : WebSocketHandler {\n\n\toverride fun handle(session: WebSocketSession): Mono<Void> {\n\t\t// ...\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Then you can map it to a URL:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t@Bean\n\tpublic HandlerMapping handlerMapping() {\n\t\tMap<String, WebSocketHandler> map = new HashMap<>();\n\t\tmap.put(\"/path\", new MyWebSocketHandler());\n\t\tint order = -1; // before annotated controllers\n\n\t\treturn new SimpleUrlHandlerMapping(map, order);\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t@Bean\n\tfun handlerMapping(): HandlerMapping {\n\t\tval map = mapOf(\"/path\" to MyWebSocketHandler())\n\t\tval order = -1 // before annotated controllers\n\n\t\treturn SimpleUrlHandlerMapping(map, order)\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If using the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebFlux Config"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/dispatcher-handler.html#webflux-framework-config"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " there is nothing further to do, or otherwise if not using the WebFlux config you’ll need to declare a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandlerAdapter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " as shown below:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t// ...\n\n\t@Bean\n\tpublic WebSocketHandlerAdapter handlerAdapter() {\n\t\treturn new WebSocketHandlerAdapter();\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t// ...\n\n\t@Bean\n\tfun handlerAdapter() =  WebSocketHandlerAdapter()\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-server-handler",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Server"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "handle"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " takes "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketSession"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and returns "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Mono<Void>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to indicate when application handling of the session is complete. The session is handled through two streams, one for inbound and one for outbound messages. The following table describes the two methods that handle the streams:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Flux<WebSocketMessage> receive()"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Provides access to the inbound message stream and completes when the connection is closed."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Mono<Void> send(Publisher<WebSocketMessage>)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Takes a source for outgoing messages, writes the messages, and returns a "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Mono<Void>"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " that completes when the source completes and writing is done."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "WebSocketSession"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " method"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": "odd",
+                "title": null,
+                "width": 100
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " must compose the inbound and outbound streams into a unified flow and return a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Mono<Void>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that reflects the completion of that flow. Depending on application requirements, the unified flow completes when:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Either the inbound or the outbound message stream completes."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The inbound stream completes (that is, the connection closed), while the outbound stream is infinite."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "At a chosen point, through the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "close"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "WebSocketSession"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When inbound and outbound message streams are composed together, there is no need to check if the connection is open, since Reactive Streams signals end activity. The inbound stream receives a completion or error signal, and the outbound stream receives a cancellation signal."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The most basic implementation of a handler is one that handles the inbound stream. The following example shows such an implementation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler implements WebSocketHandler {\n\n\t@Override\n\tpublic Mono<Void> handle(WebSocketSession session) {\n\t\treturn session.receive()\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext(message -> {\n\t\t\t\t\t// ...\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t})\n\t\t\t\t.concatMap(message -> {\n\t\t\t\t\t// ...\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t})\n\t\t\t\t.then();\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO3-4",
+                                  "kind": "callout",
+                                  "number": "4",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Access the stream of inbound messages."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Do something with each message."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Perform nested asynchronous operations that use the message content."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO3-4"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that completes when receiving completes."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler : WebSocketHandler {\n\n\toverride fun handle(session: WebSocketSession): Mono<Void> {\n\t\treturn session.receive()            "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext {\n\t\t\t\t\t// ...\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t}\n\t\t\t\t.concatMap {\n\t\t\t\t\t// ...\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t}\n\t\t\t\t.then()                     "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO4-4",
+                                  "kind": "callout",
+                                  "number": "4",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Access the stream of inbound messages."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Do something with each message."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Perform nested asynchronous operations that use the message content."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO4-4"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that completes when receiving completes."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For nested, asynchronous operations, you may need to call "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "message.retain()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on underlying servers that use pooled data buffers (for example, Netty). Otherwise, the data buffer may be released before you have had a chance to read the data. For more background, see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Data Buffers and Codecs"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/databuffer-codec.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following implementation combines the inbound and outbound streams:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler implements WebSocketHandler {\n\n\t@Override\n\tpublic Mono<Void> handle(WebSocketSession session) {\n\n\t\tFlux<WebSocketMessage> output = session.receive()\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO5-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext(message -> {\n\t\t\t\t\t// ...\n\t\t\t\t})\n\t\t\t\t.concatMap(message -> {\n\t\t\t\t\t// ...\n\t\t\t\t})\n\t\t\t\t.map(value -> session.textMessage(\"Echo \" + value));\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO5-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t\treturn session.send(output);\t\t\t\t\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO5-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO5-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Handle the inbound message stream."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO5-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the outbound message, producing a combined flow."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO5-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that does not complete while we continue to receive."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler : WebSocketHandler {\n\n\toverride fun handle(session: WebSocketSession): Mono<Void> {\n\n\t\tval output = session.receive()                      "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO6-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext {\n\t\t\t\t\t// ...\n\t\t\t\t}\n\t\t\t\t.concatMap {\n\t\t\t\t\t// ...\n\t\t\t\t}\n\t\t\t\t.map { session.textMessage(\"Echo $it\") }    "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO6-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t\treturn session.send(output)                         "
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO6-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO6-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Handle the inbound message stream."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO6-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Create the outbound message, producing a combined flow."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO6-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that does not complete while we continue to receive."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Inbound and outbound streams can be independent and be joined only for completion, as the following example shows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler implements WebSocketHandler {\n\n\t@Override\n\tpublic Mono<Void> handle(WebSocketSession session) {\n\n\t\tMono<Void> input = session.receive()\t\t\t\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": null,
+                                  "icons": null,
+                                  "id": "CO7-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext(message -> {\n\t\t\t\t\t// ...\n\t\t\t\t})\n\t\t\t\t.concatMap(message -> {\n\t\t\t\t\t// ...\n\t\t\t\t})\n\t\t\t\t.then();\n\n\t\tFlux<String> source = ... ;\n\t\tMono<Void> output = session.send(source.map(session::textMessage));\t"
+                                },
+                                {
+                                  "guard": null,
+                                  "icons": null,
+                                  "id": "CO7-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t\treturn Mono.zip(input, output).then();\t\t\t\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": null,
+                                  "icons": null,
+                                  "id": "CO7-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO7-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Handle inbound message stream."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO7-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Send outgoing messages."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO7-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Join the streams and return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that completes when either stream ends."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class ExampleHandler : WebSocketHandler {\n\n\toverride fun handle(session: WebSocketSession): Mono<Void> {\n\n\t\tval input = session.receive()\t\t\t\t\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO8-1",
+                                  "kind": "callout",
+                                  "number": "1",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t\t\t\t.doOnNext {\n\t\t\t\t\t// ...\n\t\t\t\t}\n\t\t\t\t.concatMap {\n\t\t\t\t\t// ...\n\t\t\t\t}\n\t\t\t\t.then()\n\n\t\tval source: Flux<String> = ...\n\t\tval output = session.send(source.map(session::textMessage))\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO8-2",
+                                  "kind": "callout",
+                                  "number": "2",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\n\t\treturn Mono.zip(input, output).then()\t\t\t\t\t\t\t"
+                                },
+                                {
+                                  "guard": "// ",
+                                  "icons": null,
+                                  "id": "CO8-3",
+                                  "kind": "callout",
+                                  "number": "3",
+                                  "src": "",
+                                  "xml": false
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": "\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "colist",
+                              "id": null,
+                              "items": [
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO8-1"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Handle inbound message stream."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO8-2"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Send outgoing messages."
+                                    }
+                                  ],
+                                  "src": ""
+                                },
+                                {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "coids": [
+                                    "CO8-3"
+                                  ],
+                                  "icons": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Join the streams and return a "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "Mono<Void>"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " that completes when either stream ends."
+                                    }
+                                  ],
+                                  "src": ""
+                                }
+                              ],
+                              "roles": [],
+                              "style": "arabic",
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websockethandler",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebSocketHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBuffer"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the representation for a byte buffer in WebFlux. The Spring Core part of the reference has more on that in the section on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Data Buffers and Codecs"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "core/databuffer-codec.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The key point to understand is that on some servers like Netty, byte buffers are pooled and reference counted, and must be released when consumed to avoid memory leaks."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When running on Netty, applications must use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBufferUtils.retain(dataBuffer)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " if they wish to hold on input data buffers in order to ensure they are not released, and subsequently use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DataBufferUtils.release(dataBuffer)"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " when the buffers are consumed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-databuffer",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DataBuffer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/websocket/server.html#websocket-server-handshake"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandlerAdapter"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " delegates to a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketService"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". By default, that is an instance of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HandshakeWebSocketService"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which performs basic checks on the WebSocket request and then uses "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RequestUpgradeStrategy"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the server in use. Currently, there is built-in support for Reactor Netty, Tomcat, Jetty, and Undertow."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HandshakeWebSocketService"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " exposes a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sessionAttributePredicate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property that allows setting a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Predicate<String>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to extract attributes from the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSession"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and insert them into the attributes of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketSession"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-server-handshake",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Handshake"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/websocket/server.html#websocket-server-runtime-configuration"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RequestUpgradeStrategy"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for each server exposes configuration specific to the underlying WebSocket server engine. When using the WebFlux Java config you can customize such properties as shown in the corresponding section of the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebFlux Config"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux/config.html#webflux-config-websocket-service"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or otherwise if not using the WebFlux config, use the below:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t@Bean\n\tpublic WebSocketHandlerAdapter handlerAdapter() {\n\t\treturn new WebSocketHandlerAdapter(webSocketService());\n\t}\n\n\t@Bean\n\tpublic WebSocketService webSocketService() {\n\t\tTomcatRequestUpgradeStrategy strategy = new TomcatRequestUpgradeStrategy();\n\t\tstrategy.setMaxSessionIdleTimeout(0L);\n\t\treturn new HandshakeWebSocketService(strategy);\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Configuration\nclass WebConfig {\n\n\t@Bean\n\tfun handlerAdapter() =\n\t\t\tWebSocketHandlerAdapter(webSocketService())\n\n\t@Bean\n\tfun webSocketService(): WebSocketService {\n\t\tval strategy = TomcatRequestUpgradeStrategy().apply {\n\t\t\tsetMaxSessionIdleTimeout(0L)\n\t\t}\n\t\treturn HandshakeWebSocketService(strategy)\n\t}\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Check the upgrade strategy for your server to see what options are available. Currently, only Tomcat and Jetty expose such options."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-server-config",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Server Configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "See equivalent in the Servlet stack"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "web/websocket/server.html#websocket-server-allowed-origins"
+                      }
+                    ],
+                    "kind": "span",
+                    "roles": [
+                      "small"
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The easiest way to configure CORS and restrict access to a WebSocket endpoint is to have your "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implement "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsConfigurationSource"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and return a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsConfiguration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with allowed origins, headers, and other details. If you cannot do that, you can also set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "corsConfigurations"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property on the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SimpleUrlHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to specify CORS settings by URL pattern. If both are specified, they are combined by using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "combine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CorsConfiguration"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-server-cors",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "CORS"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Spring WebFlux provides a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketClient"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " abstraction with implementations for Reactor Netty, Tomcat, Jetty, Undertow, and standard Java (that is, JSR-356)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Tomcat client is effectively an extension of the standard Java one with some extra functionality in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebSocketSession"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " handling to take advantage of the Tomcat-specific API to suspend receiving messages for back pressure."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To start a WebSocket session, you can create an instance of the client and use its "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "execute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "WebSocketClient client = new ReactorNettyWebSocketClient();\n\nURI url = new URI(\"ws://localhost:8080/path\");\nclient.execute(url, session ->\n\t\tsession.receive()\n\t\t\t\t.doOnNext(System.out::println)\n\t\t\t\t.then());"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "val client = ReactorNettyWebSocketClient()\n\n\t\tval url = URI(\"ws://localhost:8080/path\")\n\t\tclient.execute(url) { session ->\n\t\t\tsession.receive()\n\t\t\t\t\t.doOnNext(::println)\n\t\t\t.then()\n\t\t}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Some clients, such as Jetty, implement "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Lifecycle"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and need to be stopped and started before you can use them. All clients have constructor options related to configuration of the underlying WebSocket client."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "webflux-websocket-client",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Client"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "webflux-websocket-server",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "WebSocket API"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "WebSockets"
+      }
+    ]
+  }
+}

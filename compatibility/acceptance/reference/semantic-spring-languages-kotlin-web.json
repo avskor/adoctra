@@ -1,0 +1,646 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring Framework comes with a Kotlin router DSL available in 3 flavors:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebMvc.fn DSL"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc-functional.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "router { }"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/kdoc-api/spring-webmvc/org.springframework.web.servlet.function/router.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebFlux.fn Reactive DSL"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webflux-functional.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "router { }"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/kdoc-api/spring-webflux/org.springframework.web.reactive.function.server/router.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebFlux.fn Coroutines DSL"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "languages/kotlin/coroutines.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "coRouter { }"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.spring.io/spring-framework/docs/6.2.0/kdoc-api/spring-webflux/org.springframework.web.reactive.function.server/co-router.html"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "These DSL let you write clean and idiomatic Kotlin code to build a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RouterFunction"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance as the following example shows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration\nclass RouterRouterConfiguration {\n\n\t@Bean\n\tfun mainRouter(userHandler: UserHandler) = router {\n\t\taccept(TEXT_HTML).nest {\n\t\t\tGET(\"/\") { ok().render(\"index\") }\n\t\t\tGET(\"/sse\") { ok().render(\"sse\") }\n\t\t\tGET(\"/users\", userHandler::findAllView)\n\t\t}\n\t\t\"/api\".nest {\n\t\t\taccept(APPLICATION_JSON).nest {\n\t\t\t\tGET(\"/users\", userHandler::findAll)\n\t\t\t}\n\t\t\taccept(TEXT_EVENT_STREAM).nest {\n\t\t\t\tGET(\"/users\", userHandler::stream)\n\t\t\t}\n\t\t}\n\t\tresources(\"/**\", ClassPathResource(\"static/\"))\n\t}\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This DSL is programmatic, meaning that it allows custom registration logic of beans through an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "if"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " expression, a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "for"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " loop, or any other Kotlin constructs. That can be useful when you need to register routes depending on dynamic data (for example, from a database)."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MiXiT project"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/mixitconf/mixit/"
+              },
+              {
+                "kind": "text",
+                "value": " for a concrete example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "router-dsl",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Router DSL"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A Kotlin DSL is provided via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MockMvc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " Kotlin extensions in order to provide a more idiomatic Kotlin API and to allow better discoverability (no usage of static methods)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "val mockMvc: MockMvc = ...\nmockMvc.get(\"/person/{name}\", \"Lee\") {\n\tsecure = true\n\taccept = APPLICATION_JSON\n\theaders {\n\t\tcontentLanguage = Locale.FRANCE\n\t}\n\tprincipal = Principal { \"foo\" }\n}.andExpect {\n\tstatus { isOk }\n\tcontent { contentType(APPLICATION_JSON) }\n\tjsonPath(\"$.name\") { value(\"Lee\") }\n\tcontent { json(\"\"\"{\"someBoolean\": false}\"\"\", false) }\n}.andDo {\n\tprint()\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mockmvc-dsl",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "MockMvc DSL"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Spring Framework provides a "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ScriptTemplateView"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.spring.io/spring-framework/docs/6.2.0/javadoc-api/org/springframework/web/servlet/view/script/ScriptTemplateView.html"
+              },
+              {
+                "kind": "text",
+                "value": " which supports "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JSR-223"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.jcp.org/en/jsr/detail?id=223"
+              },
+              {
+                "kind": "text",
+                "value": " to render templates by using script engines."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By leveraging "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "scripting-jsr223"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " dependencies, it is possible to use such feature to render Kotlin-based templates with "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "kotlinx.html"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/Kotlin/kotlinx.html"
+              },
+              {
+                "kind": "text",
+                "value": " DSL or Kotlin multiline interpolated "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build.gradle.kts"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dependencies {\n        runtime(\"org.jetbrains.kotlin:kotlin-scripting-jsr223:${kotlinVersion}\")\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Configuration is usually done with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptTemplateConfigurer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ScriptTemplateViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " beans."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "KotlinScriptConfiguration.kt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Configuration\nclass KotlinScriptConfiguration {\n\n    @Bean\n\tfun kotlinScriptConfigurer() = ScriptTemplateConfigurer().apply {\n\t\tengineName = \"kotlin\"\n\t\tsetScripts(\"scripts/render.kts\")\n\t\trenderFunction = \"render\"\n\t\tisSharedEngine = false\n\t}\n\n    @Bean\n    fun kotlinScriptViewResolver() = ScriptTemplateViewResolver().apply {\n        setPrefix(\"templates/\")\n        setSuffix(\".kts\")\n    }\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "kotlin-script-templating"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/sdeleuze/kotlin-script-templating"
+              },
+              {
+                "kind": "text",
+                "value": " example project for more details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "kotlin-script-templates",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Kotlin Script Templates"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kotlin multiplatform serialization"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/Kotlin/kotlinx.serialization"
+              },
+              {
+                "kind": "text",
+                "value": " is supported in Spring MVC, Spring WebFlux and Spring Messaging (RSocket). The builtin support currently targets CBOR, JSON, and ProtoBuf formats."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To enable it, follow "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "those instructions"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/Kotlin/kotlinx.serialization#setup"
+              },
+              {
+                "kind": "text",
+                "value": " to add the related dependency and plugin. With Spring MVC and WebFlux, both Kotlin serialization and Jackson will be configured by default if they are in the classpath since Kotlin serialization is designed to serialize only Kotlin classes annotated with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Serializable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". With Spring Messaging (RSocket), make sure that neither Jackson, GSON or JSONB are in the classpath if you want automatic configuration, if Jackson is needed configure "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "KotlinSerializationJsonMessageConverter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " manually."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "kotlin-multiplatform-serialization",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Kotlin multiplatform serialization"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Web"
+      }
+    ]
+  }
+}

@@ -1,0 +1,539 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@DynamicPropertySource"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is an annotation that can be applied to methods in integration test classes that need to register "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "dynamic"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " properties to be added to the set of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "PropertySources"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Environment"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " loaded for an integration test. Dynamic properties are useful when you do not know the value of the properties upfront – for example, if the properties are managed by an external resource such as for a container managed by the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Testcontainers"
+              }
+            ],
+            "kind": "link",
+            "target": "https://www.testcontainers.org"
+          },
+          {
+            "kind": "text",
+            "value": " project."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example demonstrates how to register a dynamic property:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ContextConfiguration\nclass MyIntegrationTests {\n\n\tstatic MyExternalServer server = // ...\n\n\t@DynamicPropertySource "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO1-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\tstatic void dynamicProperties(DynamicPropertyRegistry registry) { "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO1-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\tregistry.add(\"server.port\", server::getPort); "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO1-3",
+                          "kind": "callout",
+                          "number": "3",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t}\n\n\t// tests ...\n}"
+                        }
+                      ],
+                      "language": "java",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Annotate a "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "static"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " method with "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DynamicPropertySource"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Accept a "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "DynamicPropertyRegistry"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " as an argument."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO1-3"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Register a dynamic "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "server.port"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " property to be retrieved lazily from the server."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "listing",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@ContextConfiguration\nclass MyIntegrationTests {\n\n\tcompanion object {\n\n\t\t@JvmStatic\n\t\tval server: MyExternalServer = // ...\n\n\t\t@DynamicPropertySource "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-1",
+                          "kind": "callout",
+                          "number": "1",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t@JvmStatic\n\t\tfun dynamicProperties(registry: DynamicPropertyRegistry) { "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-2",
+                          "kind": "callout",
+                          "number": "2",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t\tregistry.add(\"server.port\", server::getPort) "
+                        },
+                        {
+                          "guard": "// ",
+                          "icons": null,
+                          "id": "CO2-3",
+                          "kind": "callout",
+                          "number": "3",
+                          "src": "",
+                          "xml": false
+                        },
+                        {
+                          "kind": "text",
+                          "value": "\n\t\t}\n\t}\n\n\t// tests ...\n}"
+                        }
+                      ],
+                      "language": "kotlin",
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "colist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-1"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Annotate a "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "static"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " method with "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@DynamicPropertySource"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-2"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Accept a "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "DynamicPropertyRegistry"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " as an argument."
+                            }
+                          ],
+                          "src": ""
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "coids": [
+                            "CO2-3"
+                          ],
+                          "icons": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Register a dynamic "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "server.port"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " property to be retrieved lazily from the server."
+                            }
+                          ],
+                          "src": ""
+                        }
+                      ],
+                      "roles": [],
+                      "style": "arabic",
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Context Configuration with Dynamic Property Sources"
+              }
+            ],
+            "kind": "xref",
+            "target": "testing/testcontext-framework/ctx-management/dynamic-property-sources.html"
+          },
+          {
+            "kind": "text",
+            "value": " for further details."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@DynamicPropertySource"
+          }
+        ],
+        "kind": "monospace",
+        "roles": []
+      }
+    ]
+  }
+}

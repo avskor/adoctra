@@ -1,0 +1,784 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See equivalent in the Reactive stack"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webflux/dispatcher-handler.html#webflux-dispatcher-handler-sequence"
+              }
+            ],
+            "kind": "span",
+            "roles": [
+              "small"
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " processes requests as follows:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "ulist",
+        "id": null,
+        "items": [
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WebApplicationContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is searched for and bound in the request as an attribute that the controller and other elements in the process can use. It is bound by default under the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DispatcherServlet.WEB_APPLICATION_CONTEXT_ATTRIBUTE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The locale resolver is bound to the request to let elements in the process resolve the locale to use when processing the request (rendering the view, preparing data, and so on). If you do not need locale resolving, you do not need the locale resolver."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The theme resolver is bound to the request to let elements such as views determine which theme to use. If you do not use themes, you can ignore it."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you specify a multipart file resolver, the request is inspected for multiparts. If multiparts are found, the request is wrapped in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MultipartHttpServletRequest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for further processing by other elements in the process. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Multipart Resolver"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-servlet/multipart.html"
+              },
+              {
+                "kind": "text",
+                "value": " for further information about multipart handling."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "An appropriate handler is searched for. If a handler is found, the execution chain associated with the handler (preprocessors, postprocessors, and controllers) is run to prepare a model for rendering. Alternatively, for annotated controllers, the response can be rendered (within the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HandlerAdapter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") instead of returning a view."
+              }
+            ]
+          },
+          {
+            "blocks": [],
+            "checkbox": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a model is returned, the view is rendered. If no model is returned (maybe due to a preprocessor or postprocessor intercepting the request, perhaps for security reasons), no view is rendered, because the request could already have been fulfilled."
+              }
+            ]
+          }
+        ],
+        "roles": [],
+        "style": null,
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HandlerExceptionResolver"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " beans declared in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebApplicationContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " are used to resolve exceptions thrown during request processing. Those exception resolvers allow customizing the logic to address exceptions. See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Exceptions"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-servlet/exceptionhandlers.html"
+          },
+          {
+            "kind": "text",
+            "value": " for more details."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For HTTP caching support, handlers can use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "checkNotModified"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " methods of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "WebRequest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", along with further options for annotated controllers as described in "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HTTP Caching for Controllers"
+              }
+            ],
+            "kind": "xref",
+            "target": "web/webmvc/mvc-caching.html#mvc-caching-etag-lastmodified"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can customize individual "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DispatcherServlet"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instances by adding Servlet initialization parameters ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "init-param"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " elements) to the Servlet declaration in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "web.xml"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " file. The following table lists the supported parameters:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextClass"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Class that implements "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ConfigurableWebApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", to be instantiated and locally configured by this Servlet. By default, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "XmlWebApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is used."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextConfigLocation"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "String that is passed to the context instance (specified by "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextClass"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to indicate where contexts can be found. The string consists potentially of multiple strings (using a comma as a delimiter) to support multiple contexts. In the case of multiple context locations with beans that are defined twice, the latest location takes precedence."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "namespace"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Namespace of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WebApplicationContext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Defaults to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[servlet-name]-servlet"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "throwExceptionIfNoHandlerFound"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Whether to throw a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NoHandlerFoundException"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " when no handler was found for a request. The exception can then be caught with a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HandlerExceptionResolver"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (for example, by using an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ExceptionHandler"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " controller method) and handled as any others."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "value": " As of 6.1, this property is set to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and deprecated."
+                  }
+                ],
+                [
+                  {
+                    "kind": "text",
+                    "value": " Note that, if "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default servlet handling"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "web/webmvc/mvc-config/default-servlet-handler.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is also configured, unresolved requests are always forwarded to the default servlet and a 404 is never raised."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Table 1. "
+          }
+        ],
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "50"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "50"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Parameter"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Explanation"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": "mvc-disp-servlet-init-params-tbl",
+        "options": [],
+        "roles": [],
+        "stripes": "odd",
+        "title": [
+          {
+            "kind": "text",
+            "value": "DispatcherServlet initialization parameters"
+          }
+        ],
+        "width": 100
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Processing"
+      }
+    ]
+  }
+}

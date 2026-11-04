@@ -1,0 +1,526 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "XSLT is a transformation language for XML and is popular as a view technology within web applications. XSLT can be a good choice as a view technology if your application naturally deals with XML or if your model can easily be converted to XML. The following section shows how to produce an XML document as model data and have it transformed with XSLT in a Spring Web MVC application."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This example is a trivial Spring application that creates a list of words in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Controller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and adds them to the model map. The map is returned, along with the view name of our XSLT view. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Annotated Controllers"
+                  }
+                ],
+                "kind": "xref",
+                "target": "web/webmvc/mvc-controller.html"
+              },
+              {
+                "kind": "text",
+                "value": " for details of Spring Web MVC’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Controller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface. The XSLT controller turns the list of words into a simple XML document ready for transformation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Configuration is standard for a simple Spring web application: The MVC configuration has to define an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XsltViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean and regular MVC annotation configuration. The following example shows how to do so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@EnableWebMvc\n@ComponentScan\n@Configuration\npublic class WebConfig implements WebMvcConfigurer {\n\n\t@Bean\n\tpublic XsltViewResolver xsltViewResolver() {\n\t\tXsltViewResolver viewResolver = new XsltViewResolver();\n\t\tviewResolver.setPrefix(\"/WEB-INF/xsl/\");\n\t\tviewResolver.setSuffix(\".xslt\");\n\t\treturn viewResolver;\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@EnableWebMvc\n@ComponentScan\n@Configuration\nclass WebConfig : WebMvcConfigurer {\n\n\t@Bean\n\tfun xsltViewResolver() = XsltViewResolver().apply {\n\t\tsetPrefix(\"/WEB-INF/xsl/\")\n\t\tsetSuffix(\".xslt\")\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-view-xslt-beandefs",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Beans"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We also need a Controller that encapsulates our word-generation logic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The controller logic is encapsulated in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Controller"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class, with the handler method being defined as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Controller\npublic class XsltController {\n\n\t@RequestMapping(\"/\")\n\tpublic String home(Model model) throws Exception {\n\t\tDocument document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument();\n\t\tElement root = document.createElement(\"wordList\");\n\n\t\tList<String> words = Arrays.asList(\"Hello\", \"Spring\", \"Framework\");\n\t\tfor (String word : words) {\n\t\t\tElement wordNode = document.createElement(\"word\");\n\t\t\tText textNode = document.createTextNode(word);\n\t\t\twordNode.appendChild(textNode);\n\t\t\troot.appendChild(wordNode);\n\t\t}\n\n\t\tmodel.addAttribute(\"wordList\", root);\n\t\treturn \"home\";\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "import org.springframework.ui.set\n\n@Controller\nclass XsltController {\n\n\t@RequestMapping(\"/\")\n\tfun home(model: Model): String {\n\t\tval document = DocumentBuilderFactory.newInstance().newDocumentBuilder().newDocument()\n\t\tval root = document.createElement(\"wordList\")\n\n\t\tval words = listOf(\"Hello\", \"Spring\", \"Framework\")\n\t\tfor (word in words) {\n\t\t\tval wordNode = document.createElement(\"word\")\n\t\t\tval textNode = document.createTextNode(word)\n\t\t\twordNode.appendChild(textNode)\n\t\t\troot.appendChild(wordNode)\n\t\t}\n\n\t\tmodel[\"wordList\"] = root\n\t\treturn \"home\"\n\t}\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So far, we have only created a DOM document and added it to the Model map. Note that you can also load an XML file as a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Resource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and use it instead of a custom DOM document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are software packages available that automatically 'domify' an object graph, but, within Spring, you have complete flexibility to create the DOM from your model in any way you choose. This prevents the transformation of XML playing too great a part in the structure of your model data, which is a danger when using tools to manage the DOMification process."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-view-xslt-controllercode",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Controller"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XsltViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " resolves the “home” XSLT template file and merges the DOM document into it to generate our view. As shown in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XsltViewResolver"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration, XSLT templates live in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "war"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "WEB-INF/xsl"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " directory and end with an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "xslt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows an XSLT transform:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\n\n\t<xsl:output method=\"html\" omit-xml-declaration=\"yes\"/>\n\n\t<xsl:template match=\"/\">\n\t\t<html>\n\t\t\t<head><title>Hello!</title></head>\n\t\t\t<body>\n\t\t\t\t<h1>My First Words</h1>\n\t\t\t\t<ul>\n\t\t\t\t\t<xsl:apply-templates/>\n\t\t\t\t</ul>\n\t\t\t</body>\n\t\t</html>\n\t</xsl:template>\n\n\t<xsl:template match=\"word\">\n\t\t<li><xsl:value-of select=\".\"/></li>\n\t</xsl:template>\n\n</xsl:stylesheet>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The preceding transform is rendered as the following HTML:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<html>\n\t<head>\n\t\t<META http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n\t\t<title>Hello!</title>\n\t</head>\n\t<body>\n\t\t<h1>My First Words</h1>\n\t\t<ul>\n\t\t\t<li>Hello</li>\n\t\t\t<li>Spring</li>\n\t\t\t<li>Framework</li>\n\t\t</ul>\n\t</body>\n</html>"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mvc-view-xslt-transforming",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Transformation"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "XSLT Views"
+      }
+    ]
+  }
+}

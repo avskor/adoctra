@@ -2035,7 +2035,16 @@ fn render_verbatim(
     out: &mut String,
 ) {
     if let Some(inlines) = inlines {
-        render_inlines(inlines, out);
+        // Custom `subs`: the stages' generated characters (replacements,
+        // typographic quotes) are `Raw` entities already, so a `Text` part is
+        // the listing's own text, which Ruby writes as is (a literal `…`
+        // stays `…`, not `&#8230;`).
+        for inline in inlines {
+            match inline {
+                Inline::Substituted { parts, .. } => render_parts_as(parts, out, escape),
+                other => render_inlines(std::slice::from_ref(other), out),
+            }
+        }
         return;
     }
     let mut copied = 0;
@@ -3019,9 +3028,19 @@ fn render_footnotes(
 }
 
 fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
+    render_parts_as(parts, out, escape_text);
+}
+
+/// [`render_parts`] with the encoding of `Text` parts: [`escape_text`] for
+/// prose, [`escape`] for a verbatim block's own text.
+fn render_parts_as(
+    parts: &[adoctra_core::AttributePart],
+    out: &mut String,
+    text_escape: fn(&str) -> String,
+) {
     for part in parts {
         match part {
-            adoctra_core::AttributePart::Text(text) => out.push_str(&escape_text(text)),
+            adoctra_core::AttributePart::Text(text) => out.push_str(&text_escape(text)),
             adoctra_core::AttributePart::Raw(text) => out.push_str(text),
             adoctra_core::AttributePart::OpenLink(link) => {
                 out.push_str("<a href=\"");
@@ -3742,6 +3761,21 @@ mod tests {
         let html = render("* one\n  two");
         assert_eq!(html.matches("<li>").count(), 1, "got: {html}");
         assert!(html.contains("two</li>"), "got: {html}");
+    }
+
+    #[test]
+    fn a_listing_with_custom_subs_keeps_its_own_typographic_characters() {
+        // Ruby writes a listing's own `…` as is; only the characters its
+        // stages generate (replacements, typographic quotes) are entities.
+        let html = render(
+            "[source,java,subs=\"specialchars,replacements\"]\n----\nf(…) and ... (C)\n----",
+        );
+        assert!(
+            html.contains(">f(…) and &#8230;&#8203; &#169;</code>"),
+            "got: {html}"
+        );
+        // The same text in a paragraph keeps the backend's entity encoding.
+        assert!(render("f(…)").contains("<p>f(&#8230;)</p>"));
     }
 
     #[test]
