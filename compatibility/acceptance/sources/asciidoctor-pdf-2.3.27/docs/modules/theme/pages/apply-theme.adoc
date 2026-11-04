@@ -1,0 +1,109 @@
+= Apply a Theme
+
+After creating a theme, you'll need to tell Asciidoctor PDF where to find it.
+This is done using AsciiDoc attributes.
+
+== Theme and font directories
+
+There are three AsciiDoc attributes that tell Asciidoctor PDF how to locate and apply your theme.
+
+pdf-theme:: The name or file path of the theme to load.
+Can be set using the `--theme` CLI option.
+When using JRuby, the file path may begin with `uri:classloader:` to reference a location on the classpath.
++
+If the value of the `pdf-theme` attribute ends with `.yml` (e.g., `custom-theme.yml`), the name is assumed to be an absolute or relative file path.
+If the path is relative, it's resolved starting from the value of the `pdf-themesdir` attribute.
+If the `pdf-themesdir` attribute is not specified, it is resolved from the current working directory instead.
++
+If the value of the `pdf-theme` attribute doesn't end with `.yml` (e.g., `base`), the suffix `-theme.yml` is automatically appended to build a valid absolute or relative file path (i.e., `<name>-theme.yml`).
+The value is then treated as a relative path (even if it's absolute) and resolved starting from the value of the `pdf-themesdir` attribute.
+If the `pdf-themesdir` is not specified, the built-in themes directory is used as the starting point instead (rather than the current working directory).
++
+IMPORTANT: The theme file *must* end in .yml, not .yaml.
+When the theme path specified does not end in .yml, Asciidoctor PDF appends the suffix `-theme.yml` and looks for the resulting file.
++
+You can use the `+{docdir}+` token as the first path segment in the name to build an absolute path starting from the directory of the source document.
++
+The theme name or file path can be specified using the `--theme` CLI option as a shorthand.
+
+pdf-themesdir:: The directory path where the theme file is located.
+When using JRuby, the directory path may begin with `uri:classloader:` to reference a location on the classpath.
++
+If the path is relative, the value is resolved starting from the current working directory.
+You can use the `+{docdir}+` token as the first path segment to build an absolute path starting from the directory of the source document.
++
+If not specified, the value of this attribute will default to the absolute directory of the theme file (as specified by the `pdf-theme` attribute).
+If you want to use an ancestory directory instead, you must specify both the `pdf-themesdir` attribute and the `pdf-theme` attribute, and the `pdf-theme` attribute must be a path (at any depth) relative to the value of `pdf-themesdir`.
++
+Relative image paths in your theme (such as image targets) are resolved starting from this location.
+
+pdf-fontsdir:: The directory path or paths where the fonts used by your theme, if any, are located.
+When using JRuby, each path may begin with `uri:classloader:` to reference a location on the classpath.
++
+Multiple entries must be separated by either a comma or a semicolon.
+To reference a file inside a JAR file on the classpath, prefix with the path with `uri:classloader:` (JRuby only).
+If the path is relative, the value is resolved starting from the current working directory.
++
+You can use the `+{docdir}+` token as the first path segment to create an absolute path starting from the directory of the document.
+
+== Load a theme
+
+Let's assume that you've put your theme files inside a directory named `resources` with the following layout:
+
+....
+doc.adoc
+resources/
+  themes/
+    basic-theme.yml
+  fonts/
+    roboto-normal.ttf
+    roboto-italic.ttf
+    roboto-bold.ttf
+    roboto-bold_italic.ttf
+....
+
+Here's the formal way of loading your theme when calling Asciidoctor PDF:
+
+ $ asciidoctor-pdf -a pdf-theme=basic -a pdf-themesdir=resources/themes -a pdf-fontsdir=resources/fonts doc.adoc
+
+You can replace the `pdf-theme` attribute assignment with `--theme`, which does the same thing:
+
+ $ asciidoctor-pdf --theme basic -a pdf-themesdir=resources/themes -a pdf-fontsdir=resources/fonts doc.adoc
+
+If all goes well, Asciidoctor PDF will convert your document without any errors or warnings.
+
+TIP: You only need to specify the `pdf-fontsdir` if you're using custom fonts in your theme.
+By default, `pdf-fontsdir` resolves to the directory of the bundled fonts.
+
+You can skip setting the `pdf-themesdir` attribute by passing the relative path of your theme file to the `theme` option:
+
+ $ asciidoctor-pdf --theme resources/themes/basic-theme.yml -a pdf-fontsdir=resources/fonts doc.adoc
+
+In this case, the `pdf-themesdir` will be set automatically to the directory of the theme path specified either by the `pdf-theme` attribute or the `--theme` option (e.g., [.path]_resources/themes_ in the previous example).
+
+If a relative path is specified for `pdf-themesdir` or `pdf-fontsdir`, or `pdf-theme` when `pdf-themesdir` is not specified, that path is resolved starting from the current working directory.
+Alternately, you can use `+{docdir}+` as the first path segment to anchor them to the directory of the source document instead.
+
+If you're having difficulty getting the converter to locate your theme or fonts, you can specify absolute paths instead, which are used as is.
+
+ $ asciidoctor-pdf --theme /path/to/resources/themes/basic-theme.yml -a pdf-fontsdir=/path/to/resources/fonts doc.adoc
+
+Relative font paths in the theme are resolved starting from the directory resolved from the `pdf-fontsdir` attribute.
+All other paths in the theme are resolved starting from the value of the `pdf-themesdir` attribute.
+You can prefix paths in the theme using the `+{docdir}+` or `+{docimagesdir}+` attribute references.
+
+== Using Maven and Gradle
+
+As usual, you can also use build tools like Maven and Gradle to build a themed PDF.
+The only thing you need to add to an existing build is the attributes mentioned above.
+
+* https://github.com/asciidoctor/asciidoctor-maven-examples/tree/master/asciidoctor-pdf-with-theme-example[Maven Example^]
+* https://github.com/asciidoctor/asciidoctor-gradle-examples/tree/master/asciidoc-to-pdf-with-theme-example[Gradle Example^]
+
+Speaking of Java, you can bundle and distribute your theme and fonts in a jar file.
+To reference the theme file and/or directory of fonts from inside the jar, refer to their location on the classpath using the `uri:classloader:` prefix.
+Here's how you'd load both the theme and fonts from the classpath:
+
+ $ asciidoctorj -b pdf --theme uri:classloader:/path/to/themes/my-theme.yml -a pdf-fontsdir=uri:classloader:/path/to/fonts document.adoc
+
+This only works when running Asciidoctor PDF with JRuby (i.e., on the JVM).

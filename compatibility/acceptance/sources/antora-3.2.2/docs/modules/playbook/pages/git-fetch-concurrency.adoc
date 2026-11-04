@@ -1,0 +1,51 @@
+= Git Fetch Concurrency Limit
+
+The `fetch_concurrency` key tells Antora how many concurrent fetch operations to allow when retrieving content from remote git repositories.
+This covers both the `fetch` and `clone` operations (since `clone` first does a `fetch`).
+When the number of concurrent operations reaches this limit, Antora will wait for an active operation to complete before adding another one to queue.
+
+See the xref:git-read-concurrency.adoc[] to learn how to control how many repositories Antora reads from at once.
+
+== Default fetch concurrency
+
+By default, Antora limits the fetch concurrency to 1, which means it will only fetch from one repository at a time.
+If you want to allow Antora to fetch all the repositories at once, you can change this value to `0`.
+
+Fetching a lot of repositories at once can put a heavy burden on the network.
+Additionally, some git hosting services place a quota on concurrent requests, especially anonymous ones (called rate limiting).
+That may lead to the git client being throttled (or even barred) by the git server.
+In the worst case, the server may hang up on the network connection, which will cause Antora to fail.
+To alleviate this situation, Antora allows you to tune the fetch concurrency limit.
+
+[#fetch-concurrency-key]
+== fetch_concurrency key
+
+The optional `fetch_concurrency` key is set under the xref:configure-git.adoc[git category] in the playbook.
+This key accepts a positive integer value or `0` for no limit.
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  fetch_concurrency: 5
+----
+
+The purpose of the `fetch_concurrency` key is to allow you to control (i.e., limit) how many network connections are being made at once by the content aggregator, thus circumventing the problem of rate limiting enforced by the git host.
+If the git server is extremely aggressive with resetting paused connections, such as the case with GitHub, you're advised to set this value to `1`.
+
+You may find that by limiting the number of concurrent operations, it reduces the time it takes the fetch operations to complete.
+Presumably, this is because the git server does not throttle the requests.
+However, fetching repositories in serial could also increase the amount of time it takes to fetch the repositories in total.
+You will need to experiment with this value to find the setting that works best for your site.
+
+For interactive terminals, limiting the fetch concurrency also limits the number of progress bars that appear at once in the terminal.
+
+== Relationship to repository scanning
+
+Once a repository is fetched, or if a fetch is not required, Antora puts the repository into a pool to be scanned.
+By default, Antora does not place a limit on how many repositories are scanned concurrently.
+You can control this behavior using the xref:git-read-concurrency.adoc[] key.
+Antora only starts reading from repositories once all fetch (or clone) operations are complete.
+The limit is only applied to the fetch step.
+
+Antora fetches content from a remote repository if it has not previously cloned the repository or the xref:runtime-fetch.adoc[runtime.fetch key] is set.

@@ -1,0 +1,33 @@
+= Git Fetch Depth
+
+The `fetch_depth` key tells Antora how much of the history of a remote repository to fetch.
+
+[#default]
+== Default git fetch depth
+
+By default, Antora will only fetch the latest commit when cloning a repository.
+When fetching, Antora will only fetch as many commits as needed to get the latest commit.
+
+[#fetch-depth-key]
+== fetch_depth key
+
+If you want to increase the number of recent commits Antora fetches from a remote repository, set the `fetch_depth` key to a positive integer.
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  fetch_depth: 10
+----
+
+TIP: If you are using a commit as a content source, you're strongly encouraged to increase the value of this key from the default of `1`.
+Otherwise, Antora will fetch one commit at a time until it finds the specified commit.
+
+If you want Antora to fetch the full history, set the value of this key to `0`.
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  fetch_depth: 0
+----

@@ -1,0 +1,68 @@
+= Git Plugins
+:url-http-plugin-apidoc: https://isomorphic-git.org/docs/en/http#implementing-your-own-http-client
+
+The `plugins` category key is used to specify the location of plugins to load into the git client.
+The set of plugins is fixed and are referenced using predetermined names.
+These plugins offer some degree of control over how the git client used by Antora operates.
+The set of plugins may grow over time.
+
+== plugins key
+
+The `plugins` key is set under the xref:configure-git.adoc[git category key].
+
+.antora-playbook.yml
+[,yaml]
+----
+git: # <.>
+  plugins: # <.>
+----
+<.> Enter the parent key `git`, followed by a colon (`:`), and then press kbd:[Enter].
+<.> The `plugins` category key is nested under the `git` category key.
+Enter the key's name, `plugins`, followed by a colon (`:`), and then press kbd:[Enter].
+
+The `plugins` key accepts a map (i.e., key-value pairs) that specifies the location of predetermined plugins to load into the git client.
+
+[#credential-manager]
+=== credential_manager key
+
+The `credential_manager` key is a child of the `git.plugins` category key.
+It provides a way to specify a custom credential manager for the git client to use.
+The credential manager plugin is called each time the git client interacts with a repository that requires authentication.
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  plugins: # <.>
+    credential_manager: ./my-git-credential-manager-plugin.js # <.>
+----
+<.> The `credential_manager` category key is nested under the `git.plugins` category key.
+<.> Type the key name, `credential_manager`, followed by a colon (`:`).
+After the colon, entry a space followed by the require request that identifies where the code for the credential manager plugin is located.
+
+When the `credential_manager` key is set, Antora will use the require request to locate and load the code of the plugin and register it with the git client.
+The API of the credential manager plugin, and how it works, is described in xref:private-repository-auth.adoc#custom[Configure a custom credential manager].
+
+[#http]
+=== http key
+
+The `http` key is a child of the `git.plugins` category key.
+It provides a way to specify a custom HTTP request handler for the git client to use.
+The http plugin is called each time the git client communicates with a git repository (which is all done over HTTP).
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  plugins: # <.>
+    http: ./my-git-http-plugin.js # <.>
+----
+<.> The `http` category key is nested under the `git.plugins` category key.
+<.> Type the key name, `http`, followed by a colon (`:`).
+After the colon, entry a space followed by the require request that identifies where the code for the http plugin is located.
+
+When the `http` key is set, Antora will use the require request to locate and load the code of the plugin and register it with the git client.
+
+The API of the http plugin is covered by the {url-http-plugin-apidoc}[isomorphic-git documentation^].
+It amounts to exporting an async function named `request` that accepts the url, method, headers, and body as parameters and returns the result of the request as an object with url, method, headers, body, statusCode, and statusMessage properties.
+In that function, you can use your own HTTP client to fulfill the request.

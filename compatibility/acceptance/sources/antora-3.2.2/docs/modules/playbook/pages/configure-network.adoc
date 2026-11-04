@@ -1,0 +1,53 @@
+= Network Keys
+
+The playbook keys configured under `network` control the network requests initiated by Antora.
+These requests, at present, include those made by the git client in the content aggregator and the HTTP client in the UI loader.
+
+NOTE: In most cases, users will choose to use the environment variables mapped to the keys in this category (`http_proxy`, `https_proxy`, and `no_proxy` ) instead of defining them in the playbook.
+However, being able to set them in the playbook or via the mapped CLI option does offer the possibility of controlling these settings per Antora run.
+Recall that environment variables take precedence over keys defined in the playbook file, but get overridden by the CLI option for that same key.
+
+[#network-key]
+== network key
+
+The `network` key holds as the network-related playbook keys, such as the proxy settings.
+
+.antora-playbook.yml
+[,yaml]
+----
+network: # <.>
+  http_proxy: github.com # <.>
+  https_proxy: github.com # <.>
+  no_proxy: gitlab.com # <.>
+----
+<.> Optional `network` category key
+<.> Optional `http_proxy` key through which to route HTTP requests
+<.> Optional `https_proxy` key through which to route HTTPS requests
+<.> Optional `no_proxy` key for HTTP or HTTPS domain request that should bypass proxy
+
+The `network` category key and the child keys it accepts are all optional.
+When the `network` key isn't present in the playbook (and not set via environment variables), Antora falls back to using the default mode for HTTP requests.
+
+[#network-reference]
+== Available network keys
+
+[cols="3,6,1"]
+|===
+|Git Keys |Description |Required
+
+|xref:network-proxy.adoc#http-proxy[http_proxy]
+|Accepts a URL (e.g., `\http://localhost:3128`) through which to route HTTP requests.
+Honors the value of the `http_proxy` environment variable, if set.
+|No
+
+|xref:network-proxy.adoc#https-proxy[https_proxy]
+|Accepts a URL (e.g., `\http://localhost:3128`) through which to route HTTPS requests.
+Honors the value of the `https_proxy` environment variable, if set.
+|No
+
+|xref:network-proxy.adoc#no-proxy[no_proxy]
+|Accepts a comma-separate list of domains of HTTP or HTTPS requests that should not be proxied.
+Set the value to `*` to bypass the proxy entirely.
+Honors the value of the `no_proxy` environment variable, if set.
+|No
+|===

@@ -1,0 +1,69 @@
+= Log Failure Level
+
+The `failure_level` key specifies the severity threshold that, when met or exceeded, causes Antora to exit with a non-zero (i.e., failure) exit code.
+In this case, the non-zero exit code is 2.
+
+To be clear, this setting doesn't stop Antora from running.
+Rather, it merely impacts the exit code value of the process in which Antora is running.
+It's up to the shell to interpret this value, as most CI environments do.
+
+[#default]
+== Default failure level
+
+Explicitly assigning a value to the `failure_level` key is optional.
+If it isn't set in the playbook or specified using the <<failure-level-option,--log-failure-level option>> or xref:playbook:environment-variables.adoc#failure-level[ANTORA_LOG_FAILURE_LEVEL variable], Antora assigns the value `fatal` to the key at runtime.
+If a logged message meets the `fatal` severity threshold, Antora will exit with a non-zero exit code.
+
+[#failure-level-key]
+== failure_level key
+
+The `failure_level` key is configured under the xref:configure-runtime.adoc[runtime and log] keys in a playbook.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  log:
+    failure_level: error
+----
+
+The key accepts the following built-in values:
+
+* `fatal` (default)
+* `error`
+* `warn`
+* `none`
+
+These values correspond to the xref:runtime-log-level.adoc#severity-levels[severity levels] Antora assigns to log messages.
+Except when the value is `none`, Antora exits with a non-zero exit code if a message is logged that meets or exceeds the value assigned to `failure_level`.
+When the value is `none`, Antora always exits with zero exit code, even when an unhandled error is thrown.
+Note that when Antora's logger is turned off, the `failure_level` key and its value aren't applied.
+
+=== Force zero exit code
+
+When the `failure_level` key is assigned the value `none`, Antora always exits with the exit code zero (0), even if a fatal error is encountered.
+
+== Specify a failure level
+
+Let's assign the value `warn` to the `failure_level` key in the playbook shown in <<ex-failure>>.
+
+.Assign warn severity threshold to failure_level key
+[#ex-failure,yaml]
+----
+runtime:
+  log:
+    failure_level: warn
+----
+
+Antora will finish generating the site, as long as it doesn't encounter any fatal errors, and exit with a non-zero exit code if any messages are logged with a severity of `warn` or greater.
+If no warning, error, or fatal messages are logged, Antora exits with a zero (0) exit code.
+That is, your site built successfully without any errors or potential problems!
+
+[#failure-level-option]
+== Log failure level option
+
+Alternatively, you can use the xref:cli:options.adoc#failure-level[--log-failure-level option from the CLI] to assign a failure threshold.
+
+ $ antora --log-failure-level warn antora-playbook.yml
+
+The `--log-failure-level` option overrides the value assigned to the `failure_level` key or the xref:playbook:environment-variables.adoc#failure-level[ANTORA_LOG_FAILURE_LEVEL environment variable].

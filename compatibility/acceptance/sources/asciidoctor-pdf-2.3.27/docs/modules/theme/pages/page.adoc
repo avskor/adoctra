@@ -1,0 +1,200 @@
+= Page Category Keys
+:description: Reference list of the available page category keys and their value types.
+:navtitle: Page
+:source-language: yaml
+
+[#page]
+== page
+
+The keys in the `page` category control the size, margins, and background of the pages in a document (i.e., canvas).
+We recommended that you define this category before all other categories.
+
+NOTE: The background of the title page can be styled independently of other pages.
+See xref:title-pages.adoc[] and xref:title-page.adoc[] for details.
+
+[cols="3,4,5a"]
+|===
+|Key |Value Type |Example
+
+|<<background-color,background-color>>
+|xref:color.adoc[Color] +
+(default: `'FFFFFF'`)
+|[source]
+page:
+  background-color: #FEFEFE
+
+|xref:images.adoc#background[background-image]
+|xref:images.adoc#specify[image macro] {vbar} xref:images.adoc#specify[path] +
+(default: _not set_)
+|[source]
+page:
+  background-image: image:page-bg.png[]
+
+|xref:images.adoc#recto-and-verso[background-image-(recto{vbar}verso)]
+|xref:images.adoc#specify[image macro] {vbar} xref:images.adoc#specify[path] +
+(default: _not set_)
+|[source]
+page:
+  background-image:
+    recto: image:page-bg-recto.png[]
+    verso: image:page-bg-verso.png[]
+
+|<<columns,columns>>
+|Integer +
+(default: _not set_)
+|[source]
+page:
+  columns: 2
+
+|column-gap
+|xref:measurement-units.adoc[Measurement] +
+(default: _$base-font-size_)
+|[source]
+page:
+  columns: 2
+  columns-gap: 12
+
+|xref:images.adoc#foreground[foreground-image]
+|xref:images.adoc#specify[image macro] {vbar} xref:images.adoc#specify[path] +
+(default: _not set_)
+|[source]
+page:
+  foreground-image: image:watermark.svg[]
+
+|initial-zoom
+|`Fit` {vbar} `FitH` {vbar} `FitV` +
+(default: `FitH`)
+|[source]
+page:
+  initial-zoom: Fit
+
+|layout
+|`landscape` {vbar} `portrait` +
+(default: `portrait`)
+|[source]
+page:
+  layout: landscape
+
+|margin
+|xref:measurement-units.adoc[Measurement] {vbar} xref:measurement-units.adoc[Measurement[top,right,bottom,left\]] +
+(default: `36`)
+|[source]
+page:
+  margin: [0.5in, 0.67in, 1in, 0.67in]
+
+|<<rotated-margin,margin-rotated>>
+|xref:measurement-units.adoc[Measurement] {vbar} xref:measurement-units.adoc[Measurement[top,right,bottom,left\]] +
+(default: `$page-margin`)
+|[source]
+page:
+  margin-rotated: [0.5in, 0.5in, 1in, 0.5in]
+
+|<<prepress-margins,margin-inner>>
+|xref:measurement-units.adoc[Measurement] +
+(default: `48`)
+|[source]
+page:
+  margin-inner: 0.75in
+
+|<<prepress-margins,margin-outer>>
+|xref:measurement-units.adoc[Measurement] +
+(default: `24`)
+|[source]
+page:
+  margin-outer: 0.59in
+
+|mode
+|`outline` {vbar} `none` {vbar} `thumbs` {vbar} `fullscreen` {vbar} `fullscreen outline` {vbar} `fullscreen none` {vbar} `fullscreen thumbs` +
+(default: `outline`)
+|[source]
+page:
+  mode: fullscreen none
+
+|size
+|https://github.com/prawnpdf/pdf-core/blob/0.6.0/lib/pdf/core/page_geometry.rb#L16-L68[Named size^] {vbar} xref:measurement-units.adoc[Measurement[width,height\]] +
+(default: `A4`)
+|[source]
+page:
+  size: Letter
+|===
+
+[#background-color]
+=== Disable background-color
+
+To turn off the background color for the page, set the value of the `background-color` key to white (i.e., `#FFFFFF`).
+The color keyword `transparent` is not recognized in this context.
+
+[#rotated-margin]
+=== Rotated margin
+
+The rotated margin is applied to the opposing page layout when a page is rotated.
+If the initial page layout is portrait, then the rotated margin applies to landscape pages, and vice versa.
+The `margin` key applies to the initial page layout.
+
+The rotated margin does not honor <<prepress-margins>>.
+Rather, it's the same margin regardless of whether the page side is recto or verso.
+
+[#prepress-margins]
+=== Inner and outer margins
+
+The margins for `recto` (right-hand, odd-numbered) and `verso` (left-hand, even-numbered) pages are calculated automatically from the `margin-inner` and `margin-outer` values.
+These margins are only used when the value `prepress` is assigned to the `media` document attribute.
+
+The recto margin is applied to the title page if a front cover is specified.
+To apply the recto margin to the title page without specifying a front cover, assign the value `~` to the `front-cover-image`.
+See xref:cover.adoc[] for information about the `cover` category keys.
+
+TIP: Setting `front-cover-image` to `~` makes the converter acts as though a front cover is present without reserving a page for it.
+It essentially informs the converter that the front cover will be inserted by a separate process.
+
+[#columns]
+=== Columns
+
+Page columns are applied to the body of a document that has either the article or manpage doctype.
+The body of the document begins after the document title and, if present, the TOC.
+
+If the toc macro is used in a document configured to have columns, the behavior is undefined.
+
+If the columns are set on the index section using the `index-columns` key, that setting will be overridden by the value of `page-columns`.
+The index will be arranged within the page columns.
+
+[#column-break]
+==== Column break
+
+Even when columns are enabled, the AsciiDoc page break macro will still end the current page and start a new page.
+The next chunk of content will be written to the left-most column on that new page.
+
+If you want the page break macro to end the current column instead, add the `column` role to it.
+
+[,asciidoc]
+----
+left column
+
+[.column]
+<<<
+
+right column
+----
+
+If columns are not enabled, the `column` role will be ignored and it will revert to a true page break.
+Thus, it's safe to add the role even when you're not using columns.
+
+[#numbering]
+== page-numbering
+
+The key in the `page-numbering` category controls where the integer (1-based) page numbering begins.
+
+[cols="3,4,5a"]
+|===
+|Key |Value Type |Example
+
+|start-at
+|xref:page-numbers.adoc#start-at[Start page] {vbar} Integer +
+(default: `body`)
+|[source]
+page:
+  numbering:
+    start-at: cover
+|===
+
+See xref:page-numbers.adoc#start-at[Starting integer page numbering] for more information about the `start-at` key, its values, and their requirements.

@@ -1,0 +1,49 @@
+= Extend the PDF Converter
+:url-typeset-with-prawn: https://www.sitepoint.com/hackable-pdf-typesetting-in-ruby-with-prawn/
+
+This page gives you a crash course in how to extend the PDF converter.
+It begins by introducing the technology the converter uses to generate the PDF and links you to a tutorial covering how to use it.
+Then it briefly explains how the theming system influences the converter.
+Finally, it gives you an overview of how to extend the converter.
+
+== Prawn
+
+Asciidoctor PDF uses {url-prawn}[Prawn^] under the covers to generate the PDF.
+Prawn is a low-level PDF writer that can load fonts, ink text, embed images, add graphics, and draw lines.
+With those operations alone, this converter manages to produce a PDF from an AsciiDoc document.
+
+Before you dive into extending this converter, you'll need to understand how to use Prawn.
+The article {url-typeset-with-prawn}[Hackable PDF Typesetting in Ruby with Prawn^] gives a crash course in how to create your first PDF document containing text, graphics, and images with Prawn.
+That article is essential reading for extending Asciidoctor PDF, because Asciidoctor PDF uses many of the same operations (as well as many helpful add-ons).
+Once you feel comfortable with Prawn, you're ready to extend the converter.
+
+== Going beyond theming
+
+While creating the PDF document, there are thousands of small decisions the converter must make about how to instruct Prawn to lay out the content elements on the page (so-called "`hackable typesetting`").
+But once these elements are written, they can't be moved or styled (as is the case with HTML and CSS).
+To help influence those decisions--and thus prevent the converter from becoming too opinionated, a theming system was introduced.
+
+The theme support is there to provide basic customizations (fonts, colors, borders, spacing, etc.).
+But it can only go so far.
+At some point, it becomes necessary to extend the converter to meet advanced design requirements.
+
+== Tailoring the conversion
+
+The pages xref:create-converter.adoc[] and xref:use-converter.adoc[] provide step-by-step instructions about how to create and use your first extended converter.
+If you have those steps under your belt, browse the xref:use-cases.adoc[] page to see examples of how to extend the converter and give you ideas about the kinds of customizations you can make in an extended converter.
+
+=== Convert methods
+
+The methods on a converter class that handle conversion of elements follow the pattern `convert_<name>` for block elements (e.g., `convert_example`) and `convert_inline_<name>` for inline elements (e.g., `convert_inline_anchor`), where `<name>` is the name of the element.
+
+When you override a block element, you write PDF objects directly to the Prawn Document (the current context).
+When you override an inline element, you return pseudo-HTML, which is then parsed and converted into PDF objects.
+
+=== Pseudo-HTML
+
+The pseudo-HTML in Asciidoctor PDF evolved from the inline formatting in Prawn, now supporting the following elements: a, br, button, code, color, del, em, font, img, key, mark, span, strong, sub, sup.
+All decimal and hexadecimal character references are supported, as well as the named entities amp, apos, gt, lt, nbsp, and quot (e.g., `\&apos;`).
+You can change the font color using the `rgb` attribute on the `color` element (e.g., `<color rgb="#ff0000">`) and the font family and size using the `name` and `size` attributes on the `font` element, respectively (e.g., `<font name="sans" size="12">`).
+You can also use the `style` attribute on `span` to control the font color, weight, and style using the relevant CSS property names.
+The pseudo-HTML in Asciidoctor PDF also supports the `class` attribute on any element for applying roles from the theme.
+(Though not recommended, you can pass this pseudo-HTML straight through to Prawn using an inline passthrough in AsciiDoc).

@@ -1,0 +1,79 @@
+= Images
+//:page-aliases: asciidoc:insert-image.adoc
+
+Images are source files, such as photographs, diagrams, and screenshots, that are stored in an xref:ROOT:images-directory.adoc[_images_ family directory].
+An image can be inserted into any page or partial, regardless of the module or component version it belongs to, using an AsciiDoc image macro.
+AsciiDoc supports the PNG, JPG, SVG, and GIF (static and animated) image file formats.
+It's also possible to create a link to an image using the xref macro.
+
+== Block and inline image macros
+
+There are two AsciiDoc image macro types, block and inline.
+The `imagesdir` attribute is not relevant in Antora and is ignored.
+Unless the target is a URI, Antora automatically rewrites the target to refer to a location relative to the images output directory.
+
+A xref:block-images.adoc[block image] is displayed as a discrete element on a page.
+It is defined using an image macro that has *a double* colon.
+
+.Block image macro
+----
+This is a paragraph.
+
+image::resource-id-of-target-image.ext[]
+----
+
+An xref:inline-images.adoc[inline image] is displayed in the flow of another element, such as a paragraph or sidebar block.
+It is defined using an image macro that has *a single* colon.
+
+.Inline image macro
+----
+This sentence contains an inline image:resource-id-of-target-image.ext[] image.
+----
+
+== Link to a resource from an image macro
+
+Using the `xref` element attribute, you can reference a page, attachment, element, or even another image from an image embedded in a page.
+
+.xref element attribute assigned to an image macro
+----
+image::resource-id-of-target-image.ext[xref=resource-id.ext]
+----
+
+See xref:image-xref-and-link.adoc[] to learn more.
+
+== AsciiDoc xref macro for images
+
+An image can be cross referenced from a page using an xref:xref.adoc#xref-macro[AsciiDoc xref macro] and the images`' resource ID (which must include the family).
+The syntax follows that of an xref:attachments.adoc#make-link[attachment reference], except that the family must be `image` instead of `attachment`.
+The result will be a link to an image rather than the rendered image.
+
+TIP: If you want the image to be rendered in the page with a link to itself, use the xref:image-xref-and-link.adoc#link-self[self link] on the image macro instead.
+
+<<ex-xref>> shows the structure of an xref macro with an images`' fully qualified resource ID.
+
+.Xref macro structure for referencing an image
+[#ex-xref]
+----
+xref:version@component:module:image$file-coordinate-of-image.ext[optional link text]
+----
+
+At a minimum, an xref macro consists of the macro's prefix (`xref:`), the resource ID of the target image, and a set of square brackets (`[]`).
+The [.term]*target image* is the image source file that's being referenced by the current page.
+The target image is referenced by assigning its resource ID to an xref macro in the content of the current page.
+The [.term]*current page* is the page source file containing the xref macro that references the target image.
+
+How many of the target images`' xref:resource-id-coordinates.adoc[resource ID coordinates] you need to specify depends on the component version and module of the target attachment in relation to the current page.
+
+Here's a concrete example that shows how to link to an image in the same module:
+
+[,asciidoc]
+----
+Click the image xref:image$my-image.png[] to see a screenshot of the form.
+----
+
+When linking to an image, the xref macro is structured and behaves much like when it's assigned the resource ID of a page, with three differences:
+
+* The xref:resource-id.adoc[resource ID of an attachment] must specify the `image$` xref:resource-id-coordinates.adoc#id-family[family coordinate] when an image is assigned to an xref macro, otherwise Antora will assume the resource ID is that of a page at runtime.
+* A fragment (element ID) can't be appended to the end of the image's resource ID.
+* Images don't have default reference text.
+If link text isn't specified in the xref macro, the target of the xref is displayed as the link text.

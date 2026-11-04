@@ -1,0 +1,4323 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create-converter.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "create-converter.html"
+              },
+              {
+                "kind": "text",
+                "value": ", we only touched on what you can do with an extended converter. This page presents more realistic use cases that can be accomplished by extending and customizing the converter. Each section introduces a different use case and presents the code for an extended converter you can use as a starting point."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "An extended converter can access predefined or custom theme keys via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "theme"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " accessor. The segments in a key are always separated by an underscore character (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "theme.title_page_font_color"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). Consulting the value of theme keys allows the extra behavior provided by the extended converter to be styled using the theme."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The source code for each use case on this page can be found in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docs/modules/extend/examples"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/asciidoctor/asciidoctor-pdf/tree/{page-origin-refname}/docs/modules/extend/examples"
+              },
+              {
+                "kind": "text",
+                "value": " directory in the Asciidoctor PDF repository. To use one of them, you can either download the script to your local disk or clone the Asciidoctor PDF repository. Once you have done so, refer to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "use-converter.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "use-converter.html"
+              },
+              {
+                "kind": "text",
+                "value": " to learn how to register and use it with Asciidoctor PDF. For example, to register and use the extended converter that allows you to theme admonitions by type, you’d use this command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor-pdf -r pdf-converter-admonition-theme-per-type.rb doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re using Asciidoctor PDF via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctorj"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command provided by AsciidoctorJ, you’ll need to first require the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor-pdf"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " gem. This step is necessary since the extended converter assumes that Asciidoctor PDF has already been required by the time it’s required itself."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctorj -b pdf -r asciidoctor-pdf -r pdf-converter-admonition-theme-per-type.rb doc.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Refer to the sections below for details about how to use each extended converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One of the simplest ways to extend the converter is to make a thematic break. For this case, we’ll override the convert handler method for a thematic break, which is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_thematic_break"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The thematic break only consists of line graphics, no text. That means we can make use of graphics fill and stroke methods provided by Asciidoctor PDF or Prawn."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCustomThematicBreak < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_thematic_break node\n    theme_margin :thematic_break, :top\n    stroke_horizontal_rule 'FF0000', line_width: 0.5, line_style: :solid\n    move_down 1\n    stroke_horizontal_rule 'FF0000', line_width: 1, line_style: :solid\n    move_down 1\n    stroke_horizontal_rule 'FF0000', line_width: 0.5, line_style: :solid\n    theme_margin :thematic_break, ((block_next = next_enclosed_block node) ? :bottom : :top), block_next || true\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with custom thematic break"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The return value of the convert handler method for a block node is ignored, which is why there’s no clear return value in this override. If this were a convert handler method for an inline node, a return value would be required, which becomes the text to render."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-thematic-break",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom thematic break"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Every title page is as unique as the work itself. That’s why Asciidoctor PDF gives you the ability to customize the title page by overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_title_page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method in an extended converter. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_title_page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method is called after the title page has been created and the background applied, so it can focus on writing content. In this method, you can choose to honor the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "title-page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " settings from the theme, or go your own way. The one rule is that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_title_page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "must not"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " start a new page. If it tries to start a new page, that request will be ignored and a warning will be generated."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s create a custom title page that shows the document title and subtitle between two lines in the top half and a logo in the bottom half."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCustomTitlePage < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_title_page doc\n    move_cursor_to page_height * 0.75\n    theme_font :title_page do\n      stroke_horizontal_rule '2967B2', line_width: 1.5, line_style: :double\n      move_down 10\n      doctitle = doc.doctitle partition: true\n      theme_font :title_page_title do\n        ink_prose doctitle.main, align: :center, color: theme.base_font_color, line_height: 1, margin: 0\n      end\n      if (subtitle = doctitle.subtitle)\n        theme_font :title_page_subtitle do\n          move_down 10\n          ink_prose subtitle, align: :center, margin: 0\n          move_down 10\n        end\n      end\n      stroke_horizontal_rule '2967B2', line_width: 1.5, line_style: :double\n      move_cursor_to page_height * 0.5\n      convert ::Asciidoctor::Block.new doc, :image,\n        content_model: :empty,\n        attributes: { 'target' => 'sample-logo.jpg', 'pdfwidth' => '1.5in', 'align' => 'center' },\n        pinned: true\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with custom title page"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The methods "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "move_cursor_to"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "move_cursor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " advance the cursor on the page where the next content will be written. The method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "theme_font"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " applies the font from the specified category in the theme (with hyphens in the category name replaced by underscores). The method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stroke_horizontal_rule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " draws a horizontal line using the specified color and line width. The method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_prose"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is provided by Asciidoctor PDF to make writing text to the page easier. Finally, the method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will convert and render the Asciidoctor node that is passed to it, in this case a block image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-title-page",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom title page"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Documents rendered as articles (i.e., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "doctype=article"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") by Asciidoctor PDF don’t have a title page by default. Instead the document title of the article, the article title, is shown on the first content page above the main content."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The document details, which includes the author, date, and revision information (revnumber and revremark), are not shown in this mode. To insert them below the document title (similar to what the built-in HTML converter does), we can use an extended converter. To do so, we hook into the method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_general_heading"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which renders the document title of an article. Since this method is also responsible for rendering other headings (e.g. section titles), we allow it fall back to the default implementation unless it is processing the document title of an article."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterArticleTitleWithAuthorAndDate < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_general_heading doc, title, opts\n    return super unless opts[:role] == :doctitle "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    ink_document_title title, opts "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    ink_document_details doc, opts "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    margin_bottom @theme[:heading_h1_margin_bottom] || @theme.heading_margin_bottom "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-4",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n  end\n\n  def ink_document_title title, opts\n    if (top_margin = @theme.heading_h1_margin_page_top || @theme.heading_margin_page_top) > 0\n      move_down top_margin\n    end\n    pad_box @theme.heading_h1_padding do\n      if (transform = resolve_text_transform opts)\n        title = transform_text title, transform\n      end\n      if (inherited = apply_text_decoration font_styles, :heading, 1).empty?\n        inline_format_opts = true\n      else\n        inline_format_opts = [{ inherited: inherited }]\n      end\n      typeset_text_opts = { color: @font_color, inline_format: inline_format_opts }.merge opts\n      typeset_text title, (calc_line_metrics (opts.delete :line_height) || @base_line_height), typeset_text_opts\n    end\n  end\n\n  def ink_document_details doc, opts\n    revnumber = doc.attr 'revnumber' "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-5",
+                "kind": "callout",
+                "number": "5",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    if doc.author || doc.revdate || revnumber "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-6",
+                "kind": "callout",
+                "number": "6",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      move_down @theme.heading_h1_details_margin_top || 0 "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-7",
+                "kind": "callout",
+                "number": "7",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      theme_font_cascade [:base, :heading_h1_details] do "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-8",
+                "kind": "callout",
+                "number": "8",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        author_date_separator = doc.author && doc.revdate ? %( #{EmDash} ) : '' "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-9",
+                "kind": "callout",
+                "number": "9",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        revision = (doc.attr? 'revremark') ? %(#{revnumber} | #{doc.attr 'revremark'}) : revnumber if revnumber "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-10",
+                "kind": "callout",
+                "number": "10",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        revision_separator = revision && (doc.author || doc.revdate) ? %( #{EmDash} ) : '' "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-11",
+                "kind": "callout",
+                "number": "11",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        ink_prose %(#{doc.author}#{author_date_separator}#{doc.revdate}#{revision_separator}#{revision}), align: opts[:align] "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-12",
+                "kind": "callout",
+                "number": "12",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      end\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that renders the document details below the article title"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Fall back to default implementation unless handling the document title."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Render the document title. See the definition of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ink_document_title"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-3"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Render the author, date, and revision information, if available. See the definition of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ink_document_details"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-4"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Render a vertical gap between the header and body of the document."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-5"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The revnumber isn’t available as a field of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "doc"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", so we have to retrieve it using the method "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "doc.attr"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead. Because we’ll use the revnumber multiple times, we store it in a local variable."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-6"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Only include the additional line if there’s actually content for it so we don’t end up with unused vertical space."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-7"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Insert a vertical gap between the document title and the line with author, date, and revision information if the theme sets a size of that gap. Otherwise, don’t insert a gap."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-8"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When we get here, a heading-specific style will already be set by the code that calls "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ink_general_heading"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Since we don’t want the document details to use the heading font, we first have to revert to the base font using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":base"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " category. Then, we can apply the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "heading_h1_details"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " category from the theme."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-9"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Build the revision information if the revnumber is set. If a revmark is specified, add it after the revnumber, separating the two by a vertical bar."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-10"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An em dash is put before the between author and date, but only if either are set."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-11"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An em dash is put before the revision, but only if it isn’t empty and there’s content in front of it."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-12"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Put the author, date, and revision information and their separators together using Ruby string interpolation and render the resulting string."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-article-title-with-details",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom article title with details"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A common need is to add extra styling to the title page for a part in a multi-part book. Since this is a specialized section element, there’s a dedicated method named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_part_title"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that you can override. The converter already allocates a dedicated page for the part title (so there’s no need to worry about doing that). The extended converter can override the method that inks the part title to add extra decoration or content to that page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s customize the part title page by making the background orange, making the font white, aligning the title to the right, adding a line below it, and switching off the running content."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCustomPartTitle < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_part_title node, title, opts = {}\n    fill_absolute_bounds 'E64C3D'\n    move_down cursor * 0.25\n    indent bounds.width * 0.5 do\n      ink_prose title, line_height: 1.3, color: 'FFFFFF', inline_format: true, align: :right, size: 42, margin: 0\n    end\n    indent bounds.width * 0.33 do\n      move_down 12\n      stroke_horizontal_rule 'FFFFFF', line_width: 3\n    end\n    page.imported\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with custom part title"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_prose"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is provided by Asciidoctor PDF to make writing text to the page easier. If you wanted, you could just use the low-level "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method provided by Prawn."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s also possible to override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start_new_part"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method if all you want to do is called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page.imported"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to turn off the running content."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now let’s look at how to center the part title both vertically and horizontally. For this, we first need to compute the height of the title using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "height_of_typeset_text"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " helper, taking into account the vertical padding as well. Then, we use that height to position the cursor so that the title falls in the vertical center of the page. Next, we set the text alignment to center (which alternately could be done using the theme). Finally, we delegate to the super method to handle rendering the title in the new position."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCenteredPartTitle < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_part_title node, title, opts = {}\n    vertical_padding = (padding = expand_padding_value @theme.heading_h1_padding)[0] + padding[2]\n    title_height = height_of_typeset_text title, inline_format: true, text_transform: @text_transform\n    space_above = (effective_page_height - (title_height + vertical_padding)) * 0.5\n    move_down space_above\n    opts = opts.merge align: :center\n    page.imported\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with centered part title"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To find all the methods available to an extended converter, consult the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "API docs"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.rubydoc.info/gems/asciidoctor-pdf/Asciidoctor/PDF/Converter"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-part-title",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom part title"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A similar need is to add extra styling to the title of a chapter, or to place it on a page by itself. The extended converter can override the method that inks the chapter title to add extra decoration or content to that page, then insert a page break afterwards."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCustomChapterTitle < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_chapter_title node, title, opts = {}\n    move_down cursor * 0.25\n    ink_heading title, (opts.merge align: :center, text_transform: :uppercase)\n    stroke_horizontal_rule 'DDDDDD', line_width: 2\n    move_down theme.block_margin_bottom\n    theme_font :base do\n      layout_prose 'Custom text here, maybe a chapter preamble.'\n    end\n    start_new_page\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with custom chapter title"
+              }
+            ]
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s also possible to override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start_new_chapter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method if all you want to do is called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page.imported"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to turn off the running content."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "custom-chapter-title",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom chapter title"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As another way to customize the chapter title, you may want to add an image above the chapter title if specified. Once again, the extended converter can override the method that inks the chapter title and use it as an opportunity to insert an image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterChapterImage < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_chapter_title sect, title, opts\n    if (image_path = sect.attr 'image')\n      image_attrs = { 'target' => image_path, 'pdfwidth' => '1in' }\n      image_block = ::Asciidoctor::Block.new sect.document, :image, content_model: :empty, attributes: image_attrs\n      convert_image image_block, relative_to_imagesdir: true, pinned: true\n    end\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with chapter image"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The path to the image is controlled using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "image"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " block attribute on the chapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[image=gears.png]\n== Chapter Title"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "chapter-image",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Chapter image"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to (or instead of) a TOC for the whole book, you may want to insert a TOC per chapter immediately following the chapter title. Inserting a TOC into the PDF is a two-step process. First, you need to allocate the space for the chapter TOC using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "allocate_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. Then, you need to come back and ink the TOC after the chapter has been rendered using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterChapterTOC < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_section sect, opts = {}\n    result = super\n    if (toc_extent = sect.attr 'pdf-toc-extent')\n      levels = (sect.document.attr 'chapter-toclevels', 1).to_i + 1\n      page_numbering_offset = @index.start_page_number - 1\n      float do\n        ink_toc sect, levels, toc_extent.from.page, toc_extent.from.cursor, page_numbering_offset\n      end\n    end\n    result\n  end\n\n  def ink_chapter_title sect, title, opts\n    super\n    if ((doc = sect.document).attr? 'chapter-toc') && (levels = (doc.attr 'chapter-toclevels', 1).to_i + 1) > 1\n      theme_font :base do\n        sect.set_attr 'pdf-toc-extent', (allocate_toc sect, levels, cursor, false)\n      end\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with TOC per chapter"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The chapter TOC can is activated by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "chapter-toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute and the depth of the TOC is controlled using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "chapter-toclevels"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Book Title\n:chapter-toc:\n:chapter-toclevels: 2"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "per-chapter-toc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Per chapter TOC"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Some publishers prefer the colophon to precede the table of contents. Asciidoctor PDF provides support for this out of the box. The trick is to use the TOC macro to position the TOC at the end of the colophon. The converter will start the TOC on the next available recto page. If the publisher requires it, you can configure the colophon to be non-facing so it starts on the verso page that follows the title page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Use the following AsciiDoc source as a starting point:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Book Title\n:doctype: book\n:media: prepress\n:toc: macro\n\n[colophon%notitle%nonfacing]\n= Colophon\n\nThis is the text of the colophon.\nIt will start on the verso page following the title page since it has the `nonfacing` option set.\nThe title will be hidden on that page since it has the `notitle` option set.\n\ntoc::[]\n\n== First Chapter\n\nThis the the text of the first chapter.\nThis chapter will start on the first recto page after the table of contents."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want the running content and/or page numbering to start at the first chapter, you’ll need to set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start-at"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "after-toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "running-content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and/or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-numbering"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keys in your theme."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of using the built-in support through configuration, you can achieve these customizations using an extended converter instead. To do so, you need to override the built-in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method and render the colophon before the TOC is rendered (i.e., inked)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class AsciidoctorPDFExtensions < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_toc doc, num_levels, toc_page_number, start_cursor, num_front_matter_pages = 0\n    colophon = (doc.instance_variable_get :@colophon) || (doc.sections.find {|sect| sect.sectname == 'colophon' })\n    return super unless colophon\n    go_to_page toc_page_number unless (page_number == toc_page_number) || scratch?\n    if scratch?\n      (doc.instance_variable_set :@colophon, colophon).parent.blocks.delete colophon\n    else\n      # if doctype=book and media=prepress, use blank page before table of contents\n      go_to_page page_number.pred if @ppbook\n      colophon.set_option 'nonfacing' # ensure colophon is configured to be non-facing\n      convert_section colophon\n      go_to_page page_number.next\n    end\n    offset = @ppbook ? 0 : 1\n    toc_page_numbers = super doc, num_levels, (toc_page_number + offset), start_cursor, num_front_matter_pages\n    scratch? ? ((toc_page_numbers.begin - offset)..toc_page_numbers.end) : toc_page_numbers\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that modifies the placement of the colophon"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s important to note that this converter, as written, assumes the colophon fits on a single page. More effort would be needed to accomodate a multi-page colophon using an extended converter only. Thus, you are better off using the configuration-based approach described above."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "colophon-before-toc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Colophon before TOC"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s say you want to insert a license page into your documents, but you don’t want to have to put a block macro for it in the document source. You can use an extended converter to add new pages to the body of the document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s consider the case of reading the license text from a file and inserting it into the first page of the body."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterLicensePage < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def traverse node\n    return super unless node.context == :document\n    start_new_page unless at_page_top?\n    theme_font :heading, level: 2 do\n      ink_heading 'License', level: 2\n    end\n    license_text = File.read 'LICENSE'\n    theme_font :code do\n      ink_prose license_text, normalize: false, align: :left, color: theme.base_font_color\n    end\n    start_new_page\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with license page"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start_new_page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will create a new page in the document. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_prose"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method provides a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "normalize"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option. When this option is false, it will preserve the newlines in the content, which is what we want in the case of license text. You may want to take this a bit further and allow the location of the license file to be configurable."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "license-page",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "License page"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To help with content auditing or correlation, you may want to add a number in front of each paragraph. You can do this first by assigning a number to each paragraph in the document in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "init_pdf"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. Then, you can add this number in the left margin at the start of each paragraph by overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_paragraph"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterNumberedParagraphs < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def init_pdf doc\n    doc\n      .find_by(context: :paragraph) {|candidate| [:document, :section].include? candidate.parent.context }\n      .each_with_index {|paragraph, idx| paragraph.set_attr 'number', idx + 1 }\n    super\n  end\n\n  def convert_paragraph node\n    if (paragraph_number = node.attr 'number')\n      float do\n        label = %(#{paragraph_number}.#{::Prawn::Text::NBSP})\n        label_width = rendered_width_of_string label\n        bounding_box [-label_width, cursor], width: label_width do\n          ink_prose label, color: 'CCCCCC', align: :right, margin: 0, single_line: true\n        end\n      end\n    end\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with paragraph numbering"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "paragraph-numbering",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Paragraph numbering"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a page is labeled as imported, Asciidoctor PDF will not add running content to that page. Thus, you can use an extended converter to turn off the running content on otherwise empty pages by marking them as imported. You can access this property from the pages attached to the PDF state or you can switch to each page in turn, as shown in the commented code."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of marking pages as imported, you can add them to the set of pages, by page number, on which the running content will not be added. These sets are stored in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":header"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":footer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keys of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@disable_running_content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance variable. This benefit of this approach is that you can control the header and footer independently."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class NoRunningContentOnEmptyPageConverter < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_running_content(*)\n    state.pages.each do |page_|\n      page_.imported if page_.empty?\n    end\n\n    # or you can switch to each page first in case you need to use additional logic\n\n    # pgnum = page_number\n    #(1..page_count).each do |pgnum_|\n    #  go_to_page pgnum_\n    #  page.imported if page.empty?\n    #end\n    # go_to_page pgnum\n\n    # or you can add the page numbers to the sets of page numbers on which the running content is disabled\n    #state.pages.each_with_index do |page_, idx|\n    #  next unless page_.empty?\n    #  pgnum = idx + 1\n    #  @disable_running_content[:header] << pgnum\n    #  @disable_running_content[:footer] << pgnum\n    #end\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter to turn off running content on empty page"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This converter does not attempt to detect pages that are empty to make the next page facing (i.e., empty verso pages). Therefore, you may want to add a filter to only turn off the running content on those pages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "no-running-content-on-empty-page",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "No running content on empty page"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you have a preprocessor that adds change metadata to the content, you can use an extended converter to draw change bars to add a visual indicator in the rendered output."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterChangeBars < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_paragraph node\n    start_cursor = cursor\n    super\n    if node.role? 'changed'\n      float do\n        bounding_box [bounds.left - 4, start_cursor], width: 2, height: (start_cursor - cursor) do\n          fill_bounds 'FF0000'\n        end\n      end\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with change bars"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This converter will look for paragraphs like this one:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[.changed]\nThis line has been changed."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "change-bars",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Change bars"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This functionality is already provided by the converter if you set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "breakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option on section title or discrete heading or you set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "heading-min-height-after"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme key to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "auto"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The code is presented here both to explain how it works and show how to do it programmatically (perhaps to tune it for specific headings)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If an in-flow heading is followed by content that doesn’t fit on the current page, and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "breakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option is not set on the heading, the converter will orphan the heading on the current page. You can fix this behavior by overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "arrange_heading"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method in an extended converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extended converter takes this opportunity to use "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dry_run"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to make an attempt to write content in the remaining space on the page after the heading. If no content is written, it advances to the next page before inking the heading (and its corresponding anchor)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterAvoidBreakAfterSectionTitle < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def arrange_heading node, title, opts\n    return if y >= page_height / 3 "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    orphaned = nil\n    dry_run single_page: true do "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n      start_page = page\n      theme_font :heading, level: opts[:level] do\n        if opts[:part]\n          ink_part_title node, title, opts "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        elsif opts[:chapterlike]\n          ink_chapter_title node, title, opts "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-4",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        else\n          ink_general_heading node, title, opts "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-5",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        end\n      end\n      if page == start_page\n        page.tare_content_stream\n        orphaned = stop_if_first_page_empty do "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-6",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n          if node.context == :section\n            traverse node\n          else # discrete heading\n            convert (siblings = node.parent.blocks)[(siblings.index node).next]\n          end\n        end\n      end\n    end\n    advance_page if orphaned "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-7",
+                "kind": "callout",
+                "number": "5",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    nil\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that avoids a page break after a heading"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional optimization to skip this logic if the cursor is above the bottom third of the page."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Initiate a dry run up to the end of the current page."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-3",
+                  "CO2-4",
+                  "CO2-5"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Render the heading as normal."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-6"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Proceed with converting content until the end of the page is reached. Returns true if content is written, false otherwise."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-7"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Start new page before rendering heading if orphaned."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "avoid-break-after-heading",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Avoid break after heading"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, the table of contents (TOC) only includes section references. If you want to include additional entries in the TOC, or to filter the sections that are included, you can extend the converter and override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "get_entries_for_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. This method is invoked for each parent entry in the TOC, starting from the document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterAdditionalTOCEntries < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def get_entries_for_toc node\n    return super if node.context == :document\n    node.blocks.select do |candidate|\n      candidate.context == :section ||\n        (candidate.id && (candidate.title? || candidate.reftext?))\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that adds additional entries to the TOC"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The depth of the TOC is automatically controlled by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "toclevels"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. Once this limit is reached, the converter will not call "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "get_entries_for_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for that parent (as none of its children will be included in the TOC)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "additional-toc-entries",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional TOC entries"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As explained on "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ROOT:breakable-and-unbreakable.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "ROOT:breakable-and-unbreakable.html"
+              },
+              {
+                "kind": "text",
+                "value": ", tables are not configured with orphan prevention of the anchor and title by default. In order to activate this behavior, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "breakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option must be specified on the table."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To avoid having to add this option on every table, you can use an Asciidoctor extension to add it at runtime. This use case employs a tree processor rather than an extended PDF converter, though its behavior does impact conversion."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  tree_processor do\n    process do |doc|\n      doc.find_by context: :table do |table|\n        unless (table.option? 'breakable') || (table.option? 'unbreakable')\n          table.set_option 'breakable'\n        end\n      end\n      doc\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extension that adds the breakable option to all tables"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This same technique can be used to add the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "breakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unbreakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option at runtime to any blocks that support "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "breakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unbreakable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ROOT:breakable-and-unbreakable.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "ROOT:breakable-and-unbreakable.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "breakable-tables",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Breakable tables"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s say you want to make the content on the TOC page(s) really narrow. You can do so by overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ink_toc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method and squeezing the margins by applying extra indentation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterNarrowTOC < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def ink_toc *_args\n    indent 100, 100 do\n      super\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter with narrow TOC"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "narrow-toc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Narrow TOC"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want all (or some) block images to be indented by an amount specified in the theme, you can override the convert handler method for block images, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_image"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and call super within an indented context."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterImageIndent < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_image node\n    if (image_indent = theme.image_indent)\n      indent(*Array(image_indent)) { super }\n    else\n      super\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that indents block images"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "indent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " DSL method adds padding to either side of the content area, delegates to the specified code block, then shaves it back off."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This converter works when a custom theme defines the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "image-indent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key, as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nimage:\n  indent: [0.5in, 0]"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "indent-block-image",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Indent block image"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, an AsciiDoc converter only supports resolving images from a single location, the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "imagesdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. You can use an extended converter to have Asciidoctor PDF look in multiple locations until it finds the image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterMultipleImagesdirs < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def resolve_image_path node, image_path, image_format, relative_to = true\n    if relative_to == true\n      unless File.file? image_path\n        docdir = (doc = node.document).attr 'docdir'\n        %w(imagesdir imagesdir2).each do |attr_name|\n          imagesdir = (doc.attr attr_name) || ''\n          abs_imagesdir = File.absolute_path imagesdir, docdir\n          next unless File.file? (File.absolute_path image_path, abs_imagesdir)\n          relative_to = abs_imagesdir\n          break\n        end\n      end\n    end\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that resolve images from multiple locations"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need the converter to support more than two locations, update the list of attribute names in the extended converter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "look-for-images-in-multiple-dirs",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Look for images in multiple dirs"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The built-in HTML converter inserts a source language label in the upper right corner of the code block, which appears on hover. You can use an extended converter to imprint a fixed label in the PDF output."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To add this label, you’ll need to override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "arrange_block"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method of the converter. This method arranges content blocks that have a border and/or background or support unbreakable, such as code blocks. The override needs to filter the arguments for a node that has the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " style and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "language"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. If the method detects that combination, it must decorate the callback passed via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "&block"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " argument to inject the extra logic. Otherwise, the method should delegate directly to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "super"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When a code block is detected, the decorator should first call the block argument using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "instance_exec"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Then, it should look to see if the extent is set and that this is not a dry run. The extent provides information about where the background and border of the code block started. The extended converter should move to that page and cursor, reapply the code block padding, and ink the label using the code font settings."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterSourceLanguageLabel < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def arrange_block node, &block\n    return super unless node.style == 'source' && (lang = node.attr 'language')\n    super node do |extent|\n      return_val = instance_exec extent, &block\n      if extent && !scratch?\n        float do\n          go_to_page extent.from.page\n          bounds.current_column = extent.from.column if ColumnBox === bounds\n          move_cursor_to extent.from.cursor\n          pad_box theme.code_padding, node do\n            theme_font :code do\n              ink_prose lang,\n                align: :right,\n                text_transform: :uppercase,\n                margin: 0,\n                color: theme.quote_cite_font_color\n            end\n          end\n        end\n      end\n      return_val\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that imprints a source langauge label on code blocks"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The way this extended converter is written, the label is inked on top of the inked code block. You’re free to customize where the label is placed. The float method allows you to move the cursor around in absolute space without impacting the flow of the content. The extent gives you the information about the location of the code block."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "language-label-on-code-block",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Language label on code block"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor PDF provides basic support for image floats. It will wrap paragraph text on the opposing side of the float. However, if it encounters a non-paragraph, the converter will clear the float and continue positioning content below the image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As a companion to this basic support, the converter provides a framework for broadening support for float wrapping. We can take advantage of this framework in an extended converter. By extending the converter and overriding the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "supports_float_wrapping?"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method as well as the convert handler for the block you want to enlist (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_code"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), you can arrange additional content into the empty space adjacent to the floated image. In the following example, code (listing and literal) blocks are included in the float wrapping."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterCodeFloatWrapping < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def supports_float_wrapping? node\n    %i(paragraph listing literal).include? node.context\n  end\n\n  def convert_code node\n    return super unless (float_box = @float_box ||= nil)\n    indent(float_box[:left] - bounds.left, bounds.width - float_box[:right]) { super }\n    @float_box = nil unless page_number == float_box[:page] && cursor > float_box[:bottom]\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that additionally wraps code blocks around an image float"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can configure the gap next to and below the image using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "image-float-gap"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key in the theme."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nimage:\n  float-gap: [12, 6]"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "wrap-code-blocks-around-image",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Wrap code blocks around an image float"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Large tables may require extra space to arrange. Unlike HTML, PDF is a fixed-size canvas. That means large tables have to be squeezed to fit, which can sometimes cause them to overflow to other pages (and possibly even get cut off)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Fortunately, PDF does not (practically) restrict the size of the canvas. That means we can allocate a larger page in order to get the table to fit."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The PDF converter does not support changing the page size mid document. However, what it does allow you to do is import pages with any page size from another PDF. That means we can extend the converter in order to render the table in another document with a custom page size, then import those pages back into the main PDF. That’s what the extended converter below does."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterLargeTables < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_table node\n    if node.document.options[:scratch] || (!(node.attr? 'page-size') && !(node.attr? 'page-layout'))\n      return super\n    end\n    prev_page_layout = page.layout\n    prev_page_margin = page_margin\n    prev_page_size = page.size\n    table_page_size = (node.attr? 'page-size') ? (node.attr 'page-size') : page.size.to_s\n    table_page_layout = (node.attr? 'page-layout') ? (node.attr 'page-layout') : page.layout.to_s\n    all_attributes = (doc = node.document).attributes\n    attributes = all_attributes.each_with_object({}) do |(k, v), accum|\n      accum[k] = v if doc.attribute_locked? k\n    end\n    attributes['pdf-page-size'] = table_page_size\n    attributes['pdf-page-layout'] = table_page_layout\n    table_doc = Asciidoctor.load [], backend: 'pdf', safe: :safe, attributes: attributes, standalone: true, scratch: true\n    all_attributes.each {|(k, v)| table_doc.set_attribute k, v if String === v }\n    table_doc << node.dup\n    table_doc.convert\n    table_pdf = StringIO.new table_doc.converter.render\n    pgnum = 0\n    delete_current_page if page.empty?\n    while (pgnum += 1)\n      imported = nil\n      import_page table_pdf, page: pgnum, advance: false, advance_if_missing: false do\n        imported = true\n      end\n      break unless imported\n    end\n    start_new_page layout: prev_page_layout, margin: prev_page_margin, size: prev_page_size\n    nil\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that supports large tables"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the overridden "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_table"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, we first detect whether the table has either the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-size"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-layout"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attributes set, which effectively flags it as a large table. Then, we use the Asciidoctor API to convert the table in a separate document with that page size and/or layout. We mark that document as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":scratch"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to avoid processing the same table again. Next, we grab the pages from the resulting PDF and import them back into the current PDF. Some additional work must be done with attributes to ensure the scratch document has access to the same environment as the main document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how you would mark up a table to activate this functionality."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ifdef::backend-pdf[]\n[%autowidth,cols=8,page-size=A2,page-layout=landscape]\n|===\n// table cells here\n|===\nendif::[]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The page size can be any value accepted by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pdf-page-size"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute. The page layout can be landscape or portrait. Note that we’re allowing the converter to set the column widths automatically. You still have the option to set explicit width ratios, though the numbers must be greater than 0."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "make-room-for-large-tables",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Make room for large tables"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The converter only supports custom roles on paragraphs and phrases. You can use an extended converter to add this capability to tables."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterTableRole < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_table node\n    if node.role?\n      key_prefix = %(role_<table>_#{node.roles[0]}_)\n      unless (role_entries = theme.each_pair.select {|name, val| name.to_s.start_with? key_prefix }).empty?\n        save_theme do\n          role_entries.each do |name, val|\n            theme[%(table_#{name.to_s.delete_prefix key_prefix})] = val\n          end\n          super\n        end\n        return\n      end\n    end\n    super\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that supports a custom role on a table"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extended converter allows you to specify any theme key on the custom role that’s supported for tables. The role must be defined under a special role name "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<table>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (to avoid clashing with other role names). Here’s an example of a custom table role named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "heavy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that increases the width of the table border and grid lines and increases the font size."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nrole:\n  <table>:\n    heavy:\n      border-width: 1.5\n      grid-width: 1.5\n      font-size: 12.5"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You apply this role to a table by prepending "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".heavy"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the first positional attribute in the block attribute line above the table."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[.heavy,cols=2*]\n|===\n|big\n|data\n|==="
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As written, the extended converter only supports the first role on the table. It could be enhanced to support an arbitrary number of roles, with each successive role cascading (like CSS)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the technique shown in this extended converter to add role-based theming to any other block type recognized by the theme (e.g., code, sidebar, etc)."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "theme-table-using-roles",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Theme table using roles"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Similarly to the custom table role, we can use an extended converter to add support for theme keys per admonition type."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class PDFConverterAdmonitionThemePerType < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  def convert_admonition node\n    type = node.attr 'name'\n    key_prefix = %(admonition_#{type}_)\n    entries = theme.each_pair.select {|name, val| name.to_s.start_with? key_prefix }\n    return super if entries.empty?\n    save_theme do\n      entries.each do |name, val|\n        theme[%(admonition_#{name.to_s.delete_prefix key_prefix})] = val\n      end\n      super\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extended converter that supports theme keys per admonition type"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This converter temporarily promotes keys under the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "admonition-<type>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme category to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "admonition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme category, overriding any existing keys. The placeholder "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<type>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " represents the admonition type; caution, important, note, tip, or warning."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example that shows how you’d use the theme to apply a border to the important admonition type when using this extended converter:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "admonition:\n  important:\n    border-color: #BF0000\n    border-width: 1\n    column-rule-width: 0\n    padding: 12"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "theme-admonition-per-type",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Theme admonition per type"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Starting with Asciidoctor PDF 2.1, this converter provides built-in support for multiple columns. This feature is available when the doctype is article or manpage, but not book. The columns get applied to the body of the document, which excludes the document title and TOC, if present."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Asciidoctor PDF converter also provides the framework for making multi-column layouts in an extended converter. This framework is accessible via the helper method "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "column_box"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". To make a multi-column layout, you put statements that ink content inside a code block and pass it to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "column_box"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "column_box [bounds.left, cursor], columns: 2, width: bounds.width, reflow_margins: true do\n  ink_prose 'left column'\n  bounds.move_past_bottom\n  ink_prose 'right column'\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want a multi-column layout for a specific chapter or section, you can override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "traverse"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, look for the section you want to arrange, and wrap the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "super"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "column_box"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " enclosure."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "multiple-columns",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Multiple columns"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although not an extended converter, this use case uses information from the converter in much the same way. In this case, we’re interested in retrieving the page number and inserting it into the content."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s create an inline macro named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pagenum"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that inserts the current page number into the document when the macro is converted."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  inline_macro :pagenum do\n    format :short\n    process do |parent|\n      create_inline parent, :quoted, parent.document.converter.page_number.to_s\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "inline-pagenum-macro.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how this macro would be used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Document Title\n:doctype: book\n\nYou're looking at page number pagenum:[]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can build on this extension to show the start page of the current section by adding support for a scope parameter. We can also have it show the page number label instead of the physical page number by subtracting the start page number (which is stored on the index catalog)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  inline_macro :pagenum do\n    format :short\n    parse_content_as :text\n    process do |parent, scope|\n      doc = parent.document\n      if scope == 'section'\n        if doc.nested?\n          inner_doc = doc\n          parent = (doc = doc.parent_document).find_by(context: :table_cell) do |it|\n            it.style == :asciidoc && it.inner_document == inner_doc\n          end.first\n        end\n        section = (closest parent, :section) || doc\n        physical_pagenum = section.attr 'pdf-page-start'\n      else\n        physical_pagenum = doc.converter.page_number\n      end\n      create_inline parent, :quoted, %(#{physical_pagenum + 1 - (start_page_number doc)})\n    end\n\n    def closest node, context\n      node.context == context ? node : ((parent = node.parent) && (closest parent, context))\n    end\n\n    def start_page_number doc\n      doc.converter.index.start_page_number\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "advanced-inline-pagenum-macro.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The macro can now be used to show the page number label for the current section:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Document Title\n:doctype: book\n\n== Chapter A\n\nYou're reading a section that begins on page pagenum:[section]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Taking inspiration from this extension, we develop another inline macro named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pageref"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that resolves the page number of the closest parent section of a reference."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  inline_macro :pageref do\n    process do |parent, refid|\n      doc = (doc = parent.document).nested? ? doc.parent_document : doc\n      if (ref = doc.catalog[:refs][refid])\n        section = (closest ref, :section) || doc\n        unless (physical_pagenum = section.attr 'pdf-page-start')\n          doc.instance_variable_set :@pass, 1 unless (doc.instance_variable_get :@pass) == 2\n          next create_inline parent, :quoted, '00' # reserve space for real page number\n        end\n        attributes = { 'refid' => refid, 'fragment' => refid, 'path' => nil }\n        create_anchor parent, %(#{physical_pagenum + 1 - (start_page_number doc)}), { type: :xref, attributes: attributes }\n      else\n        create_inline parent, :quoted, '???'\n      end\n    end\n\n    def closest node, context\n      node.context == context ? node : ((parent = node.parent) && (closest parent, context))\n    end\n\n    def start_page_number doc\n      doc.converter.index.start_page_number\n    end\n  end\n\n  postprocessor do\n    process do |doc|\n      if (doc.instance_variable_get :@pass) == 1\n        doc.instance_variable_set :@pass, 2\n        doc.convert # WARNING: this may have side effects\n      end\n      doc.converter\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "inline-pageref-macro.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The only caveat of this extension is that it has to use a two-phase conversion. In other words, it has to convert the document a second time to resolve any forward references. That’s because the page number of a section is not known until it is rendered. And not all sections are rendered until the first conversion is complete."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pageref"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " macro would be used:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Document Title\n:doctype: book\n\n== Chapter A\n\nContent.\n\n== Chapter B\n\nRefer to <<_chapter_a>> on page pageref:_chapter_a[]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "access-page-number-from-inline-macro",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Access page number from inline macro"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use an extended converter to emulate the “Page Border” and “Surround Header” feature of Word from Microsoft Office. This can be accomplished using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stroke_horizontal_rule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stroke_vertical_rule"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " helper functions to draw lines in the margins of the page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can find the code, description, and a screenshot of the result in the following blog post:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "shumpei-tanaka.github.io/en/posts/2024-11-23-asciidoc-page-border-in-margin/"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://shumpei-tanaka.github.io/en/posts/2024-11-23-asciidoc-page-border-in-margin/"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The code is also stored in the following git repository:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "github.com/Shumpei-Tanaka/asciidoc-borderinmargin"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/Shumpei-Tanaka/asciidoc-borderinmargin"
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "border-in-page-margins",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Border in page margins"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To find even more examples of how to override the behavior of the converter, refer to the extended converter in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InfoQ Mini-Book template"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/mraible/infoq-mini-book/blob/main/src/main/ruby/asciidoctor-pdf-extensions.rb"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "resources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Resources"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Extended Converter Use Cases"
+      }
+    ]
+  }
+}

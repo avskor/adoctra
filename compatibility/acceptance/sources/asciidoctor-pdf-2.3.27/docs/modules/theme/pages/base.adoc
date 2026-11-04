@@ -1,0 +1,154 @@
+= Base Category Keys
+:description: Reference list of the available base category keys and their value types. The base category provides generic theme settings.
+:source-language: yaml
+:navtitle: Base
+
+[#base]
+== base
+
+The keys in the `base` category provide generic theme settings and are often referenced throughout the theme file as variables.
+You can think of this category as roughly analogous to the `body` selector in CSS.
+We recommended that you define this category after the xref:page.adoc[page category] and before all other categories.
+
+TIP: While it's common to define additional keys in this category (e.g., `base-border-radius`) to keep your theme DRY, we recommend using xref:variables.adoc#custom[custom variables] instead.
+
+[cols="3,4,6a"]
+|===
+|Key |Value Type |Example
+
+|border-color
+|xref:color.adoc[Color] +
+(default: `'EEEEEE'`)
+|[source]
+base:
+  border-color: #F0FFF0
+
+|border-width
+|xref:measurement-units.adoc[Measurement] +
+(default: `0.5`)
+|[source]
+base:
+  border-width: 0.6
+
+|font-color
+|xref:color.adoc[Color] +
+(default: `'000000'`)
+|[source]
+base:
+  font-color: #333333
+
+|font-family
+|xref:font-support.adoc[Font family name] +
+(default: `Helvetica`)
+|[source]
+base:
+  font-family: Noto Serif
+
+|font-kerning
+|`none` {vbar} `normal` +
+(default: `normal`)
+|[source]
+base:
+  font-kerning: none
+
+|font-size
+|xref:language.adoc#values[Number] +
+(default: `12`)
+|[source]
+base:
+  font-size: 10.5
+
+|font-size-min
+|xref:text.adoc#font-size[Font size] +
+(default: `6`)
+|[source]
+base:
+  font-size-min: 0.75rem
+
+|font-style
+|xref:text.adoc#font-style[Font style] +
+(default: `normal`)
+|[source]
+base:
+  font-style: bold
+
+|hyphens
+|Boolean {vbar} Language code +
+(default: _not set_)
+|[source]
+base:
+  hyphens: true
+
+|<<height,line-height>>
+|xref:language.adoc#values[Number] +
+(default: `1.15`)
+|[source]
+base:
+  line-height: >
+    $base-line-height-length /
+    $base-font-size
+
+|<<height,line-height-length>>
+|xref:language.adoc#values[Number] +
+(default: _not set_)
+|[source]
+base:
+  line-height-length: 12
+
+|text-align
+|xref:text.adoc#text-align[Text alignment] +
+(default: `left`)
+|[source]
+base:
+  text-align: center
+
+|text-decoration
+|xref:text.adoc#decoration[Text decoration] +
+(default: `none`)
+|[source]
+base:
+  text-decoration: underline
+
+|text-decoration-color
+|xref:color.adoc[Color] +
+(default: `$base-font-color`)
+|[source]
+base:
+  text-decoration-color: #0000FF
+
+|text-decoration-width
+|xref:measurement-units.adoc[Measurement] +
+(default: `1`)
+|[source]
+base:
+  text-decoration-width: 0.5
+
+|<<transform,text-transform>>
+|Implicitly set to `none` on `base`.
+|_Can't be set on base_.
+|===
+
+[#height]
+== line-height and line-height-length
+
+Refer to the xref:text.adoc#line-height[line-height] section to learn how to use the `line-height` key.
+
+The `line-height-length` key is a utility property that's internal to the theme.
+It's used as an intermediate property for computing the `base-line-height` from the base font size and the desired line height size.
+For instance, if you set `base-line-height-length`, you can use `$base-line-height-length / $base-font-size` to set the value of `base-line-height`.
+You don't have to go about it this way in your own theme.
+
+[#text-align]
+== text-align
+
+The default text alignment can be set globally using the `text-align` key on the `base` category.
+While the base theme applies the value `left`, the default theme applies the value `justify`.
+If you don't prefer text justification, you can change this behavior by setting this key to `left`.
+It's also possible to set the default text alignment using the `text-align` document attribute.
+
+[#transform]
+== text-transform
+
+The `text-transform` key can't be set globally.
+Therefore, this key shouldn't be used on the `base` category.
+The value of `none` is implicit and is only documented in the table above for completeness.

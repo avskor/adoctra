@@ -1,0 +1,1166 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The limited character set of WINANSI, or the plain look of the built-in or bundled fonts, may motivate you to incorporate your own fonts. Custom fonts can enhance the look of your PDF theme substantially."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order for a third-party font to work properly with Prawn (and hence Asciidoctor PDF), several modifications are required. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "prepare-custom-font.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "prepare-custom-font.html"
+              },
+              {
+                "kind": "text",
+                "value": " to learn how to prepare your font for use with Asciidoctor PDF."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To start, find the TTF file collection for the font you want to use. A collection typically consists of four font styles:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "normal"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "italic"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bold"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bold_italic"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You’ll need all four variants to support AsciiDoc content properly (unless the font only has a single variant). If you do not register the font correctly, the converter may crash or revert to the fallback font, depending on how the theme is configured. If one of the variants is missing from your collection, you can simply reuse the normal / single variant in its place."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor PDF cannot italicize a font dynamically like a browser can, so the italic styles are required to italicize text."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once you’ve obtained the TTF (or OTF) files, put them in the directory inside your project where you want to store the fonts. It’s recommended that you name them consistently so it’s easier to type the names in the theme file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s assume the name of the font is "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Roboto"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/googlefonts/roboto/releases"
+              },
+              {
+                "kind": "text",
+                "value": ". Rename the files as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "roboto-normal.ttf ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "originally Roboto-Regular.ttf"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "roboto-italic.ttf ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "originally Roboto-Italic.ttf"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "roboto-bold.ttf ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "originally Roboto-Bold.ttf"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "roboto-bold_italic.ttf ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "originally Roboto-BoldItalic.ttf"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "select",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Selecting your font"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, declare the font under the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "font-catalog"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key at the top of your theme file. Assign each font a unique key (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Roboto"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and specify the path to each of the four font styles under that key."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "font:\n  catalog:\n    merge: false "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    Roboto:\n      normal: roboto-normal.ttf\n      italic: roboto-italic.ttf\n      bold: roboto-bold.ttf\n      bold_italic: roboto-bold_italic.ttf"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set value to true to merge catalog with theme you’re extending."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you use this form, you must declare all four variants. If you’re missing the font file for one of the variants, configure it to use the same font file as the normal variant."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If your font only has a single variant, assign the font path to the font key directly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "font:\n  catalog:\n    merge: false "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    VLGothic: vlgothic.ttf"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set value to true to merge catalog with theme you’re extending."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Font paths can be absolute or relative. Absolute paths are used as is. Relative font paths are resolved from the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "font search path"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#configure-search-path"
+              },
+              {
+                "kind": "text",
+                "value": ". You can also use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GEM_FONTS_DIR"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword to refer to the location of the bundled fonts."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can add any number of fonts to the catalog. Each font must be assigned a unique key, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "font:\n  catalog:\n    merge: false "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO3-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    Roboto:\n      normal: roboto-normal.ttf\n      italic: roboto-italic.ttf\n      bold: roboto-bold.ttf\n      bold_italic: roboto-bold_italic.ttf\n    Roboto Light:\n      normal: roboto-light-normal.ttf\n      italic: roboto-light-italic.ttf\n      bold: roboto-light-bold.ttf\n      bold_italic: roboto-light-bold_italic.ttf"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO3-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set value to true to merge catalog with theme you’re extending."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the key that you assign to the font in the font catalog anywhere the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "font-family"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is accepted in the theme file. For example, to use the Roboto font for all headings (section titles and discrete headings), use:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "heading:\n  font-family: Roboto\n  font-style: bold"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The font name and font style are used to locate an entry in the font catalog."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Fonts defined for text in SVGs will be mapped to the font catalog from your theme. So if you have an SVG that requires a specific font, you’ll need to declare that font in the font catalog in your theme."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We recommend that you match the font key in your theme file to the name of the font seen by the operating system. This will allow you to use the same font names (aka families) in both your graphics program and Asciidoctor PDF, thus making them portable."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "sidebar",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "About Fonts in SVGs"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "declare",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Declaring your font"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you invoke Asciidoctor PDF, specify the directory where the fonts reside using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pdf-fontsdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor-pdf --theme basic-theme.yml -a pdf-fontsdir=path/to/fonts document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can specify multiple directories by separating the paths with either a comma ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ","
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor-pdf --theme basic-theme.yml -a pdf-fontsdir=path/to/fonts,path/to/more-fonts document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "or a semicolon ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ";"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") (which requires enclosing the combined value in double quotes to escape the delimiter from the shell):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor-pdf --theme basic-theme.yml -a pdf-fontsdir=\"path/to/fonts;path/to/more-fonts\" document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To include the location of the bundled fonts in the search, include the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GEM_FONTS_DIR"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " token in the list:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor-pdf --theme basic-theme.yml -a pdf-fontsdir=\"path/to/fonts;GEM_FONTS_DIR\" document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When running Asciidoctor PDF on the JVM (perhaps using AsciidoctorJ PDF), you can refer to a directory inside any JAR file on the classpath by prefixing the path with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "uri:classloader:"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctorj -b pdf --theme basic-theme.yml -a pdf-fontsdir=\"uri:classloader:/path/to/fonts;GEM_FONTS_DIR\" document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "configure-search-path",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuring the font search path"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can configure Asciidoctor PDF to use the system fonts provided by Microsoft Windows. If you decide to use these fonts without modification, you’ll need to define a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fallback font"
+                  }
+                ],
+                "kind": "xref",
+                "target": "fallback-font.html"
+              },
+              {
+                "kind": "text",
+                "value": ". This step is necessary since these fonts do not support all the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "required characters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "prepare-custom-font.html#required-characters"
+              },
+              {
+                "kind": "text",
+                "value": " Asciidoctor PDF needs in order to function properly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To retain consistent font metrics, you’ll also want to use a system font as the fallback font. Windows provides two fonts, Segoe UI Symbol "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "seguisym.ttf"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " and Segoe UI Emoji "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "seguiemj.ttf"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", that work well as fallback fonts to fill in the characters required by Asciidoctor PDF. These fonts have baselines that align with other Windows system fonts better than the bundle fonts in Asciidoctor PDF, so they’re more suitable as fallback fonts in this scenario."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of how to register Times New Roman from Windows as the main font and Segoe UI Symbol from Windows as the fallback."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "font:\n  catalog:\n    TimesNewRoman:\n      normal: times.ttf\n      italic: timesi.ttf\n      bold: timesbd.ttf\n      bold_italic: timesbi.ttf\n    SegoeUISymbol: seguisym.ttf\n  fallbacks:\n  - SegoeUISymbol"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order for Asciidoctor PDF to locate these system fonts, you’ll need to configure the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pdf-fontsdir"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute to look in the Windows font folder, which is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "c:/Windows/Fonts"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". For example, you can pass the following option when invoking Asciidoctor PDF:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-a pdf-fontsdir=\"c:/Windows/Fonts;GEM_FONTS_DIR\""
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configuring the font search path"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#configure-search-path"
+              },
+              {
+                "kind": "text",
+                "value": " for more information about this attribute."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "using-system-fonts-from-microsoft-windows",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using system fonts from Microsoft Windows"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When Asciidoctor PDF creates the PDF, it only embeds the glyphs from the font that are needed to render the characters present in the document. Effectively, it subsets the font. While that saves space taken up by the generated PDF, you may still be storing the full font in your source repository."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To minimize the size of the source font, you can use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FontForge"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://fontforge.github.io/en-US/"
+              },
+              {
+                "kind": "text",
+                "value": " to subset the font ahead of time. Subsetting a font means removing glyphs you don’t plan to use. Doing so is not a requirement, simply a personal preference."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "subset",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Subsetting your font"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Use Custom Fonts"
+      }
+    ]
+  }
+}

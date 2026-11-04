@@ -1,0 +1,217 @@
+= Redirect Facility Key
+:page-aliases: configure-redirect-facility.adoc
+:url-netlify-redirects: https://docs.netlify.com/routing/redirects/
+:url-nginx-rewrites: https://nginx.org/en/docs/http/ngx_http_rewrite_module.html#return
+:url-htaccess: https://httpd.apache.org/docs/current/howto/htaccess.html
+:url-meta-tag: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta
+
+Antora sets up automatic routing for start pages, symbolic latest versions, and page aliases according to the redirect facility you have specified.
+
+By default, Antora generates a static HTML file for each URL alias to redirect the visitor to the target page.
+Antora also has the ability to generate web server-specific configuration files that leverage the web server's redirect/rewrite facility to handle the routing instead.
+
+IMPORTANT: Antora won't generate any redirect files (e.g., [.path]_++_redirects++_) if the site does not define any redirects.
+
+Antora derives these URL routes from the site and component version start pages, latest version aliases, and xref:page:page-aliases.adoc[page aliases] defined using the `page-aliases` attribute.
+For page aliases, the xref:page:page-aliases.adoc#target-page[target page] is the page to which the source page is redirected.
+The target page is also where page aliases are defined.
+The xref:page:page-aliases.adoc#source-page[source page] is the alias page that's being redirected (i.e., the claimed page).
+
+[#redirect-facility-key]
+== redirect_facility key and its values
+
+The playbook key `redirect_facility` is optional.
+It can be configured in the playbook or via the xref:cli:options.adoc#redirect-facility[CLI] and accepts one of the following built-in values:
+
+disabled::
+No redirect files are generated.
+If the site does not define any redirects, this becomes the effective value.
+gitlab::
+A redirect file for GitLab Pages named [.path]_++_redirects++_ is generated and placed at the root of the published site.
+httpd::
+A redirect file for Apache httpd named [.path]_.htaccess_ is generated and placed at the root of the published site.
+netlify::
+A redirect file for Netlify named [.path]_++_redirects++_ is generated and placed at the root of the published site.
+nginx::
+A redirect file for nginx named [.path]_rewrite.conf_ is generated and placed at the location [.path]_.etc/nginx/rewrite.conf_ in the published site.
++
+CAUTION: By default, nginx will not know to look for the file in this location.
+You either need to move it to where nginx can find it or configure nginx to use it at this location.
+[[static-value]]static::
+(default) A static HTML file with the `http-equiv` meta element set to `refresh` is generated at the source page's URL.
+The file provides a redirect notice and routes the source page URL to the target page URL.
+
+Antora automatically assigns the value `static` to the `redirect_facility` key unless you explicitly configure it.
+
+=== Configure the redirect facility from the playbook
+
+The `redirect_facility` key is configured in the playbook under the `urls` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+urls:
+  redirect_facility: netlify
+----
+
+=== Configure the redirect facility from the CLI
+
+The `redirect_facility` key can also be configured from the xref:cli:options.adoc[CLI].
+
+ $ antora --redirect-facility netlify antora-playbook.yml
+
+The CLI option overrides the value specified in the playbook.
+
+== Choosing a redirect facility configuration
+
+How your site's URL redirects should be configured depends on the web server or service you use to serve your site.
+
+If you use the default redirect facility, Antora will generate HTML pages that use the meta refresh feature of HTML to route the visitor to the target page (i.e., bounce page).
+When you inspect the output of your site, you will find pages that end with [.ext]_.html_ that include a `<meta http-equiv="refresh">` tag inside a minimal HTML structure.
+If you have specified a start page for your site, this will include a [.path]_index.html_ page at the root of your published site.
+
+If you use any other redirect facility, Antora will not generate these bounce pages.
+(In other words, don't expect to find the [.path]_index.html_ page at the root of your published site).
+Instead, Antora relies on the web server to apply the redirect rules that it generates.
+For details about these rules and where they are written, see the sections below.
+
+Redirect rules for start pages and page aliases are defined using the 301 HTTP status code, which means the redirect is considered permanent.
+Redirect rules for the latest version aliases are defined using the 302 HTTP status code, which means the redirect is considered temporary.
+
+When a redirect configuration file is used, entries are sorted by component, version (reverse), module, then publication URL of the alias "`from`".
+If a supplemental entry is added for the index.html path, that entry comes before the entry for the corresponding directory path.
+
+The locations in the web server-specific redirect/rewrite rules match the URL of the pages as they are accessed in the site, and thus depend on the value of the xref:urls-html-extension-style.adoc[urls.html-extension-style] key.
+By default, locations will end with _.html_.
+If the HTML URL extension style is changed to _indexify_, the locations will end with _/_.
+
+[#netlify]
+=== Netlify
+
+{url-netlify-redirects}[Redirect rules for sites served by Netlify] are configured in a plain text file named [.path]_++_redirects++_.
+When the assigned redirect facility value is `netlify`, Antora generates the [.path]_++_redirects++_ file and places it at the root of the generated site.
+
+.+_redirects+ file for Netlify generated by Antora
+[listing]
+----
+/index.html /component/version/index.html 301!
+/ /component/version/index.html 301!
+/component/version/module/old-name.html /component/version/module/new-name.html 301!
+----
+
+The example output above shows redirect rules for two scenarios.
+The first scenario, which is handled by the first two rules, routes the user from the root domain to the URL of the site start page using a 301 HTTP status code.
+The second scenario, which is handled by the last rule, routes the user from the URL of a renamed page to its new URL using a 301 HTTP status code.
+
+[#gitlab]
+=== GitLab
+
+{url-netlify-redirects}[Redirect rules for sites served by GitLab Pages] are configured in a plain text file named [.path]_++_redirects++_.
+The format of this file is a modified version of the one for Netlify.
+When the assigned redirect facility value is `gitlab`, Antora generates the [.path]_++_redirects++_ file and places it at the root of the generated site.
+
+.+_redirects+ file for GitLab Pages generated by Antora
+[listing]
+----
+/index.html /component/version/index.html 301
+/ /component/version/index.html 301
+/component/version/module/old-name.html /component/version/module/new-name.html 301 <1>
+----
+<1> Unlike the redirect file for the `netlify` redirect facility, the rule does not end with `!`.
+
+The example output above shows redirect rules for two scenarios.
+The first scenario, which is handled by the first two rules, routes the user from the root domain to the URL of the site start page using a 301 HTTP status code.
+The second scenario, which is handled by the last rule, routes the user from the URL of a renamed page to its new URL using a 301 HTTP status code.
+
+[#nginx]
+=== nginx
+
+Antora generates an {url-nginx-rewrites}[nginx rewrite configuration file] named [.path]_rewrite.conf_ and places it in the generated site at [.path]_.etc/nginx/rewrite.conf_.
+
+.nginx rewrite configuration file generated by Antora
+[,nginx]
+----
+location = /index.html { return 301 /component/version/index.html; }
+location = /component/version/module/old-name.html { return 301 /component/version/module/new-name.html; }
+----
+
+The example output above shows redirect rules for two scenarios.
+The first scenario, which is handled by the first rule, routes the user from the root domain to the URL of the site start page using a 301 HTTP status code.
+The second scenario, which is handled by the last rule, routes the user from the URL of a renamed page to its new URL using a 301 HTTP status code.
+
+When using the nginx redirect facility, Antora assumes that nginx is configured in a way similar to the configuration shown in <<ex-nginx-conf>>.
+The path [.path]_/srv/www_ refers to the location of the generated site.
+
+.nginx configuration that loads the rewrite configuration generated by Antora
+[#ex-nginx-conf,nginx]
+----
+server {
+  listen       80;
+  server_name  _;
+  root         /srv/www;
+
+  location = /.etc/nginx/rewrite.conf {
+    deny    all;
+    return  404;
+  }
+
+  include /srv/www/.etc/nginx/rewrite.conf;
+
+  location / {
+      index  index.html;
+      # uncomment the next line if using --html-url-extension-style drop
+      #try_files $uri $uri.html $uri/index.html = 404;
+  }
+
+  error_page  404  /404.html;
+}
+----
+
+Adjust the configuration if your site is accessible from a different hostname or port or is served from a different root.
+
+[#httpd]
+=== httpd
+
+Antora generates an {url-htaccess}[.htaccess] file containing redirect rules and places it at the root of the generated site.
+
+..htaccess file generated by Antora
+[,nginx]
+----
+Redirect 301 /index.html /component/version/index.html
+Redirect 301 /component/version/module/old-name.html /component/version/module/new-name.html
+----
+
+The example output above shows redirect rules for two scenarios.
+The first scenario, which is handled by the first rule, routes the user from the root domain to the URL of the site start page using a 301 HTTP status code.
+The second scenario, which is handled by the last rule, routes the user from the URL of a renamed page to its new URL using a 301 HTTP status code.
+
+When using the httpd redirect facility, Antora assumes that Apache httpd is configured to load the [.path]_.htaccess_ file at the root of the hosted site.
+
+[#static]
+=== Static (meta refresh)
+
+The `static` redirect value is useful for sites deployed on services, such as GitLab Pages and GitHub Pages, that don't accept or provide access to URL redirection configuration files.
+This setting is also helpful when you build a site on your local machine to test your start pages and page aliases.
+
+Antora generates a static https://en.wikipedia.org/wiki/Meta_refresh[meta refresh] page for each aliased source page that redirects a visitor to the corresponding target page.
+Each refresh page contains:
+
+. The canonical URL of the xref:page:page-aliases.adoc#target-page[target page].
+. The `http-equiv` meta attribute assigned the value `refresh`.
+. The `content` meta attribute assigned the value `0` and the URL of the relative target page that the visitor will be redirected to.
+The `0` indicates that the visitor will be redirected to the target page in 0 seconds.
+. A redirect notice, letting the visitor know that the xref:page:page-aliases.adoc#source-page[source page] no longer exists and providing a link to the target page.
+
+.Static meta refresh page for old-name.html that redirects to new-name.html
+[,html]
+----
+<!DOCTYPE html>
+<meta charset="utf-8">
+<link rel="canonical" href="https://base-url.com/component/version/module/new-name.html">
+<script>location="new-name.html"</script>
+<meta http-equiv="refresh" content="0; url=new-name.html">
+<meta name="robots" content="noindex">
+<title>Redirect Notice</title>
+<h1>Redirect Notice</h1>
+<p>The page you requested has been relocated to <a href="new-name.html">https://base-url.com/component/version/module/new-name.html</a>.</p>
+----

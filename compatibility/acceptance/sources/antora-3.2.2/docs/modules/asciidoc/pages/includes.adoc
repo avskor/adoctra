@@ -1,0 +1,46 @@
+= Includes
+
+AsciiDoc supports including content into an AsciiDoc file from other files using the include directive.
+Antora enhances this behavior by treating the target of the include as a resource reference, thus allowing you to include content into a page (or other include) from any file in the content catalog (not just pages and partials).
+As a by-product of this feature, Antora does not support including conntent from an absolute file or URL.
+
+== Target as resource reference
+
+When you use the include directive in an AsciiDoc file in Antora, Antora assumes that the target is a resource reference.
+
+IMPORTANT: Antora does not support including content from an absolute file path or URL.
+// NOTE Antora has to handle all includes because the behavior of Asciidoctor.js would otherwise be unexpected.
+
+The resource reference can be fully qualified, or it can be relative to the current file.
+The relative behavior differs from an xref since the include directive is aware of the file in which it is located.
+Thus, the relative relationship is to the current file, not necessarily the page.
+
+Keep in mind that the include directive can only be used in an AsciiDoc file.
+So while you can use the include directive to include an example in an AsciiDoc file, you can't use the include directive to include an example file in another example file.
+
+Here's an example of a qualified target:
+
+[,asciidoc]
+----
+\include::1.0@the-component:the-module:partial$the-include.adoc[]
+----
+
+Here's an example of a relative target:
+
+[,asciidoc]
+----
+\include::partial$the-include.adoc[]
+----
+
+When using the include directive, the family is inherited from the current file (so it always starts as `page` at the top level).
+
+== Include a resource
+
+The AsciiDoc file in which the include directive is used can be in any family (page, partial, etc).
+The include directive can include a file from any family (i.e., page, partial, example, image, attachment).
+
+To learn more about how to include a resource into an AsciiDoc file, refer to the following pages.
+
+* xref:page:include-a-page.adoc[]
+* xref:page:include-a-partial.adoc[]
+* xref:page:include-an-example.adoc[]

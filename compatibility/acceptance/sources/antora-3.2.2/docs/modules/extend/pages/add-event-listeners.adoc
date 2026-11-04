@@ -1,0 +1,72 @@
+= Add Event Listeners
+:url-event-emitter: https://nodejs.org/api/events.html#events_class_eventemitter
+
+The bulk of the work of an Antora extension is done by the event listeners.
+An event listener is a function that's called whenever an event it's listening for is emitted.
+Any value returned by the listener is ignored (so any value is permitted).
+The register function is responsible for associating these listener functions with particular events.
+It does so by passing the event name and the listener function to the `on` method of the generator context, called adding a listener.
+The xref:generator-context-reference.adoc[API of the generator context] follows that of a Node.js {url-event-emitter}[EventEmitter^].
+
+Let's build on the extension we have defined by updating it to add an event listener.
+We'll listen for the `playbookBuilt` and `sitePublished` events, which are the first and last events to be emitted by the generator.
+This gives us the opportunity to roughly measure how long it took to generate and publish the site.
+
+.time-generation-extension.js
+[#ex-listen,js]
+----
+include::example$time-generation-extension.js[lines=3..]
+----
+
+In <<ex-listen>>, we use the `on` method of the generator context to add two listeners, one for when the `playbookBuilt` event is emitted and one for when the `sitePublished` event is emitted.
+The `on` method returns the generator context, so we can use it to chain calls, as show in the previous example.
+
+[TIP]
+====
+Since built-in events are only emitted once, you can register the listener for a built-in event using `once` instead of `on`.
+
+[,js]
+----
+this.once('playbookBuilt', () => { ... })
+----
+
+Using `once` provides a very slight optimization.
+It allows the event emitter to deactivate itself once there are no more listeners remaining.
+====
+
+By default, listeners are invoked in the order they are added, even if they are async.
+To guarantee our timer starts before listeners from other extensions are called, our `playbookBuilt` listener should be called before other listeners of the `playbookBuilt` event and our `sitePublished` listener should be called after other listeners of the `sitePublished` event.
+There are two changes we must make to get this to work.
+
+First, we can use the `prependListener` method as an alternative to `on` to add the `playbookBuilt` listener before other listeners that have already been associated with that event.
+
+.time-generation-extension.js
+[,js]
+----
+include::example$better-time-generation-extension.js[lines=3..]
+----
+
+Second, we should list our extension last in the playbook.
+Taking these two steps ensures our timer runs around all other listeners.
+
+[TIP]
+====
+If you want to time a specific stage of the generator, you can update this extension to listen to xref:generator-events-reference.adoc[other generator events].
+To extend the timer all the way to when Node.js exits, you can listen for the `exit` event on the Node.js process object.
+
+[,js]
+----
+process.on('exit', () => {
+  console.timeEnd('generation time')
+})
+----
+
+To learn more about the `exit` event and other events emitted by the Node.js process, see https://nodejs.org/api/process.html#process-events[Node.js process events].
+====
+
+The EventEmitter API, which the generator context inherits, also allows listeners to be retrieved, removed, and added again.
+That opens up the possibility that one extension can rearrange listeners added by other extensions, if the need arises.
+Extensions can also emit and listen for custom events using the same methods.
+
+To do something more interesting than time the execution and print messages to the console, we need to xref:use-context-variables.adoc[use context variables].
+Let's learn how that's done next.

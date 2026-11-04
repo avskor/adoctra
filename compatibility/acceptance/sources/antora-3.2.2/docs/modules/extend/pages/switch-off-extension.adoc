@@ -1,0 +1,29 @@
+= Switch Off Extension
+
+If an extension is declared as enabled in the playbook file, there is still a way to turn it off for a single run of Antora using the CLI.
+Much like the `--extension` option is used to enable an extension flagged as not enabled, the option can also be used to switch the enabled flag to false.
+
+To do so, you negate the value of the `--extension` option by prefixing the value with `!` (read as: not).
+After removing the `!`, Antora will look for the first entry whose `id` key matches this value.
+If no match is found, Antora will then look for the first entry whose `require` key matches this value.
+
+First, let's give our extension an ID:
+
+.An extension with an ID that is enabled
+[,yaml]
+----
+antora:
+  extensions:
+  - id: my-extension
+    require: ./my-extension.js
+    custom: value
+----
+
+Now we can now switch off this extension from the CLI as follows:
+
+ $ antora --extension '!my-extension' antora-playbook.yml
+
+We enclose the value of the `--extension` option here in single quotes since `!` is a reserved shell character.
+If a match is found, Antora will switch the the `enabled` key on the extension to `false`, effectively switching it off.
+
+Note that a subsequent `--extension` option could still enable it again.

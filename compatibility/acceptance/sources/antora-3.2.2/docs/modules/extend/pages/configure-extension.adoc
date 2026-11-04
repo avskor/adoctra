@@ -1,0 +1,94 @@
+= Configure an Extension
+
+An extension that you write or use may require additional settings to configure its behavior.
+While the extension could tap into information already available in the playbook or the content sources Antora is building, it may be necessary to configure the extension directly.
+An extension can accept an arbitrary number of properties, which may be nested, that are specified in the entry in the playbook file.
+These properties are accessible via a context variable named `config` that's passed to the extension's register function.
+The value of this variable is an empty object (e.g., `{}`) if no configuration is specified in the playbook.
+
+== Basic configuration
+
+Let's assume that we want to publish a file named [.path]_humans.txt_ to give credit to the people who make the documentation site possible.
+We'll name our extension [.path]_humans-txt-extension.js_.
+Of course, the extension won't know who to credit, so we'll need to pass it some configuration.
+
+Let's start by registering our new extension in the playbook and passing in the list of people using the `names` key.
+The value of this key will be an array of names.
+
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./humans-txt-extension.js
+    names:
+    - Doc Writer
+    - Dr. Austen
+    - Emily Story
+----
+
+To make room for the additional keys, we've converted the entry for the extension from a single (string) value to a map.
+The require request value slides into the `require` key.
+That leaves room to define additional keys, in this case `names`.
+
+Now let's write an extension that accepts this configuration and uses it to create the [.path]_humans.txt_ file:
+
+.humans-txt-extension.js
+[,js]
+----
+include::example$humans-txt-extension.js[lines=3..]
+----
+
+The `config` object for the extension is accessed using object destructuring just like any other context variable.
+Thanks to variable scoping in JavaScript, we can still access that variable in our listener for the `beforePublish` event.
+We use the information it provides to populate the contents of the [.path]_humans.txt_ file and add it to the site catalog.
+Antora will then include [.path]_humans.txt_ file in the published site.
+
+== Configuration key transformation
+
+In YAML, key names use the snake_case naming convention.
+In JavaScript, property names use the camelCase naming convention.
+To help bridge the naming convention mismatch between YAML and JavaScript, Antora automatically transforms snake_case key names in the playbook file into camelCase properties on the configuration object.
+For example, Antora transforms `cache_dir` to `cacheDir`.
+Most of the time, this isn't a problem.
+However, if your extension passes configuration or data on to another application, this transformation can be problematic.
+
+=== Configuration data
+
+To bypass this configuration, you can tuck keys away inside the `data` key.
+Any keys inside the `data` key (at any depth) are passed through without being modified.
+
+Let's assume that we want to specify structured content for our [.path]_humans.txt_ file.
+We don't need Antora to transform this structured content, so we can store it inside a key named `data`.
+
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./humans-txt-extension.js
+    data:
+      TEAM:
+      - Lead Writer: Doc Writer
+        Contact: doc [at] example.org
+        Location: Denver, CO
+      - Information Architect: Dr. Austen
+        Location: Winchester, Hampshire, England
+      - Narrator: Emily Story
+        Location: Antwerp, Belgium
+----
+
+Now, the extension can iterate over the keys in `config.data` and layout the contents of the [.path]_humans.txt_ file.
+
+[,js]
+----
+const contents = Buffer.from(
+  Object.entries(config.data).reduce((accum, [category, entries]) => {
+    if (accum.length) accum.push('')
+    accum.push(`/* ${category} */`)
+    entries.forEach((entry) => {
+      accum.push('')
+      for (const [key, val] of Object.entries(entry)) accum.push(`${key}: ${val}`)
+    })
+    return accum
+  }, []).join('\n')
+)
+----

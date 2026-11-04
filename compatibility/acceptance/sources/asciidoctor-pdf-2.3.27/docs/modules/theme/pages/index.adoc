@@ -1,0 +1,59 @@
+= Asciidoctor PDF Theming
+:navtitle: Theming
+
+Asciidoctor PDF includes a theming system that allows you to control the layout and styling of the PDF that Asciidoctor PDF generates from AsciiDoc.
+The theming system comes with a default theme as well as several additional built-in themes.
+
+If you're just seeking a professional-looking result, the default theme may suit your needs.
+Other built-in themes offer variations on this style for different needs, such as print-optimized styling, extended character support (including emoji), or a sans serif font.
+
+If you want to customize the layout and styling of the PDF, you can extend one of the built-in themes to change or add styles or you can develop a custom theme from scratch.
+
+== Theme configuration and language
+
+The Asciidoctor PDF theming system is driven by a YAML data file.
+The Asciidoctor PDF theme language is described using https://en.wikipedia.org/wiki/YAML[YAML] and incorporates many _concepts_ from CSS and SASS, such as selectors, properties, and inheritance.
+Therefore, if you have a background in web design, the terminology should be immediately familiar to you.
+*Note, however, that the theming system is not actually CSS.*
+
+When a theme file is loaded, it gets converted to a flat theme map.
+The converter uses the information stored in the keys of the theme map to help construct the PDF.
+
+TIP: You can use the built-in themes found in the [.path]_data/themes_ directory of the {url-project-repo}[project's repository^] as a reference.
+
+== Theme capabilities
+
+The theme can generally influence PDF settings, page numbering, font properties, background and borders, character selections, spacings, and running content.
+It has limited influence over the layout of elements on the page.
+If your theming requirements demand more than what this theming system can accommodate, you can xref:extend:index.adoc[extend the converter] to gain more control over the layout and style.
+
+//This document describes how the theming system works, how to define a custom theme in YAML, and how to activate the theme when running Asciidoctor PDF.
+//To learn how the theming system works and how to create and apply custom themes, refer to the <<docs/theming-guide.adoc#,Asciidoctor PDF Theming Guide>>.
+
+== Built-in themes
+
+Asciidoctor PDF provides the following built-in themes:
+
+base:: A barebones theme that provides rudimentary styling to support AsciiDoc content.
+Useful as a starting point when developing a custom theme.
+default:: Used if no theme is specified.
+Optimized for screen.
+Uses a serif base font.
+default-with-font-fallbacks:: A variation of the `default` theme that includes fallback fonts to provide extended Unicode character support, including emoji and commonly used CJK characters.
+default-for-print:: A variation of the `default` theme that is optimized for print.
+Used if no theme is specified and `media=print` or `media=prepress`.
+default-for-print-with-font-fallbacks:: A combination of the `default` and `default-with-font-fallback` themes.
+default-sans:: A variation of the `default` theme that uses a sans base font.
+default-sans-with-font-fallbacks:: A variation of the `default-sans` theme that includes fallback fonts to provide extended Unicode character support, including emoji and commonly used CJK characters.
+
+Refer to xref:apply-theme.adoc[] to learn how to apply a theme.
+
+== Syntax highlighter style
+
+If you've enabled a source highlighter, you can control the style (aka theme) it applies to source blocks using the `coderay-style`, `pygments-style`, and `rouge-style` attributes, respectively.
+For example, to configure Rouge to use the built-in monokai theme, run Asciidoctor PDF as follows:
+
+ $ asciidoctor-pdf -a rouge-style=monokai basic-example.adoc
+
+It's possible to develop your own theme for Rouge.
+Refer to xref:source-highlighting-theme.adoc[] for details.

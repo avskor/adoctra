@@ -1,0 +1,154 @@
+= UI Bundle URL
+:url-zip-file-format: https://en.wikipedia.org/wiki/Zip_(file_format)
+
+A UI bundle is a {url-zip-file-format}[ZIP archive] or directory that contains one or more UIs for a site.
+The only required file in the UI bundle is the default layout for pages (e.g., [.path]_layouts/default.hbs_) (and, if the 404 page is enabled, [.path]_layouts/404.hbs_ as well).
+Antora automatically fetches and loads a UI bundle when generating a site.
+
+[#url-key]
+== url key
+
+The `url` key is required.
+This key is configured under the xref:configure-ui.adoc[bundle key] of the ui category key in a playbook.
+The `url` key accepts a URL or filesystem path from where Antora can locate and fetch the site's UI bundle.
+The filesystem path must point to a ZIP archive or a local directory where the ZIP archive has been extracted.
+
+.antora-playbook.adoc
+[source,yaml]
+----
+ui: # <.>
+  bundle: # <.>
+    url: https://repo.org/path/to/a-ui-bundle.zip # <.>
+----
+<.> Enter the parent key `ui`, followed by a colon (`:`), and then press kbd:[Enter].
+<.> The `bundle` key is a child of `ui`.
+Enter the key's name, `bundle`, followed by a colon (`:`), and then press kbd:[Enter].
+<.> The `url` key is a child of `bundle`.
+Enter `url`, followed by a colon and a blank space (`:{sp}`), and then enter a URL or filesystem path value.
+
+Alternatively, the `url` key can be assigned from the xref:cli:options.adoc#ui-bundle[CLI].
+
+The UI bundle can be augmented using a xref:ui-supplemental-files.adoc[supplemental UI].
+
+[#remote-bundle]
+== Load a remote bundle
+
+When the value of `url` is a remote URL, Antora downloads and caches the UI bundle the first time it runs.
+In this case, the target must be a ZIP archive.
+
+.Remote UI bundle
+[,yaml]
+----
+ui:
+  bundle:
+    url: https://repo.org/path/to/a-ui-bundle.zip
+----
+
+The UI bundle is cached based on the signature of the URL.
+On subsequent runs, Antora loads the bundle from the cache as long as the value of `url` remains unchanged.
+This saves Antora from having to download the bundle each time you generate your site.
+
+When using a secure URL with a self-signed certificate, you will need to provide additional configuration in order for Node.js to recognize and accept that certificate.
+Refer to xref:set-up-playbook.adoc#self-signed-certificates[using self-signed certificates] to learn how.
+
+[#snapshot]
+=== Use a snapshot
+
+Antora won't download the UI bundle again if it exists in the cache, even when xref:runtime-fetch.adoc[fetch] is enabled.
+If the `url` value remains the same, but the archive it points to changes over time, the UI bundle needs to be identified as a snapshot to bypass this cache.
+
+In order to retrieve UI bundle updates without changing the `url` value, you need to enable the `snapshot` key adjacent to the `url` key.
+By default, snapshot is not enabled (set to `false`).
+When snapshot is set to `true`, Antora will download the UI bundle whenever the xref:runtime-fetch.adoc#fetch-key[fetch key] under the `runtime` category of the playbook is enabled.
+The xref:runtime-fetch.adoc#fetch-key[fetch key] instructs Antora to retrieve updates (including the UI bundle snapshot).
+
+.Remote UI bundle marked as a snapshot
+[,yaml]
+----
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+----
+
+TIP: If you're using Antora's reference UI bundle, you should mark the bundle as a snapshot because its URL never changes.
+
+If you want to control when Antora retrieves updates, pass the `--fetch` option when invoking the `antora` command.
+To make this setting permanent, set the `runtime.fetch` key in the playbook to `true`.
+
+.Fetch updates as persistent setting
+[,yaml]
+----
+runtime:
+  fetch: true
+----
+
+The snapshot key is only required if you're referring to a remote bundle (which Antora caches by default).
+If you're referencing a bundle from the filesystem, Antora will always use the file specified.
+
+[#local-bundle]
+== Load a bundle from the filesystem
+
+The `url` key can reference a local UI bundle using an absolute or relative filesystem path.
+
+.Relative UI bundle path
+[,yaml]
+----
+ui:
+  bundle:
+    url: ./../docs-ui/build/ui-bundle.zip
+----
+
+include::partial$relative-path-rules.adoc[]
+
+Here's the path to the same UI bundle, but using an absolute path instead.
+
+.Absolute UI bundle path
+[,yaml]
+----
+ui:
+  bundle:
+    url: /home/user/projects/docs-ui/build/ui-bundle.zip
+----
+
+Here's the path to the location where the UI bundle has been extracted (or it was organized with the same layout as an extracted archive).
+
+.Extracted UI bundle path
+[,yaml]
+----
+ui:
+  bundle:
+    url: ./../docs-ui/build/ui-bundle-extracted
+----
+
+Loading the UI bundle from a local directory is a good way to debug the UI templates.
+
+If you're using the default UI, you can run `npx gulp build` instead of `npx gulp bundle` (thus skipping the bundle step), then point Antora to the directory of the UI files ready to be bundled.
+
+.Extracted UI bundle path
+[,yaml]
+----
+ui:
+  bundle:
+    url: ./../docs-ui/public/_
+----
+
+You could also configure the UI project to automatically detect changes and run the `npx gulp build` step on demand.
+
+[#start-path-key]
+== start_path key
+
+The `start_path` key is mapped to the `bundle` key.
+It accepts a the relative path inside the UI bundle from where Antora should start reading files.
+This key is useful when a UI bundle packages multiple UIs (e.g., light, dark, etc.).
+
+.Select UI from start_path
+[,yaml]
+----
+ui:
+  bundle:
+    url: /home/user/projects/docs-ui/build/ui-bundle-with-themes.zip
+    start_path: dark
+----
+
+In this example, Antora will ignore all of the files in the UI bundle that fall outside the [.path]_dark_ directory.

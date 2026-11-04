@@ -1,0 +1,163 @@
+= Content Keys
+
+The playbook keys configured under the `content` key and its subkey `sources` define the locations of the content source repositories and how they're processed.
+
+[#content-key]
+== content key
+
+The `content` category key encapsulates the list of content sources (i.e., git repositories) in an Antora site.
+The content sources are defined using the `sources` key.
+The `branches`, `tags`, and `edit_url` keys can be used to define default values for all content sources.
+These keys can be redefined per content source, alongside other keys that are specific to a content source.
+
+[,yaml]
+----
+content: # <.>
+  branches: [v2.0, v2.5, v3.0] # <.>
+  tags: [release/*, '!release/*-patch'] # <.>
+  edit_url: '{web_url}/blob/{refname}/{path}' # <.>
+  worktrees: true # <.>
+  sources: # <.>
+  - url: https://git-service.com/org/repo-z.git # <.>
+    start_path: path-to/content-source-root # <.>
+  - url: https://git-service.com/org/repo-y.git # <.>
+----
+<.> Required `content` key
+<.> Optional `branches` key
+<.> Optional `tags` key
+<.> Optional `worktrees` key
+<.> Optional `edit_url` key
+<.> Required `sources` key
+<.> Required `url` key
+<.> Optional `start_path` key
+<.> Another `url` key
+
+The `content` and `sources` keys are required.
+The `sources` key must contain at least one entry with the `url` key defined.
+All other keys are optional.
+The xref:content-branches.adoc#default[branches], xref:content-worktrees.adoc#default[worktrees], and xref:content-edit-url.adoc#default[edit_url] keys have built-in values Antora automatically applies at runtime if they're not explicitly set in the playbook.
+
+Keys-value pairs that are specified directly under `content` are applied to all of the `url` key entries under `sources`, unless the key is also specified on a specific `url`.
+
+[#sources-key]
+== sources key
+
+The `sources` key is required and nested under the `content` key.
+The `sources` key contains a list of source entries.
+Each entry, designated by a hyphen, consists of a git repository location (URL or filesystem path), patterns to match branches and/or tags, an optional start path or paths, and other repository properties that Antora uses when aggregating the site content.
+
+[,yaml]
+----
+content: # <.>
+  sources: # <.>
+  - url: https://git-service.com/org/repo-z.git # <.>
+    branches: [v1.*, v2.*, !v1.2] # <.>
+    start_paths: path-to/content-source-root-{item..item} # <.>
+  - url: https://git-service.com/org/repo-y.git # <.>
+    branches: [] # <.>
+    tags: [release/*, '!release/*-patch'] # <.>
+    start_path: path-to/content-source-root # <.>
+    edit_url: '{web_url}/blob/{refname}/{path}' # <.>
+  - url: https://git-service.com/org/repo-x.git # <.>
+    branches: v* # <.>
+    version: true # <.>
+----
+<.> Required `content` key
+<.> Required `sources` key
+<.> Required `url` key
+<.> Optional `branches` key
+<.> Optional `start_paths` key
+<.> Another `url` key
+<.> Optional `branches` key
+<.> Optional `tags` key
+<.> Optional `start_path` key
+<.> Optional `edit_url` key
+<.> Another `url` key
+<.> Optional `branches` key
+<.> Optional `version` key
+
+The `sources` key must contain at least one entry with the `url` key defined.
+All other keys are optional.
+The xref:content-branches.adoc#default[branches] and xref:content-edit-url.adoc#default[edit_url] keys have built-in values Antora automatically applies at runtime if they're not explicitly defined in the playbook.
+
+NOTE: If no git references (branches or tags) are matched for a content source entry, Antora will log a message at the info level.
+You must have the log severity level set to at least info to see this message.
+We recommend configuring Antora's logger accordingly to aid with debugging.
+
+The `version` key provides a fallback value for the `version` key in the xref:ROOT:component-version-descriptor.adoc[component version descriptor (_antora.yml_)].
+You should only use it if you're matching a single reference or you want the value to be derived from the refname.
+
+[#content-reference]
+== Available content keys
+
+The following keys can be defined under the `content` key.
+With the exception of the `sources` key, which contains the source entries themselves, these keys are used to provide default values for each source entry.
+
+[cols="3,6,1"]
+|===
+|Content Keys |Description |Required
+
+|xref:content-branches.adoc[branches]
+|Accepts a list of exact branch names and name patterns to use from the repository specified in the content source.
+|No
+
+|xref:content-edit-url.adoc[edit_url]
+|Accepts a URL pattern for building the URL that maps to the source view for the current page.
+Accommodates the following placeholder segments: `+{web_url}+`, `+{refname}+`, `+{refhash}+`, and `+{path}+`.
+|No
+
+|xref:content-source-url.adoc[sources]
+|Accepts a list of content source entries that specify which repositories and repository references to use as content.
+|Yes
+
+|xref:content-tags.adoc[tags]
+|Accepts a list of exact tag names and name patterns to use from the repository specified in the content source.
+|No
+
+|xref:content-worktrees.adoc[worktrees]
+|Accepts a boolean value or list of exact worktree names, name patterns, or symbolic names to control which corresponding worktrees Antora should use for any branches it selects.
+|No
+|===
+
+[#content-source-reference]
+== Available content source keys
+
+[cols="3,6,1"]
+|===
+|Content Keys |Description |Required
+
+|xref:content-branches.adoc[branches]
+|Accepts a list of exact branch names and name patterns to use from the repository specified in the content source.
+If not specified, defaults to the value of the `branches` key defined on the `content` key.
+|No
+
+|xref:content-edit-url.adoc[edit_url]
+|Accepts a URL pattern for building the URL that maps to the source view for the current page.
+Accommodates the following placeholder segments: `+{web_url}+`, `+{refname}+`, `+{refhash}+`, and `+{path}+`.
+|No
+
+|xref:content-source-start-path.adoc[start_path]
+|Specifies the relative path in the repository to a content source root's location.
+|No
+
+|xref:content-source-start-paths.adoc[start_paths]
+|Accepts a list of repository relative path patterns to content source root locations, either as exact paths or shell glob patterns.
+Single values are coerced into an array.
+|No
+
+|xref:content-tags.adoc[tags]
+|Accepts a list of exact tag names and name patterns to use from the repository specified in the content source.
+|No
+
+|xref:content-source-url.adoc[url]
+|Accepts the URL of a git repository, which can either be an HTTPS URL or a local filesystem path.
+|Yes
+
+|xref:content-source-version.adoc[version]
+|Provides a fallback value for the `version` key in the component version descriptor for all references matched.
+|No
+
+|xref:content-worktrees.adoc[worktrees]
+|Accepts a boolean value or list of exact worktree names, name patterns, or symbolic names to control which corresponding worktrees Antora should use for any branches it selects.
+|No
+|===

@@ -1,0 +1,180 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor provides a mechanism for looking up a registered converter so it can be extended (i.e., used as a base class), then another mechanism for registering the extended converter in its place. Let’s see how that looks."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class ExtendedPDFConverter < (Asciidoctor::Converter.for 'pdf')\n  register_for 'pdf'\n\n  # overrides go here\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "extended-pdf-converter.rb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When this script is required by Asciidoctor, it will replace the primary converter with the extended one automatically. As it stands, this converter doesn’t do anything different than the primary converter because we haven’t yet overridden any of its methods."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "register-an-extended-converter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Register an extended converter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s start by overriding the thematic break (i.e., horizontal rule) to make it render like a red ribbon."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "  def convert_thematic_break node\n    theme_margin :thematic_break, :top\n    stroke_horizontal_rule 'FF0000', line_width: 0.5, line_style: :solid\n    move_down 1\n    stroke_horizontal_rule 'FF0000', line_width: 1, line_style: :solid\n    move_down 1\n    stroke_horizontal_rule 'FF0000', line_width: 0.5, line_style: :solid\n    theme_margin :thematic_break, ((block_next = next_enclosed_block node) ? :bottom : :top), block_next || true\n  end"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The return value of a convert handler for a block node is ignored. The return value of a convert handler for an inline node must be a string, which may contain the HTML-like markup that this convert supports."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To find all the available methods to override, see the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "API docs"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.rubydoc.info/gems/asciidoctor-pdf/Asciidoctor/PDF/Converter"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that you’ve made a change to the converter, let’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "learn how to activate it"
+                  }
+                ],
+                "kind": "xref",
+                "target": "use-converter.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "override-a-method",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Override a method"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Create an Extended Converter"
+      }
+    ]
+  }
+}

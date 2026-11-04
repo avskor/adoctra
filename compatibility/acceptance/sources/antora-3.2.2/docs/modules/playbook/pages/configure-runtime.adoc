@@ -1,0 +1,185 @@
+= Runtime Keys
+
+The playbook keys configured under the `runtime` key manage Antora's logger, as well as its console output, caching, and remote repository update behavior.
+
+[#runtime-key]
+== runtime key
+
+The global log, console output, fetch, and cache directory properties are defined under the `runtime` key in a playbook file.
+These settings are applied to the Antora pipeline when it starts.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime: # <.>
+  cache_dir: ./.cache/antora # <.>
+  fetch: true # <.>
+  log: # <.>
+    level: error # <.>
+  quiet: true # <.>
+----
+<.> Optional `runtime` key
+<.> Optional `cache_dir` key
+<.> Optional `fetch` key
+<.> Optional `log` key
+<.> Optional `level` key
+<.> Optional `quiet` key
+
+The `runtime` key and the key-value pairs it accepts are optional.
+If `runtime` isn't set in the playbook, Antora uses the default cache directory, fetch, and log settings.
+Alternatively, these keys can be assigned from the xref:cli:options.adoc#generate-options[CLI] or, except for `fetch`, using xref:playbook:environment-variables.adoc[environment variables].
+
+[#log-key]
+== log key
+
+The `log` key is optional.
+If you do set it in the playbook, you must nest it under the <<runtime-key,runtime key>>.
+The `log` key accepts a list of built-in key-value pairs that configure the log level (`level`), failure level (`failure_level`), and display format (`format`).
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  log: # <.>
+    format: json # <.>
+    failure_level: warn # <.>
+    level: all # <.>
+    level_format: number # <.>
+    destination: # <.>
+      file: ./antora.log # <.>
+      append: true # <.>
+      buffer_size: 4096 # <.>
+      sync: false # <.>
+----
+<.> The optional `log` category key is nested under the `runtime` category key.
+<.> The optional `format` key is nested under the `log` category key.
+<.> The optional `failure_level` key is nested under the `log` category key.
+<.> The optional `level` key is nested under the `log` category key.
+<.> The optional `level_format` key is nested under the `log` category key.
+<.> The optional `destination` category key is nested under the `log` category key.
+<.> The optional `file` key is nested under the `destination` category key.
+<.> The optional `append` key is nested under the `destination` category key.
+<.> The optional `buffer_size` key is nested under the `destination` category key.
+<.> The optional `sync` key is nested under the `destination` category key.
+
+If `level`, `failure_level`, `format`, or `level_format` are set in the playbook, they must be nested under the `log` category key.
+The xref:runtime-log-level.adoc#default[level], xref:runtime-log-failure-level.adoc#default[failure_level], xref:runtime-log-format.adoc#default[format], and xref:runtime-log-format.adoc#level-format-key[level_format] keys have default values that are automatically applied when Antora runs if they're not explicitly defined in the playbook or using the corresponding the xref:cli:options.adoc#generate-options[command line options] or xref:playbook:environment-variables.adoc[environment variables].
+
+If `file`, `append`, `buffer_size`, or `sync` are set in the playbook, they must be nested under the `destination` category key.
+
+IMPORTANT: The log settings are not honored if a fatal error is thrown before Antora fully configures the playbook.
+In such cases, the error message is only printed directly to standard error (stderr) using a preconfigured logger.
+
+[#quiet-key]
+== quiet key
+
+The `quiet` key is optional.
+If you do set it in the playbook, you must nest it under the <<runtime-key,runtime key>>.
+The `quiet` key accepts a boolean value.
+If the value is true, informational messages such as the git progress and build completion message are not written to stdout (i.e., the standard output stream) of the console.
+In short, no messages are written directly stdout when this key is set to true.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  quiet: true # <.>
+----
+<.> The optional `quiet` key is nested under the `runtime` category key.
+
+This flag does not impact messages written to stderr.
+Messages will still be written to the log, which may then be routed to stdout depending on the log configuration.
+
+[#silent-key]
+== silent key
+
+The `silent` key is optional.
+If you do set it in the playbook, you must nest it under the <<runtime-key,runtime key>>.
+The `silent` key accepts a boolean value.
+If the value is true, the log level is set to `silent` (and cannot be overridden) and any messages written directly to stdout and stderr are suppressed.
+In short, all messages to the console and log are suppressed.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  silent: true # <.>
+----
+<.> The optional `silent` key is nested under the `runtime` category key.
+
+You should not expect to see any messages in the console when the value of this key is true.
+
+[#runtime-reference]
+== Available runtime keys
+
+[cols="3,6,1"]
+|===
+|Runtime Keys |Description |Required
+
+|xref:runtime-cache-dir.adoc[cache_dir]
+|Specifies the directory where the remote content sources git repositories and UI bundles are cached.
+|No
+
+|xref:runtime-fetch.adoc[fetch]
+|When set to `true`, the `fetch` key refreshes the files in the cache each time Antora runs.
+|No
+
+|xref:runtime-log-failure-level.adoc[log.failure_level]
+|Sets the log level tolerance that, when met or exceeded, causes Antora to fail on exit with a non-zero exit code.
+Accepts the values `warn`, `error`, `fatal`, and `none`.
+The default value is `fatal`.
+The value `none` causes Antora to always exit with a zero exit code.
+|No
+
+|xref:runtime-log-format.adoc[log.format]
+|Sets the format of log messages.
+Accepts the values `pretty` and `json`.
+The default value is `json` in a CI environment and `pretty` in all other environments.
+|No
+
+|xref:runtime-log-level.adoc[log.level]
+|Sets the minimum severity threshold level that must be met for a message to be logged.
+Accepts the values `all`, `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `silent`.
+The default value is `warn`.
+The value `silent` turns the logger off.
+|No
+
+|xref:runtime-log-format.adoc#level-format-key[log.level_format]
+|Sets the format of how the log levels are expressed.
+Only applies when `log.format` is `json`.
+Accepts the values `label` and `number`.
+The default value is `label`.
+|No
+
+|xref:runtime-log-destination.adoc#file-key[log.destination.file]
+|Sets the destination file or stream where log messages are written.
+The default value (either `stdout` or `stderr`) depends on the log format.
+|No
+
+|xref:runtime-log-destination.adoc#append-key[log.destination.append]
+|Configures whether to truncate (i.e., clear) the file before writing to it.
+The default value is `true`, which means to append to the file.
+A value of `false` means to first truncate the file.
+|No
+
+|xref:runtime-log-destination.adoc#buffer-size-key[log.destination.buffer_size]
+|Sets the amount of memory to use to buffer log messages.
+Once the buffer reaches this size, the buffered messages are written to the destination in a batch.
+The default value is `0`, which turns off this behavior.
+|No
+
+|xref:runtime-log-destination.adoc#sync-key[log.destination.sync]
+|Configures whether to use a sync or async operation to write log messages to the destination.
+The default value is `true`, which means log messages are written synchronously (blocking).
+|No
+
+|quiet
+|Prevents any messages from being written to stdout.
+The default value is `false` (messages are written to stdout).
+|No
+
+|silent
+|Suppresses all messages, including log messages (by forcefully setting the log level to silent).
+The default value is `false`.
+|No
+|===

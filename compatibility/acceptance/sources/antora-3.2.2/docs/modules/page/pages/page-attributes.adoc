@@ -1,0 +1,208 @@
+= Page Attributes
+
+Certain AsciiDoc document attributes provide metadata to the Antora page (for use in the UI template) or control how Antora processes the page.
+We refer to these as [.term]*page attributes*.
+There are three types of page attributes: custom, predefined, and intrinsic.
+This page explains the purpose of each type of page attribute, how they're defined, and how they can be accessed from the UI template using the UI model.
+
+== Purpose and anatomy
+
+Page attributes are all about providing metadata, whether that metadata is for Antora itself, for the UI template, for the user, or for a search index.
+By defining page attributes, you can store additional information about the page, which can then be accessed and used throughout the site.
+
+A page attribute is defined just like any other AsciiDoc document attribute, typically using an attribute entry in the document header.
+Where a page attribute differs is that the name of the attribute must begin with `page-` (e.g., `page-category`).
+The presence of the `page-` prefix allows Antora to identify it as a page attribute.
+
+TIP: If you're wondering whether you need to add the `page-` prefix, ask yourself if you need to access the attribute from the UI template.
+If the answer is yes, then you need the prefix.
+Otherwise, the prefix is not required.
+
+Here's an example of page that defines two page attributes:
+
+----
+= Page Title
+:page-category: DevOps
+:page-edition: Enterprise
+
+Main content.
+----
+
+The `page-` prefix is meant to provide a hint to both Antora and the author as to which attributes comprise the metadata for the page.
+By standardizing on the `page-` prefix, Antora is able to isolate page attributes from the numerous built-in and intrinsic attributes in AsciiDoc or defined by the AsciiDoc processor.
+The prefix also isolates the page attributes from internal attributes used to store reusable content within the page or site (aka custom content attributes).
+
+[#custom-attribute]
+== Define a custom page attribute
+
+To define a page attribute, you add an attribute entry to the page header and start the name with `page-`.
+It's important to define the attribute entry in the header.
+Otherwise, the page attribute will not be found.
+
+Here's an example of an xref:define-and-modify-attributes.adoc#attribute-entry[attribute entry] that defines a page attribute:
+
+----
+= Page Title
+:page-name-goes-here: value goes here
+----
+
+The name of this page attribute is `name-goes-here` (the `page-` prefix plus the custom name, `name-goes-here`).
+Its value is `value goes here`.
+
+The name of the page attribute must adhere to the xref:define-and-modify-attributes.adoc#naming-rules[naming rules] for a document attribute.
+The value can be left blank or it can be a string value.
+If the value is not blank, it must be offset from the closing colon (`:`) by at least one space.
+
+TIP: Since page attributes are just special AsciiDoc document attributes, they can also be defined xref:playbook:asciidoc-attributes.adoc[site-wide] in the Antora playbook or xref:ROOT:component-attributes.adoc[per component version] in the component version descriptor.
+
+=== Promote a non-page attribute
+
+If you want to make information in an existing document attribute available as a page attribute, you must promote that attribute to a page attribute.
+You can promote a document attribute to a page attribute using an attribute reference.
+
+For example, let's say you have the attribute `product-name` defined on the page or site.
+You can promote it to a page attribute using the following attribute entry:
+
+----
+= Page Title
+:product-name: Name of My Product
+:page-product-name: {product-name}
+----
+
+The attribute reference is resolved immediately, so the page attribute named `page-product-name` now shares the same value as the document attribute named `product-name`.
+
+== Configure a predefined page attribute
+
+Some page attributes receive special treatment in Antora.
+These page attributes have reserved names, but accept user-defined values for communicating information about the page to Antora.
+Examples include `page-aliases`, `page-layout`, and `page-partial`.
+
+The `page-aliases` attribute allows you to configure alternate resource IDs for the current page.
+For example, to claim the old name of a page, you'd use:
+
+----
+= Page Title
+:page-aliases: old-page-name.adoc
+----
+
+Unlike custom page attributes, the `page-aliases` attribute requires the value to conform to a specific syntax (i.e., a comma-separated list of resource IDs).
+See xref:page-aliases.adoc[page aliases] to learn about the `page-aliases` attribute and how it can be used to preserve references to a renamed, moved, or deleted page.
+
+The `page-layout` attribute allows you to specify which UI template to apply to the current page.
+For example, to apply the `home` layout to the current page, you'd use:
+
+----
+= Home Page
+:page-layout: home
+----
+
+See xref:page-layout.adoc[page layout] to learn about the `page-layout` attribute and how it can be used to define which UI layout is applied to a page.
+
+Additional predefined page attributes may be added in the future to allow similar kinds of functionality to be configured.
+
+[#access-attributes-from-ui-template]
+== Access page attributes from the UI template
+
+One of the primary roles of a page attribute is to pass metadata about the page to the UI template via the xref:antora-ui-default::templates.adoc#template-variables[UI model].
+The UI template can then use the information provided by the page attributes in a variety of ways, from populating metadata in the published page (i.e, the HTML) to toggling or configuring behavior in the UI.
+
+Let's look at an example.
+The default UI allows you do configure the depth of the sidebar TOC using the page attribute named `toclevels` (i.e., `page-toclevels` when defined).
+
+You could set this attribute globally in your playbook (or component descriptor).
+
+[,yaml]
+----
+asciidoc:
+  attributes:
+    page-toclevels: 3@
+----
+
+The trailing `@` is added so the attribute can still can be overridden in the header of a page.
+For example:
+
+[,asciidoc]
+----
+= Page Title
+:page-toclevels: 2
+----
+
+Page attributes are accessible in the UI model via the `page.attributes` property.
+The value of this property is a map of attributes.
+
+To access the value of the `page-toclevels` attribute in a UI template, you'd use:
+
+[,hbs]
+----
+{{page.attributes.toclevels}}
+----
+
+So where's the `page-` prefix gone?
+
+When a page attribute is promoted to the UI model, the `page-` prefix is dropped from its name.
+That's why we often refer to the page attribute using its short name (e.g., `toclevels`).
+The `page-` prefix acts as a namespace to identify the attribute as a page attribute.
+Thus, a page attribute named `page-toclevels` becomes `toclevels` in the UI model (e.g., `page.attributes.toclevels`).
+
+Let's look at another example that shows how the default UI uses a page attribute to control pagination.
+You'll often set this attribute globally in your playbook or component descriptor.
+This time, however, we hard set the attribute so it cannot be turned off by a page.
+
+[,yaml]
+----
+asciidoc:
+  attributes:
+    page-pagination: ''
+----
+
+Now, in the footer-scripts.hbs partial template, we can check whether this attribute is set and include the pagination controls if it is.
+
+[,hbs]
+----
+{{#unless (eq page.attributes.pagination undefined)}}
+<nav class="pagination">
+...
+</nav>
+{{/unless}}
+----
+
+Notice we check whether the value is not equal to undefined rather than checking if it truthy.
+That's because an empty value in JavaScript is falsy, so we have to make the assertion more specific.
+Inside the clause, the template can check whether the attribute has the value next or prev, implying the opposite direction should be turned off.
+
+The `page-` prefix on the attribute name is what hoists it to the UI model.
+All other document attributes are still accessible from the UI model, just not as easily.
+Here's an example of how to reference a non-page attribute from the UI model:
+
+[,hbs]
+----
+{{#with (resolvePage page.relativeSrcPath model=false)}}
+{{./asciidoc.attributes.policy-number}}
+{{/with}}
+----
+
+Passing the `page.relativeSrcPath` value to the built-in `resolvePage` helper resolves to the current page.
+The `model=false` option instructions the helper to return the virtual file rather than the UI model for the resolved page.
+From there, all the AsciiDoc attributes can be access through the nested `asciidoc.attributes` property.
+
+== Intrinsic page attributes
+// I have reservations about these examples - SW
+
+Antora automatically sets a number of read-only, intrinsic page attributes at runtime that are derived from existing metadata about the current page.
+For example, the name of the current component can be read from the `page-component-name` attribute.
+
+These attributes are defined at the time the page or navigation file is loaded (i.e., parsed)
+They are not yet assigned when the attributes in the component descriptor are resolved, and are thus not visible to the component descriptor.
+
+////
+One way to use the intrinsic page attributes is to construct references to a page in another product that shares the same version, as shown here:
+
+----
+You might also be interested in xref:{page-version}@other-product::index.adoc[other product].
+----
+
+Implicit page attributes also come in handy when constructing xref:page-aliases.adoc[page aliases].
+////
+
+The intrinsic page attributes are listed on xref:intrinsic-attributes.adoc[].
+These attributes are *read-only*, so you should not override their values in the page header.

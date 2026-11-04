@@ -1,0 +1,199 @@
+= Resource ID Coordinates
+
+[#id-coordinates]
+== Coordinate syntax and order
+
+A xref:resource-id.adoc#whats-a-resource-id[resource ID] contains five coordinates: version, component, module, family, and file.
+Antora constructs a resource ID for a source file by assigning values to these coordinates based on the file, xref:ROOT:standard-directories.adoc[standard directory set], and information in the xref:ROOT:component-version-descriptor.adoc[component version descriptor].
+You can reference a resource from any other resource--regardless of the component version each resource belongs to--using a sequence of the resource ID coordinates assigned to a resource.
+
+<<fig-full-id>> shows the coordinate types and their sequence in a fully qualified resource ID.
+
+.Fully qualified resource ID
+[#fig-full-id]
+image::full-resource-id.svg[Diagram of a fully qualified Antora resource ID]
+
+[[full-id]]A [.term]*fully qualified resource ID* is a resource ID with all of its coordinates specified.
+You probably won't have to use a resource's fully qualified resource ID that often.
+The number of resource ID coordinates you specify when referencing a resource depends on:
+
+* the component version and module of the current page in relation to the target resource,
+* the family of the target resource, and
+* the AsciiDoc syntax used to reference the target resource.
+
+[[target]]The [.term]*target resource* is the resource source file that's referenced, by specifying its resource ID, in an AsciiDoc macro, include directive, or other syntax.
+[[current]]The [.term]*current page* is the page file that contains the AsciiDoc syntax that references the target resource.
+
+.The current page, with the filename satellites.adoc, containing an xref macro referencing a resource
+[#fig-target]
+image::target-resource.svg[Example of an xref in the current page referencing a target resource]
+
+In <<fig-target>>, [.path]_satellites.adoc_ is the current page and the resource with the filename _modes.adoc_ is the target resource being referenced by the xref macro.
+
+If the resource ID contains characters that are reserved by the AsciiDoc syntax (e.g., `+`), you can escape those characters by using their URI-encoded equivalents.
+For example, if you're referencing a resource named `pass:[c++.adoc]`, you can write it as `c%2B%2B.adoc` to prevent the AsciiDoc processor from interpretting it has formatted text.
+Antora will decode these escape sequences before resolving the resource.
+
+The following sections describe how to determine the value of each coordinate for a target resource and when to use each coordinate.
+
+[#id-version]
+== Version coordinate
+
+The version coordinate is the same value as the version of the component to which the <<target,target resource>> belongs.
+The value of the version is assigned to the xref:ROOT:component-version-key.adoc[version key].
+The `version` key is specified either in the [.path]_antora.yml_ file that defines the resource's component version or on the content source in your playbook that specified from where Antora collected the component version's files.
+
+The version coordinate should be used to reference a resource in a different version of the same component or a specific version of a different component.
+When entering a version coordinate in a resource ID, it should always be the first coordinate and end with an at sign (`@`).
+If the component coordinate is not specified, the current component will be used.
+If the component coordinate is specified without specifying a version coordinate, the latest version of that component will be chosen.
+
+[#id-component]
+== Component coordinate
+
+The component coordinate is the name of the component to which the target resource belongs.
+The component name is specified by the xref:ROOT:component-name-key.adoc[name key] in the [.path]_antora.yml_ file that defines the resource's component version.
+
+The component coordinate must be used when the target resource and current page belong to different documentation components.
+The component name is entered before the module coordinate in a resource ID and is directly followed by one colon (`:`).
+If the component coordinate is specified without specifying a version coordinate, the latest version of that component will be chosen.
+
+[#id-module]
+== Module coordinate
+
+The module coordinate is the name of the module to which the target resource belongs.
+The module name is derived from the xref:ROOT:module-directories.adoc#module[module directory] where the resource is stored.
+
+The module coordinate must be used when the target resource and current page belong to different modules.
+The module name is entered before the family coordinate, if the family coordinate is present, or before the file coordinate if the family coordinate isn't present.
+The module name is directly followed by one colon (`:`).
+
+When a module coordinate ends with the name of a built-in AsciiDoc macro, such as `link`, `kbd`, `menu`, etc., you may have to escape that portion of the coordinate by prefixing the macro name with a backslash.
+For example, module coordinates such as `monolink` and `redmenu` may need to be entered as `mono\link` and `red\menu` in a resource ID.
+
+[#id-family]
+== Family coordinate
+
+The family coordinate identifies the name of the family to which the target resource belongs.
+The family is derived from the xref:ROOT:family-directories.adoc[family directory] where the resource is stored.
+Remove the "`s`" at the end of the family's name and replace it with a dollar sign (`$`) when constructing a resource ID.
+The valid family coordinates are `page$`, `image$`, `partial$`, `example$`, and `attachment$`.
+
+Whether the family coordinate needs to be entered in a resource ID depends on:
+
+* the family of the target resource, and
+* the AsciiDoc syntax used to reference the target resource.
+
+For example, if you reference a page using the xref macro, the `page$` family coordinate isn't required because the xref macro applies it by default when no family coordinate is specified.
+The following table lists when the family coordinate is required depending on the resource being referenced and the syntax that is referencing the resource.
+
+[#reference-syntax-id-requirements]
+[cols="2,2,4"]
+|===
+|Resource being referenced |Syntax referencing the resource |Family coordinate required?
+
+|xref:attachments.adoc[Attachment]
+|Xref macro
+|*Yes, the `attachment$` coordinate is required*.
+See xref:attachments.adoc[].
+
+|xref:examples.adoc[Example]
+|Include directive
+|*Yes, the `example$` coordinate is required*.
+See xref:include-an-example.adoc[].
+
+.3+|xref:images.adoc[Image]
+|Block image macro
+|No, the family coordinate isn't required.
+See xref:block-images.adoc[] and xref:image-resource-id-examples.adoc[].
+
+|Inline image macro
+|No, the family coordinate isn't required.
+See xref:inline-images.adoc[] and xref:image-resource-id-examples.adoc[].
+
+|Xref macro
+|*Yes, the `image$` coordinate is required*.
+
+.2+|xref:index.adoc[Page]
+|Xref macro
+|No, the family coordinate isn't required.
+See xref:xref.adoc[].
+
+|Include directive
+|No, the family coordinate isn't required.
+See xref:include-a-page.adoc[].
+
+|xref:partials.adoc[Partial]
+|Include directive
+|*Yes, the `partial$` coordinate is required*.
+See xref:include-a-partial.adoc[].
+|===
+
+[#id-resource]
+== File coordinate
+
+The file coordinate specifies the path, relative to the xref:ROOT:family-directories.adoc[family directory], of the target resource's source file.
+The file coordinate must specify the resource's file extension except when:
+
+* the target resource doesn't have a file extension, such as [.path]_Dockerfile_, *and*
+* the target resource is a xref:partials.adoc[partial] or xref:examples.adoc[example].
+
+The file coordinate for a resource stored at the root of a family directory is the name of the resource's source file and its file extension.
+
+.Resource stored at root of family directory
+[listing#ex-family]
+----
+📂 modules
+  📂 admin
+    📂 pages <.>
+      📄 modes.adoc <.>
+----
+<.> [.path]_pages_ family directory
+<.> Page stored at the root of the [.path]_pages_ directory
+
+For example, the file coordinate for [.path]_modes.adoc_, shown in <<ex-family>>, is `modes.adoc` because it's stored at the root of the [.path]_pages_ family directory.
+
+If the target resource is located in a subdirectory of a family directory, the file coordinate must specify the family-relative directory path to the target resource.
+
+.Resource stored in subdirectory of family directory
+[listing#ex-sub]
+----
+📂 modules
+  📂 admin
+    📂 pages
+      📄 modes.adoc <.>
+      📂 fields <.>
+        📂 level <.>
+          📄 routes.adoc <.>
+          📄 terrain.adoc <.>
+----
+<.> Page stored at the root of the [.path]_pages_ directory
+<.> Subdirectory in the [.path]_pages_ directory
+<.> Subdirectory in the [.path]_fields_ subdirectory
+<.> Page stored in [.path]_level_ subdirectory
+<.> Page stored in [.path]_level_ subdirectory
+
+The page [.path]_terrain.adoc_, shown in <<ex-sub>>, is stored in the [.path]_level_ subdirectory.
+The file coordinate for [.path]_terrain.adoc_ is `fields/level/terrain.adoc`.
+If [.path]_modes.adoc_ (current page) references [.path]_terrain.adoc_ (target resource), the file coordinate specified in the target resource's resource ID is `fields/level/terrain.adoc`.
+If [.path]_terrain.adoc_ (current page) references [.path]_modes.adoc_ (target resource), the file coordinate specified in the target resource's resource ID is `modes.adoc`.
+*Remember, the file coordinate of the target resource is always calculated from the family directory.*
+
+When the target resource and current page are both located in the same subdirectory of a family directory, the relative path token, `./`, can be used to abbreviate the family-relative directory path of the target resource's file coordinate.
+
+.Resources stored in the same subdirectory
+[listing#ex-token]
+----
+📂 modules
+  📂 admin
+    📂 pages
+      📂 fields
+        📂 level
+          📄 routes.adoc <.>
+          📄 terrain.adoc <.>
+----
+<.> Page stored in [.path]_level_ subdirectory
+<.> Page stored in [.path]_level_ subdirectory
+
+The pages [.path]_routes.adoc_ and [.path]_terrain.adoc_, shown in <<ex-token>>, are both stored in the [.path]_level_ subdirectory.
+If [.path]_routes.adoc_ (current page) references [.path]_terrain.adoc_ (target resource), the file coordinate specified in the target resource's resource ID can be specified as `./terrain.adoc` instead of `fields/level/terrain.adoc`.

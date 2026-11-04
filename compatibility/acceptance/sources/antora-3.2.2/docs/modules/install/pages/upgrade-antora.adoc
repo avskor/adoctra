@@ -1,0 +1,116 @@
+= Upgrade Antora
+// https://github.com/npm/cli/releases/tag/
+
+On this page, you'll learn:
+
+* [x] How to upgrade Node.js.
+* [x] How to upgrade Antora globally.
+* [x] How to upgrade the Antora CLI and site generator individually.
+
+NOTE: If you're already on Antora 3.0 and ready to upgrade to Antora {page-component-version}, skip the next section and go directly to <<node,Upgrade Node.js>>.
+
+include::partial$upgrade-checklist.adoc[]
+
+[#node]
+== Upgrade Node.js (optional)
+
+You can use any active LTS or maintenance LTS version of Node.js with Antora, but we recommend using the most recent active LTS version so that you benefit from the latest performance and security enhancements.
+The {url-node-releases}[Node.js release schedule^] shows the active Node.js LTS versions.
+
+To check which Node.js version you have installed, open a terminal and run:
+
+ $ node --version
+
+If you need to upgrade to the active Node.js LTS version, run:
+
+.Linux and macOS
+ $ nvm install --lts
+
+.Windows
+[subs=attributes+]
+ $ nvm install {version-node}
+
+Next, to set the latest version of Node.js as the default for any new terminal, run:
+
+.Linux and macOS
+[subs=attributes+]
+ $ nvm alias default {version-node-major}
+
+.Windows
+[subs=attributes+]
+ $ nvm alias default {version-node}
+
+Now you're ready to upgrade to the latest version of Antora.
+
+== Upgrade Antora locally
+
+If you installed Antora locally, you will use [.path]_package.json_ to manage the version.
+This file tracks which version of Antora you currently have installed.
+You can use the file to specify a different version.
+The `npm i` command will consult this file to determine which packages and which versions of those packages to install.
+
+. Switch to your playbook project where your Antora playbook file (e.g., [.path]_antora-playbook.yml_) is stored.
+
+. Open the [.path]_package.json_ file.
+
+. Change the version number of the CLI and site generator.
++
+[,json,subs=attributes+]
+----
+{
+  "devDependencies": {
+    "@antora/cli": "{page-component-version}",
+    "@antora/site-generator": "{page-component-version}"
+  }
+}
+----
++
+TIP: Unless you're installing a prerelease, we recommend specifying only the major.minor version number so you receive the latest patch update.
+
+. Save the file.
+
+. (Optional) Remove the [.path]_node_modules_ folder and [.path]_package-lock.json_ file.
+Although removing the [.path]_node_modules_ folder is not always required, doing so ensures you get a fresh installation.
+If you're using at least npm 8, this step is usually unnecessary.
+
+. Upgrade the Antora packages by running the `npm i` command.
+
+ $ npm i
+
+You've now upgraded to the latest version of Antora.
+
+As an alternative to removing the [.path]_node_modules_ folder, you can use `npm upgrade`, which closely mimics a fresh installation.
+
+== Upgrade Antora globally
+
+If you installed Antora globally, you can upgrade them by reinstalling the packages:
+
+In a terminal, run:
+
+[subs=attributes+]
+ $ npm i -g antora@{page-component-version}
+
+The `npm i` command will remove any existing packages with the same name and install them anew.
+
+.Do I have Antora installed globally?
+****
+To list your globally installed Node.js packages, type the following command in your terminal:
+
+ $ npm ls -g --depth 0
+
+If you've installed Antora globally, you'll see entries for the Antora CLI and Antora site generator packages listed in the terminal output alongside their version numbers.
+
+.List of globally installed Node.js packages
+[subs=attributes+]
+....
+/home/user/.nvm/versions/node/v{version-node}/lib
+├── @antora/cli@{release-version}
+├── @antora/site-generator@{release-version}
+├── npm@{version-npm}
+└── ...
+....
+****
+
+== Learn more
+
+Review xref:ROOT:whats-new.adoc[What's New in Antora] for the latest features and potential breaking changes.

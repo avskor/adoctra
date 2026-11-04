@@ -1,0 +1,211 @@
+= Attachments
+:page-aliases: asciidoc:link-attachment.adoc
+
+Attachments are downloadable resources, such as PDFs or the ZIP archives of sample projects, that are stored in an xref:ROOT:attachments-directory.adoc[_attachments_ family directory].
+You create links to attachments using the xref macro.
+Although not as common, an example file can be reclassified as an attachment to make it downloadable as well.
+Unlike images, attachments cannot be inserted directly into a page.
+
+== AsciiDoc xref macro for attachments
+
+An attachment can be cross referenced from pages, other resources, and navigation files using an xref:xref.adoc#xref-macro[AsciiDoc xref macro] and the attachment's resource ID.
+
+<<ex-base>> shows the structure of an xref macro with an attachment's fully qualified resource ID.
+
+.Xref macro structure for referencing an attachment
+[#ex-base]
+----
+xref:version@component:module:attachment$file-coordinate-of-attachment.ext[optional link text]
+----
+
+At a minimum, an xref macro consists of the macro's prefix (`xref:`), the resource ID of the target attachment, and a set of square brackets (`[]`).
+[[target]]The [.term]*target attachment* is the attachment source file that's being referenced by the current page.
+The target attachment is referenced by assigning its resource ID to an xref macro in the content of the current page.
+[[current]]The [.term]*current page* is the page source file containing the xref macro that references the target attachment.
+
+When referencing an attachment, the xref macro is structured and behaves much like when it's assigned the resource ID of a page, with three differences:
+
+* The xref:resource-id.adoc[resource ID of an attachment] must specify the `attachment$` xref:resource-id-coordinates.adoc#id-family[family coordinate] when an attachment is assigned to an xref macro, otherwise Antora will assume the resource ID is that of a page at runtime.
+* A fragment (element ID) can't be appended to the end of the attachment's resource ID.
+* Attachments don't have default reference text.
+If <<link-text,link text>> isn't specified in the xref macro, the target of the xref is displayed as the link text.
+
+How many of the target attachment's xref:resource-id-coordinates.adoc[resource ID coordinates] you need to specify depends on the component version and module of the target attachment in relation to the current page.
+
+[#make-link]
+== Make a link to an attachment
+
+Let's break down the xref macro and resource ID coordinates you need to create a cross reference to an attachment (the <<target,target attachment>>) from a page that you're currently editing (the <<current,current page>>).
+
+. In your IDE or text editor, open the page where you want to create a cross reference to an attachment.
+For this step and the subsequent steps, let's assume you've opened the source file for a page named [.path]_satellites.adoc_.
+[.path]_satellites.adoc_ is the current page.
++
+.satellites.adoc (current page)
+[listing]
+----
+= System Satellites
+
+The group maintains five satellites.
+----
+
+. Select the place in the content flow of the current page where you want the link to the target attachment to be displayed.
+Enter the name of the xref macro followed by one colon, `xref:`.
++
+.satellites.adoc (current page)
+[listing#ex-prefix,subs="+quotes"]
+----
+The group maintains five satellites.
+See the **xref:**
+----
+
+. Let's reference the source file of an attachment with the filename [.path]_flight-patterns.pdf_.
+Both [.path]_flight-patterns.pdf_ and [.path]_satellites.adoc_ belong to the same component version and module.
+Therefore, only the `attachment$` family coordinate and xref:resource-id-coordinates.adoc#id-resource[file coordinate] of the target attachment needs to be assigned to the xref macro in <<ex-id>>.
+Directly after the macro's prefix, enter the resource ID of the target attachment.
++
+--
+.satellites.adoc (current page)
+[listing#ex-id,subs="+quotes"]
+----
+The group maintains five satellites.
+See the xref:**attachment$flight-patterns.pdf**
+----
+
+The file coordinate for [.path]_flight-patterns.pdf_ consists solely of its filename and file extension because it's stored at the root of the [.path]_attachments_ directory.
+The target attachment's file coordinate is always calculated from the root of the [.path]_attachments_ family directory where the attachment is stored.
+If the target attachment is stored in a subdirectory of an [.path]_attachments_ directory, its file coordinate must specify the __attachments__-relative directory path, filename, and file extension.
+(See <<ex-component-version-base>> for an example.)
+--
+
+. Directly after the resource ID of the target attachment, enter an opening square bracket (`[`), then a closing square bracket (`]`).
++
+.satellites.adoc (current page)
+[listing,subs="+quotes"]
+----
+The group maintains five satellites.
+See the xref:attachment$flight-patterns.pdf**[]**
+----
+
+. Let's add some link text to the xref macro because, unlike pages, attachments don't have default reference text.
+Between the macro's square brackets, specify the text you want displayed as a link to the target attachment when the current page is published.
++
+--
+.satellites.adoc (current page)
+[listing,subs="+quotes"]
+----
+The group maintains five satellites.
+See the xref:attachment$flight-patterns.pdf[**flight pattern schedule**]
+----
+
+Link text is optional.
+See <<link-text>> for more information.
+--
+
+. After the closing square bracket (`]`) of the xref macro, continue entering your content.
++
+.satellites.adoc (current page)
+[listing]
+----
+The group maintains five satellites.
+See the xref:attachment$flight-patterns.pdf[flight pattern schedule] for more details.
+----
+
+That's it!
+You've created a cross reference to the target attachment, [.path]_flight-patterns.pdf_, from the current page, [.path]_satellites.adoc_, using the AsciiDoc xref macro.
+
+While the previous steps use a target attachment and current page that belong to the same component version and module, you can reference any attachment in your site, regardless of the component version and module it belongs to, from any page.
+You'll need to specify xref:resource-id-coordinates.adoc[additional resource ID coordinates] when the target attachment and current page don't belong to the same module or component version.
+
+.Resource ID patterns for a target attachment in relation to a current page
+[#ex-component-version-base]
+----
+xref:attachment$target-attachment-filename.ext[link text] <.>
+
+xref:attachment$path/to/target-attachment-filename.ext[link text] <.>
+
+xref:attachment$./target-attachment-filename.ext[link text] <.>
+
+xref:module:attachment$file-coordinate-of-attachment.ext[link text] <.>
+
+xref:version@component:module:attachment$file-coordinate-of-attachment.ext[link text] <.>
+
+xref:component:module:attachment$file-coordinate-of-attachment.ext[link text] <.>
+
+xref:version@module:attachment$file-coordinate-of-attachment.ext[link text] <.>
+
+xref:version@attachment$file-coordinate-of-attachment.ext[link text] <.>
+----
+<.> Assign the `attachment$` family coordinate and file coordinate of the target attachment to the xref macro when the target attachment and current page belong to the same component version and module.
+The target attachment's file coordinate is its filename and file extension when the target attachment is stored at the root of an _attachments_ family directory.
+<.> If the target attachment is stored in a subdirectory of an _attachments_ directory, the target attachment's file coordinate must specify its __attachments__-relative directory path, filename, and file extension.
+<.> The file coordinate of the target attachment can be abbreviated with the relative path token (`./`) when the target attachment and current page are stored in subdirectories with parallel family-relative directory paths.
+_This is an advanced use case._
+<.> Assign the module, `attachment$`, and file coordinates of the target attachment  to the xref macro when the target attachment and current page don't belong to the same module, but they do belong to the same component version.
+<.> Assign the version, component, module, `attachment$`, and file coordinates of the target attachment to the xref macro when the target attachment and current page don't belong to the same component version.
+<.> If the version coordinate isn't specified, Antora uses the xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version] of the target attachment's component to complete the resource ID at runtime.
+This behavior only applies when the target attachment and current page don't belong to the same component version.
+<.> Assign the version, module, `attachment$`, and file coordinates of the target attachment to the xref macro when the target attachment doesn't belong to the same version and module as the current page, but it does belong to the same component as the current page.
+<.> Assign the version, `attachment$`, and file coordinates of the target attachment to the xref macro when the target attachment doesn't belong to the same version as the current page, but it does belong to the same component and module as the current page.
+
+Attachment links and page links share many similarities.
+See xref:page-links.adoc[] for more examples that show how to construct the resource ID of the target resource when it doesn't belong to the same xref:page-links.adoc#modules[module], xref:page-links.adoc#component-versions[component version], or xref:page-links.adoc#versions[version] as the current page.
+Just remember to always add the `attachment$` family coordinate to the target attachment's resource ID when you assign it to an xref macro.
+
+[#link-text]
+== Link text for attachments
+
+You can specify link text between the square brackets of an AsciiDoc xref macro, or you can leave the square brackets of the xref macro empty.
+<<ex-no-text>> shows an xref macro that's assigned the resource ID of an attachment.
+No link text has been specified between the xref macro's square brackets.
+
+.Xref macro without specified link text
+[#ex-no-text]
+----
+Download xref:attachment$practice-project.zip[] to try it out!
+----
+
+Because the xref macro in <<ex-no-text>> isn't assigned link text, Antora will display the xref target as the link text.
+
+....
+Download attachment$practice-project.zip to try it out!
+....
+
+Unlike pages, attachments don't have xref:link-content.adoc#default[default reference text], so it's always good to specify link text to ensure a good reader experience.
+
+You can specify link text by entering it between the square brackets of the xref macro.
+
+.Xref macro with specified link text
+[#ex-text]
+----
+Download xref:attachment$practice-project.zip[the sample project] to try it out!
+----
+
+When link text is specified in the xref macro, Antora displays the specified content as the link to the attachment in the published page.
+
+[#include-attachment]
+== Include an attachment
+
+Instead of linking to an attachment, you can include it into an AsciiDoc page or partial using the include directive.
+The only restriction is that the file must be a text file.
+Storing a text file as an attachment allows it to be included while still being downloadable.
+
+Here's the full syntax that shows how to include the text of an attachment into a page.
+
+[subs=+quotes]
+----
+\include::version@component:module:**attachment$**name-of-file.ext[optional attributes]
+----
+
+The `attachment$` segment tells Antora to look for the file in the attachments folder.
+If the attachment lives in the same component version and module as the page, the target can start with the `attachment$` segment.
+
+----
+\include::attachment$name-of-file.ext[optional attributes]
+----
+
+You can use the same attachment in both an xref macro and an include directive.
+
+== Learn more
+
+You can also create links to attachments in xref:navigation:reference-resources.adoc[navigation files] and from xref:image-xref-and-link.adoc#attachment[image macros].

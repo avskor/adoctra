@@ -1,0 +1,120 @@
+= Class-Based Extension
+
+If your extension is going to listen for multiple events and keep track of state, you may want to consider defining your extension as a JavaScript class.
+A class is a template for creating an object.
+It encapsulates both data and the methods that operate on that data.
+This encapsulation can help keep your extension more organized.
+The challenge is to work out how to define a class in such a way that it can be used as an Antora extension.
+This page shows you how.
+
+== Extension class structure
+
+The basic structure of a class-based extension is as follows:
+
+* Define a class named after your extension (e.g., MyExtension)
+* Add a static register method that Antora can call
+* Define listeners as instance methods (e.g., `onPlaybookBuilt ({ playbook })`)
+* Add a constructor that accepts the generator context and registers listeners from the class
+* Export the class definition
+
+Here's the skeleton of our extension class:
+
+[,js]
+----
+class MyExtension {
+}
+----
+
+Let's fill in the details.
+
+== The register method and instantiation
+
+Antora won't create an instance of your class, but you can use the static register method on the class to do so.
+If you're coming from Java, you can think of it like the main method of the class.
+Here's how that entry point looks:
+
+[,js]
+----
+class MyExtension {
+  static register () {
+    new MyExtension(this)
+  }
+}
+
+module.exports = MyExtension
+----
+
+All Antora will see is the register method on the exported class definition, which Antora will invoke to get the process started.
+The remainder of the work happens in the extension instance.
+
+Notice how the static register method has transitioned us from a static function to an instance of the extension class.
+The register method passes the generator context to constructor of the extension class so it can access and store a reference to it.
+
+== Listener methods
+
+Listeners are defined as methods on the extension class.
+They will get invoked just like any other listener function, only they will have a reference to both the current instance of the class (`this`) and the generator context (`this.context`).
+That way, they can access both properties on the extension (extension state) and context variables in the generator.
+Here's the extension class again with the listeners defined as methods:
+
+[,js]
+----
+class MyExtension {
+  static register () {
+    new MyExtension(this)
+  }
+
+  onPlaybookBuilt () {
+    this.startTime = +new Date
+  }
+
+  onSitePublished () {
+    const elapsed = (+new Date - this.startTime) / 1000
+    const logger = this.context.getLogger('my-extension')
+    logger.info(`elapsed time: ${elapsed}s`)
+  }
+}
+
+module.exports = MyExtension
+----
+
+Now all that's left is to wire these listeners to events.
+
+== The constructor and adding listeners
+
+The next step is to create a constructor the accepts the generator context and adds listeners.
+Here's the extension class again with the constructor:
+
+[,js]
+----
+class MyExtension {
+  static register () {
+    new MyExtension(this)
+  }
+
+  constructor (generatorContext) {
+    ;(this.context = generatorContext)
+      .on('playbookBuilt', this.onPlaybookBuilt.bind(this))
+      .on('sitePublished', this.onSitePublished.bind(this))
+  }
+
+  onPlaybookBuilt () {
+    this.startTime = +new Date
+  }
+
+  onSitePublished () {
+    const elapsed = (+new Date - this.startTime) / 1000
+    const logger = this.context.getLogger('my-extension')
+    logger.info(`elapsed time: ${elapsed}s`)
+  }
+}
+
+module.exports = MyExtension
+----
+
+When adding each listener, it must be bound to the extension instance (i.e., `this`).
+Otherwise, the listeners won't be able to access the properties on the extension instance.
+The listener can still access the generator context using the `context` property, to which the constructor assigns the generator context.
+
+As you have seen, using a class-based extension can keep your extension code more organized.
+It also allows your extension to take advantages of other object-oriented patterns, such as inheritance, composition, and delegation.

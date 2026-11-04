@@ -1,0 +1,59 @@
+= Antora Extensions
+
+The `antora` key can be used to register Antora extensions.
+
+For more information about writing and using Antora extensions, see xref:extend:extensions.adoc[].
+
+== Install extension code
+
+Before registering an extension in your playbook, you need to install the extension code.
+You can install it globally, declare it as a dependency of the project, or add the extension script to the playbook project.
+
+[#extensions-key]
+== extensions key
+
+An Antora extension is registered using the `extensions` key.
+The `extensions` key accepts a list of node module names (i.e., npm package names) and relative or absolute filesystem paths.
+An entry can also be a map to specify additional configuration.
+In this case, the require path is specified using the `require` key.
+
+IMPORTANT: When registering an Antora extension, make sure you're using the nested key `antora.extensions` and not `asciidoc.extensions`.
+The latter key is for registering Asciidoctor extensions, which use a different extension facility.
+
+.antora-playbook.yml
+[,yaml]
+----
+antora:
+  extensions:
+  - name-of-node-module
+  - require: ./path/to/extension.js
+    name: value
+----
+
+IMPORTANT: If you're requiring a Node.js module (e.g., a package installed from npmjs.com) whose name ends with a file extension, such as `.js`, you must append a trailing forward slash.
+This suffix tells Antora to resolve the request as the name of a module, not as a local file.
+Without this suffix, Antora assumes the request is a local file.
+If it's not a local file, this can result in the error message _Cannot find module_.
+If the request is already a local file, the suffix is not needed.
+
+[#configure-extension-only]
+== Configure extension only
+
+If you want to configure an extension, but not enable it, you must use the map-style entry and set `enabled: false`.
+
+.antora-playbook.yml
+[,yaml]
+----
+antora:
+  extensions:
+  - require: '@antora/lunr-extension'
+    enabled: false
+    index_by_heading: true
+----
+
+You can then enable the extension using the `--extension` CLI option when invoking the *antora* commmand:
+
+ $ npx antora --extension @antora/lunr-extension antora-playbook.yml
+
+You can refer to the extension by an alias instead of the require path by assigning a value to the `id` key on the extension entry.
+For more information about registering and enabling extensions, refer to xref:extend:enable-extension.adoc[].

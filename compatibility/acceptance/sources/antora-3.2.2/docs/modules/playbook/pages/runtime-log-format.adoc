@@ -1,0 +1,208 @@
+= Log Format
+
+The log `format` key specifies the format of the log messages.
+
+IMPORTANT: The log format, and all other log settings, are not honored if a fatal error is thrown before Antora fully configures the playbook.
+Instead, the error message is printed directly to standard error (STDERR).
+
+[#default]
+== Default log format
+
+Explicitly assigning a value to the `format` key is optional.
+When `format` isn't set, Antora assigns one of the key's accepted values, either `json` or `pretty`, based on the environment it detects at runtime.
+Antora assigns the value `pretty` to the `format` key when Antora is running in a <<ci,continuous integration environment (CI=true)>>, the `IS_TTY` environment variable is `true`, or the terminal is interactive (TTY) and the `IS_TTY` environment variable is not `false`.
+In all other cases, Antora uses the `json` value.
+
+[#format-key]
+== format key
+
+The `format` key is configured under the xref:configure-runtime.adoc[runtime and log] keys in a playbook.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  log:
+    format: json
+----
+
+The `format` key accepts the following built-in values:
+
+json:: _Default if the `CI` environment variable is not set (not running in a CI environment variable), `IS_TTY=false`, or the terminal is not interactive._
+The structured log messages are emitted in JSON format to the standard out stream (STDOUT) so they can be piped to other applications and processed.
+The output adheres to the https://jsonlines.org[JSON Lines] (jsonl) text format (also known as Newline delimited JSON, or ndjson).
+Each message is output on its own line using UTF-8 encoding and each line is a valid JSON value.
+The levels of the messages are expressed as labels, _error_, _info_, etc., by default.
+The level format can be changed to numbers by setting the <<level-format-key,log.level_format key>> and assigning the value `number` to it.
+
+pretty:: _Default if `CI=true`, `IS_TTY=true`, or the terminal is interactive._
+The log messages are formatted for readability and emitted to the standard error stream (STDERR).
+
+The `format` key can also be specified using the <<format-option,--log-format option>> or xref:playbook:environment-variables.adoc#log-format[ANTORA_LOG_FORMAT variable].
+
+.CI environment variable
+[#ci]
+****
+Continuous integration (CI) environments, such as Netlify, GitHub Actions, GitLab CI, and many others, typically set the continuous integration environment variable (`CI`) to `true`.
+Antora uses this environment variable to determine when it's running in a CI environment and change its behavior accordingly.
+****
+
+[#pretty]
+=== Prettified
+
+To emit formatted log messages, assign the `pretty` value to the `format` key in your playbook.
+
+.Assign pretty value to format key
+[#ex-pretty,yaml]
+----
+runtime:
+  log:
+    format: pretty
+----
+
+Now when you run Antora, it will emit log messages to STDERR.
+Antora tries to be smart about the use of color.
+When Antora writes log messages to a standard stream, such as STDERR, it will colorize the prettified log messages if the terminal supports color.
+
+If you run Antora from your terminal, the formatted log messages are displayed there.
+<<result-pretty>> shows a prettified log message (without color) for an xref error.
+
+.Log message output using pretty format
+[listing#result-pretty]
+----
+[16:03:00.691] ERROR (asciidoctor): target of xref not found: a-page.adoc
+    file: /home/computer/my-projects/project/docs/modules/module-name/pages/index.adoc:54 <.>
+    source: /home/computer/my-projects/project (refname: my-branch <worktree>, start path: docs)
+----
+<.> To display the line number where an error occurs, set the xref:asciidoc-sourcemap.adoc[sourcemap key].
+
+You can prevent Antora from colorizing the prettified log messages by setting the `NO_COLOR` environment variable when you run Antora.
+
+ $ NO_COLOR=1 antora antora-playbook.yml
+
+Antora will never apply color to the log message if the `NO_COLOR` environment variable is set, regardless of the capabilities of the terminal.
+If you want to force Antora to apply color, even if it doesn't detect color support in the terminal, set the `FORCE_COLOR` environment variable instead (e.g., `FORCE_COLOR=1`).
+
+[#json]
+=== JSON
+
+To emit structured log messages in JSON format, assign the `json` value to the `format` key in your playbook.
+
+.Assign json value to format key
+[#ex-json,yaml]
+----
+runtime:
+  log:
+    format: json
+----
+
+When Antora runs, any log messages are emitted to STDOUT.
+<<result-json>> shows a structured log message about an xref error.
+
+.Log message output in JSON
+[#result-json,json]
+----
+{"level":"error","time":1627682525543,"name":"asciidoctor","file":{"path":"/home/computer/my-projects/project/docs/modules/module-name/pages/index.adoc","line":54},"source":{"url":"https://gitlab.com/org/project.git","worktree":"/home/computer/my-projects/project","refname":"my-branch","startPath":"docs"},"msg":"target of xref not found: a-page.adoc"}
+----
+
+A structured log message is made up of a series of key-value pairs.
+Each key indicates a log message field, such as _level_, and each value records the logging information for that field, such as _error_.
+
+==== Process JSON messages
+
+JSON formatted messages can be directed to a separate application or sent to log ingestion services for parsing, search, and analysis.
+A popular tool for working with JSON messages is jq.
+https://stedolan.github.io/jq[jq] is a JSON processor; a command line tool to select, filter, and reshape JSON messages.
+
+Here's an example that shows how to pipe JSON formatted log messages generated by Antora to jq.
+
+ $ antora antora-playbook.yml | jq
+
+<<result-jq>> shows the result of structured log message for an xref error that's been piped to jq to make it easier to read.
+
+.Log message output piped to jq
+[#result-jq,json]
+----
+{
+  "level": "error",
+  "time": 1627683497637,
+  "name": "asciidoctor",
+  "file": {
+    "path": "/home/user/projects/project/docs/modules/module-name/pages/index.adoc",
+    "line": 54
+  },
+  "source": {
+    "url": "https://gitlab.com/org/project.git",
+    "worktree": "/home/user/projects/project",
+    "refname": "my-branch",
+    "startPath": "docs"
+  },
+  "msg": "target of xref not found: a-page.adoc"
+}
+----
+
+You can also use jq to filter messages.
+For example, if you only want to see xref errors from Asciidoctor, ignoring all other errors, you can add a select filter to the jq command.
+
+ $ antora --log-level error antora-playbook.yml | \
+   jq 'select(.name == "asciidoctor" and (.msg | contains(" not found:")))'
+
+If you're only building part of your site, and you want to filter out warnings to "`offsite`" pages, you can add an ignore filter to the jq command.
+
+ $ antora antora-playbook.yml | \
+   jq 'select(.msg | contains(" not found: missing-component-name:") | not)'
+
+You can pipe to jq multiple times to select or ignore additional messages.
+See the reference documentation for the https://stedolan.github.io/jq/manual/#select%28boolean_expression%29[select] function to learn more about how to use it.
+
+If you want the result set from jq to be displayed in prettified format, you can pipe that result to `pino-pretty`.
+Since `pino-pretty` is a dependency of Antora, you can invoke it using `npx`.
+
+ $ antora antora-playbook.yml | jq -cM | npx pino-pretty
+
+The `-c` option tells jq to keep the output in JSON lines format and the `-M` option turns off color in the data passed to `pino-pretty`.
+The prettified messages aren't quite as pretty as the output Antora produces, though it is possible to customize pino-pretty to achieve a similar result.
+
+[#format-option]
+== Log format option
+
+You don't have to modify the playbook file directly to set the `format` key.
+You can use the `--log-format` option from the xref:cli:options.adoc#log-format[CLI].
+
+ $ antora --log-format json antora-playbook.yml
+
+The `--log-format` option overrides the value assigned to the `format` key or to the xref:playbook:environment-variables.adoc#log-format[ANTORA_LOG_FORMAT environment variable].
+
+However, recall that if you pipe the output to another program, and the log format has not been specified, Antora will automatically switch to the JSON format.
+
+[#level-format-key]
+== level_format key
+
+When the log format is JSON (`json`), each log level correlates to a label and a number.
+The JSON format expresses a level as a label, such as _error_ or _info_, by default.
+However, some tools require the level to be a number.
+The format of the level can be configured with the `level_format` key.
+The `level_format` key is configured under the xref:configure-runtime.adoc[runtime and log] keys in a playbook.
+
+.Assign number value to level_format key
+[#ex-number,yaml]
+----
+runtime:
+  log:
+    format: json
+    level_format: number
+----
+
+The `level_format` key accepts the built-in values `label` and `number`.
+The default value is `label`.
+If the log format is `pretty`, the value assigned to the `level_format` key is ignored and levels are always expressed as labels.
+
+[#level-format-option]
+== Level format option
+
+You don't have to modify the playbook file directly to set the `level_format` key.
+You can use the `--log-level-format` option from the xref:cli:options.adoc#log-level-format[CLI].
+
+ $ antora --log-format json --log-level-format number antora-playbook.yml
+
+The `--log-level-format` option overrides the value assigned to the `level_format` key or to the xref:playbook:environment-variables.adoc#log-level-format[ANTORA_LOG_LEVEL_FORMAT environment variable].

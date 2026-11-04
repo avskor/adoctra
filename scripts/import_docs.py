@@ -104,7 +104,10 @@ def main(argv=None):
     for page in sorted(docs.glob("modules/*/pages/**/*.adoc")):
         module = page.relative_to(docs / "modules").parts[0]
         relative = page.relative_to(docs / "modules" / module / "pages")
-        identifier = case_id(args.prefix, module, relative)
+        source = f"sources/{args.origin}/{page.relative_to(args.checkout).as_posix()}"
+        # A page another manifest already has keeps its id there.
+        identifier = next((c["id"] for c in manifests["body"]["cases"] if c["source"] == source),
+                          case_id(args.prefix, module, relative))
         files = {page: None, **{path: target for target, path in
                                 resources(docs, module, page.read_text(encoding="utf-8")).items()}}
         names = {}
@@ -119,7 +122,6 @@ def main(argv=None):
             shutil.copyfile(path, target)
             names[path] = (name, {"sha256": hashlib.sha256(data).hexdigest(),
                                   "origin": args.origin, "upstream_path": upstream})
-        source = names[page][0]
         case = {"id": identifier, "category": "document", "source": source, "attributes": attributes}
         resource_map = {target: names[path][0] for path, target in files.items() if target is not None}
         if resource_map:

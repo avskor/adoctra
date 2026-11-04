@@ -7,18 +7,20 @@ import unittest
 import acceptance
 import import_docs
 
-# Pages per origin: the full Asciidoctor and AsciiDoc language documentation
-# (every `docs/modules/*/pages/**/*.adoc` of the pinned revision, imported by
-# import_docs.py) and a selection of Spring Framework pages.
-PAGES = {"asciidoctor-docs-2.0.23": 78, "asciidoc-lang-0.3.0": 202, "spring-framework-6.2.0": 6}
+# Pages per origin: the full Asciidoctor, AsciiDoc language, Asciidoctor PDF
+# and Antora documentation (every `docs/modules/*/pages/**/*.adoc` of the
+# pinned revision, imported by import_docs.py) and a selection of Spring
+# Framework pages.
+PAGES = {"asciidoctor-docs-2.0.23": 78, "asciidoc-lang-0.3.0": 202, "asciidoctor-pdf-2.3.27": 96,
+         "antora-3.2.2": 205, "spring-framework-6.2.0": 6}
 # Full documentation pages outside the semantic profile's schema (they stay in
 # the body, structure and visual profiles): floating titles, a thematic break,
-# a bibliography anchor, diagnostics and raw markup.
+# a bibliography anchor, diagnostics and raw markup, image options.
 SEMANTIC_EXCLUSIONS = {
     "asciidoc-lang-syntax-quick-reference", "asciidoc-lang-attributes-counters",
     "asciidoc-lang-blocks-breaks", "asciidoc-lang-pass-pass-macro",
     "asciidoc-lang-sections-bibliography", "asciidoc-lang-sections-titles-and-levels",
-    "asciidoc-lang-subs-apply-subs-to-text",
+    "asciidoc-lang-subs-apply-subs-to-text", "asciidoctor-pdf-convert-to-pdf",
 }
 
 
@@ -38,7 +40,8 @@ class DocumentationCorpusTests(unittest.TestCase):
         for origin, count in PAGES.items():
             record = self.body["origins"][origin]
             self.assertRegex(record["revision"], r"^[0-9a-f]{40}$")
-            self.assertTrue(record["source"].endswith("/tree/" + record["revision"]))
+            # The tree of the pinned commit (or its docs directory).
+            self.assertRegex(record["source"], "/tree/" + record["revision"] + "(/docs)?$")
             self.assertIn(record["notice"]["path"], self.body["files"])
             self.assertIn(record["configuration"], self.body["files"])
             pages = [c for c in self.documents if self.body["files"][c["source"]]["origin"] == origin]
@@ -101,7 +104,12 @@ class DocumentationCorpusTests(unittest.TestCase):
                                 (case["id"], target))
             for value in case["attributes"].values():
                 self.assertNotRegex(value, r"\{[^}]+\}")
-                self.assertFalse(value.endswith("@"))
+                # A soft default keeps antora.yml's `@`, which the CLI
+                # accepts; the selected Asciidoctor and Spring pages pass
+                # hard values (from before soft overrides were supported).
+                if origin_of := self.body["files"][case["source"]]["origin"]:
+                    if origin_of in {"asciidoctor-docs-2.0.23", "spring-framework-6.2.0"}:
+                        self.assertFalse(value.endswith("@"))
 
 
 if __name__ == "__main__":

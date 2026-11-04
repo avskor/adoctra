@@ -1,0 +1,472 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora calls listeners synchronously in the order they are registered. This is true even if a listener is marked asynchronous using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "async"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword or the listener returns a Promise. Antora will await the completion of the listener invocation before calling the next listener (and thus before continuing its own operation). This behavior differs from the behavior of the built-in NodeEmitter in Node.js."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The benefit of marking a listener as async, or returning a Promise, is that the listener can perform asynchronous operations. Of course, these operations will all be resolved before Antora proceeds, so they are made to behave in a synchronous fashion outside the boundaries of the function."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A Promise ends when the program calls "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "await"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on it. Obviously, that requirement bubbles all the way up to the top-level function of the program. Antora hides away this detail by allowing you to either define an extension listener as async or return a Promise."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s look at an example of fetching a file from a URL and publishing it to the site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const https = require('node:https')\n\nmodule.exports.register = function () {\n  this.on('beforePublish', async ({ siteCatalog }) => {\n    const contents = await new Promise((resolve, reject) => {\n      const buffer = []\n      https\n        .get('https://gitlab.com/antora/antora/-/raw/HEAD/README.adoc', (response) => {\n          response.on('data', (chunk) => buffer.push(chunk.toString()))\n          response.on('end', () => resolve(buffer.join('').trimEnd()))\n        })\n        .on('error', reject)\n    })\n    siteCatalog.addFile({ contents: Buffer.from(contents), out: { path: 'README.adoc' } })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "fetch-and-publish-readme-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that we have added the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "async"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword to the listener function. This allows us to the use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "await"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword inside the function."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As an exercise, you could try retrieving a file from each branch of each content source and adding it to the published site. To give you a hint, you would need to access the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbook"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " variable to get a list of content sources."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you don’t want Antora to wait for the completion of your asynchronous listener, you can either return an empty promise (e.g, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "return Promise.resolve()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), or you can remove the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "async"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword from your listener. However, if you do so, you’ll need to add a listener that listens for an event that is emitted later in the generator, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextClosed"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", so you can resolve the promise before Antora completes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s look at the same example as earlier, except it downloads the README.adoc in the background while the site is being generated. To help manage the state of the pending promise, it has also been rewritten as a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "class-based extension"
+                  }
+                ],
+                "kind": "xref",
+                "target": "class-based-extension.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const https = require('node:https')\n\nclass FetchAndPublishReadmeExtension {\n  // alternate way to export register method\n  //static register ({ config }) {\n  //  return new FetchAndPublishReadmeExtension(this, config)\n  //}\n\n  constructor (context, config) {\n    ;(this.context = context)\n      .on('playbookBuilt', this.onPlaybookBuilt.bind(this))\n      .on('beforePublish', this.onBeforePublish.bind(this))\n    this.readmeUrl = config.readmeUrl || 'https://gitlab.com/antora/antora/-/raw/HEAD/README.adoc'\n    this.contentsPromise = undefined\n  }\n\n  onPlaybookBuilt () {\n    this.contentsPromise = new Promise((resolve, reject) => {\n      const buffer = []\n      https\n        .get(this.readmeUrl, (response) => {\n          response.on('data', (chunk) => buffer.push(chunk.toString()))\n          response.on('end', () => resolve(buffer.join('').trimEnd()))\n        })\n        .on('error', reject)\n    })\n  }\n\n  async onBeforePublish ({ siteCatalog }) {\n    const contents = await this.contentsPromise\n    siteCatalog.addFile({ contents: Buffer.from(contents), out: { path: 'README.adoc' } })\n  }\n}\n\nFetchAndPublishReadmeExtension.register = function ({ config }) {\n  return new FetchAndPublishReadmeExtension(this, config)\n}\n// or\n//FetchAndPublishReadmeExtension.register = (context, { config }) => new FetchAndPublishReadmeExtension(context, config)\n\nmodule.exports = FetchAndPublishReadmeExtension"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "background-fetch-and-publish-readme-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that only the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "onBeforePublish"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " listener function is async so it can wait for the promise started by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "onPlaybookBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " listener function. The extension also now accepts the URL of the README as a configuration key named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "readme_url"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "define-async-listeners",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Define Async Listeners"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When an listener is defined as async, you can use async functions. However, it’s very important that any call to an async functions is proceed by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "await"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword (i.e., awaited). Otherwise, it may continue to run even after Antora’s context is already closed. Running code outside of Antora’s context can result in unexpected behavior, especially if it uses resources managed by Antora, such as the logger."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example demonstrates how to await an async function call. (Any function that returns a Promise is implicitly async)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('contentClassified', async () => {\n    const logger = this.getLogger('my-extension')\n    await doWork(logger, 'task completion message') "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n    logger.info('Event listener finished')\n  })\n}\n\nfunction doWork (logger, message) {\n  return new Promise((resolve) =>\n    setTimeout(() => {\n      // do some async work...\n      logger.info(message)\n      resolve()\n    }, 500)\n  )\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "call-async-function-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Without the await keyword, the function is called, but the code the follows continues to be executed. If this happens, Antora’s context may be closed before the logger is used by the async function. You would then see a message that the logger is being reinitialized."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "use-async-functions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Use Async Functions"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Asynchronous Listeners"
+      }
+    ]
+  }
+}

@@ -1,0 +1,177 @@
+= Assign Attributes to a Site
+
+You can apply attributes to all of the pages in a site by declaring them in a site's playbook file.
+
+== Site attributes
+
+Attributes declared in a playbook are referred to as [.term]*site attributes*.
+These attributes are set and available (or unavailable if unset) to all the pages in the site.
+The pages in a site are defined as all pages that Antora finds in the content sources specified in the playbook for a single run of Antora.
+Site attributes can be xref:page:attributes.adoc[built-in, custom, and page attributes].
+The <<precedence-rules,attribute precedence rules>> determine whether site attributes can be overridden at a more granular level.
+
+In addition to being declared site-wide in a playbook, attributes can be xref:ROOT:component-attributes.adoc[defined per component version] in an [.path]_antora.yml_ file or xref:page:attributes.adoc[directly on a page in the page's header].
+However, when an attribute is hard set or hard unset in the site's playbook, it overrides any subsequent declarations of the same attribute in a component version descriptor or page.
+Site attributes can also be xref:cli:options.adoc#attribute[configured from the CLI].
+
+include::partial$playbook-vs-descriptor.adoc[tags=**;!note-for-extension-writers]
+
+[#attributes-key]
+== attributes key
+
+Site attributes are mapped under the `attributes` key in a playbook.
+The attributes key must be set under the `asciidoc` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+asciidoc:
+  attributes:
+    hide-uri-scheme: ''
+    page-team: Coco B
+    table-caption: ~
+    listing-caption: Snippet@
+----
+
+Site attributes are applied and available to all of a site's pages according to the <<precedence-rules,attribute precedence rules>>.
+
+[#hard-set]
+== Set attributes in the playbook
+
+Each site attribute is entered on its own line as a key-value pair under the `attributes` key.
+
+.Declare attributes in the playbook
+[#ex-hard-set,yaml]
+----
+asciidoc: # <.>
+  attributes: # <.>
+    listing-caption: Snippet # <.>
+    hide-uri-scheme: '' # <.>
+    page-team: Coco B # <.>
+    db: graphical-peaks-pack.db # <.>
+----
+<.> Enter the `asciidoc` key, followed by a colon (`:`), and press kbd:[Enter].
+<.> The `attributes` key is nested under the `asciidoc` key.
+Enter `attributes`, followed by a colon (`:`), and press kbd:[Enter].
+<.> Site attributes are nested under the `attributes` key.
+Enter the name of the attribute, followed by a colon (`:`).
+Press kbd:[spacebar] once after the colon, then enter the value of the attribute.
+<.> To set an attribute without specifying an explicit value, assign an _empty string_ by entering two consecutive single quotation marks (`''`) in the value part.
+For certain built-in attributes, an empty value is equivalent to the default value, though it depends on the attribute.
+Although using the boolean value `true` often works in this case, attribute values in AsciiDoc are strings, so it will likely be coerced to the string value `'true'`.
+<.> To declare a custom page attribute, type `page-` and the name of your attribute, followed by a colon (`:`).
+Press kbd:[spacebar] once after the colon, then enter the value of the attribute.
+<.> This custom attribute, like the previous three attributes, is hard set.
+
+The attributes in <<ex-hard-set>> are all hard set.
+[.term]*Hard set* site attributes cannot be overridden from a component version descriptor or a page.
+By default, an attribute is hard set when it's assigned a value that isn't reserved for unsetting the attribute (i.e., `false` or `~`) and doesn't end with a modifier (i.e., `@`).
+To allow a component version or page to modify or unset a site attribute, you need to <<soft-set,soft set the site attribute>>.
+
+Attributes set in the playbook are site-wide and, thus, available to every page in your site.
+The values of custom attributes, such as `page-team` and `db` can be displayed in a page using the AsciiDoc attribute reference syntax (e.g., `+{page-team}+`, `+{db}+`).
+Site attributes can also be referenced from the <<references-in-values,value of another site attribute>>, xref:ROOT:component-attributes.adoc#references-in-values[component version attribute], or xref:page:attributes.adoc[page attribute].
+
+[#soft-set]
+=== Soft set attributes
+
+Soft set site attributes can be overridden from a component version descriptor or page.
+An attribute is soft set in a playbook by attaching the `@` modifier to the end of its value.
+
+.Assign soft set precedence to attributes
+[#ex-soft-set,yaml]
+----
+asciidoc:
+  attributes:
+    page-team: Coco B@ # <.>
+    hide-uri-scheme: '@' # <.>
+----
+<.> To soft set an attribute that's assigned an explicit value, attach the `@` modifier to the end of its value.
+<.> To soft set and assign a built-in attribute's default value, or in the case of a boolean attribute, the _empty string_ value, type an opening single quotation mark, followed by the `@` modifier, and then a closing single quotation mark (`'`).
+
+Since the site attributes in <<ex-soft-set>> are soft set, a component version descriptor or page could modify their values or unset them.
+
+[#references-in-values]
+=== Insert the value of another attribute
+
+The value of any site attribute set earlier in the playbook or from the CLI can be inserted into the value of a site attribute using an AsciiDoc attribute reference (e.g., `+{page-team}+`).
+
+.A site attribute that references the value of another site attribute
+[#ex-attribute-value-references,yaml]
+----
+asciidoc:
+  attributes:
+    page-team: Coco B@
+    db: graphical-peaks-pack.db
+    test-server: http://localhost:9090/{db}
+----
+
+A site attribute can also be referenced in the value of a xref:ROOT:component-attributes.adoc#references-in-values[component version attribute] or xref:page:attributes.adoc[page attribute].
+
+To prevent an attribute reference substitution, insert a backslash in front of the reference (e.g., `+\{not-substituted}+`).
+In this case, the attribute reference will not be substituted and the backslash will be omitted.
+
+[#hard-unset]
+== Unset attributes in the playbook
+
+Site attributes can also be unset in a playbook.
+Site attributes are hard unset when they're assigned the reserved tilde symbol (`~`) value.
+Each site attribute is entered on its own line as a key-value pair under the `attributes` key.
+
+.Hard unset site attributes in the playbook
+[#ex-hard-unset,yaml]
+----
+asciidoc:
+  attributes:
+    figure-caption: ~ # <.>
+    hide-uri-scheme: ~ # <.>
+----
+<.> To hard unset an attribute, assign it the tilde symbol (`~`).
+`~` is shorthand in YAML for `nil`, which is a reserved value that hard unsets a site attribute.
+<.> Boolean attributes are also hard unset when assigned the tilde symbol (`~`).
+
+[.term]*Hard unset* site attributes cannot be overridden from a component version descriptor or a page.
+When a site attribute is hard unset, its behavior is turned off and it isn't available to the site's pages.
+
+[#soft-unset]
+=== Soft unset attributes
+
+Soft unset site attributes can be overridden from a component version descriptor or page.
+An attribute is soft unset in a playbook by assigning it the reserved value `false`.
+
+.Assign soft unset precedence to attributes
+[#ex-soft-unset,yaml]
+----
+asciidoc:
+  attributes:
+    figure-caption: false # <.>
+    hide-uri-scheme: false # <.>
+----
+<.> To soft unset an attribute, assign it the value `false`.
+<.> Boolean attributes are also soft unset when assigned `false`.
+
+Since the site attributes in <<ex-soft-unset>> are soft unset, a component version descriptor or page could reset them.
+
+[#precedence-rules]
+== Precedence rules
+
+Antora takes the precedence assigned to attributes in the site's playbook into account first.
+Site attributes that are hard set and hard unset can't be changed by a component version descriptor file or a page.
+However, soft set and unset site attributes can be overridden from the component version descriptor or a page.
+
+. <<hard-set,Hard setting>> a site attribute using a string value with no trailing `@` modifier (e.g., `value` or `''`) prevents a component version descriptor or page from changing or unsetting the attribute.
+. <<soft-set,Soft setting>> a site attribute using a string value with a trailing `@` modifier (e.g., `value@` or `'@'`) allows a component version descriptor or page to change or unset the attribute.
+. <<hard-unset,Hard unsetting>> a site attribute using the tilde symbol (`~`) prevents a component version descriptor or page from setting the attribute.
+. <<soft-unset,Soft unsetting>> a site attribute using the `false` value allows a component version descriptor or page to set the attribute.
+
+To learn more about how site attributes interact with component version attributes and page attributes, see xref:ROOT:component-attributes.adoc[] and xref:page:attributes.adoc[].
+
+[#intrinsic]
+== Intrinsic site attributes
+
+Antora defines intrinsic site and page attributes from some of the keys in a playbook file.
+For instance, Antora sets the built-in attribute `site-title` and assigns it the value specified by the `site.title` key.
+Antora also sets some built-in AsciiDoc attributes, such as `sectanchors`, by default.
+See xref:page:intrinsic-attributes.adoc#site-and-configuration-attributes[Site and configuration attributes] and xref:page:intrinsic-attributes.adoc#page-attributes[Intrinsic page attributes] for more information.
+
+include::ROOT:partial$dont-use-these-attributes.adoc[]

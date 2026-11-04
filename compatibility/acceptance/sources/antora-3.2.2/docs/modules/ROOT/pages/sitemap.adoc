@@ -1,0 +1,63 @@
+= Automatic Sitemap
+
+If the value of the site URL defined in the playbook is an absolute URL, Antora will automatically generate a sitemap and output it to the root of the generated site.
+
+== Sitemap structure
+
+The sitemap that Antora produces consists of several files.
+Rather than just a single [.path]_sitemap.xml_ file, Antora partitions the sitemap into multiple files.
+The [.path]_sitemap.xml_ file is a sitemap index that lists each of the individual component sitemap files.
+The sitemap files are placed at the root of the published site, where a search engine will expect to find them.
+
+....
+404.html
+index.html
+robots.txt
+sitemap.xml
+sitemap-colorado.xml
+sitemap-wyoming.xml
+...
+....
+
+Each component sitemap file is named [.path]_sitemap-<name>.xml_, where `<name>` is the component name.
+The file contains a `<url>` entry for each publishable page in the site.
+No other type of resource is included in the sitemap.
+
+The value of the `<loc>` tag for a `<url>` is the absolute URL to that page.
+The `<url>` value is constructed by combining the site URL (including the subpath) with the (root-relative) URL of the page.
+The value of the `<lastmod>` tag for a `<url>` is the date the site was generated.
+
+The entries are sorted merely to ensure that the order remains stable between runs.
+
+== Example
+
+Let's look at an example.
+We'll assume that your site has two components, named colorado and wyoming, and the site URL is `\https://docs.example.org`.
+Here's how the [.path]_sitemap.xml_ might look:
+
+[,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<sitemap>
+<loc>https://docs.example.org/sitemap-colorado.xml</loc>
+</sitemap>
+<sitemap>
+<loc>https://docs.example.org/sitemap-wyoming.xml</loc>
+</sitemap>
+</sitemapindex>
+----
+
+Here's how the [.path]_sitemap-colorado.xml_ might look:
+
+[,xml]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<url>
+<loc>https://docs.example.org/colorado/6.0/index.html</loc>
+<lastmod>2021-12-24T23:00:00.123Z</lastmod>
+</url>
+...
+</urlset>
+----

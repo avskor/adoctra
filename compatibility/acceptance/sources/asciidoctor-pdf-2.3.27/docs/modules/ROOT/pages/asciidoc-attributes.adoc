@@ -1,0 +1,195 @@
+= AsciiDoc Attributes for PDF
+
+Asciidoctor PDF supports additional built-in document attributes that are used by the PDF converter.
+These attributes can control certain aspects of PDF rendering, such as the PDF media, launch mode, outline, optimization, text hyphenation, as well as some document-specific theme settings such as the front and back cover images, the background images, the title page logo and background images, page dimensions, and more.
+
+== Relationship to theme
+
+The theme-oriented attributes overlap with settings controlled by the xref:theme:index.adoc[PDF theme].
+These attributes are not meant to be a replacement for the theming system.
+Rather, they're provided as a convenience to control some theme settings that are frequently changed per document or conversion and thus warrant an override.
+
+For maximum control over the theming (aka branding) of the PDF, you'll want to use a xref:theme:index.adoc[theme].
+You can either create the theme anew or xref:theme:create-theme.adoc#extend-default[extend from a built-in theme].
+Once you've created a theme, you'll need to xref:theme:apply-theme.adoc[apply it] when converting the document.
+
+If an AsciiDoc attribute for PDF correlates to a key in the theme file, the AsciiDoc attribute always takes precedence.
+
+[#asciidoc-document-attributes]
+== Reference
+
+If an attribute is marked as "Header Only", it only takes effect if defined by the end of the AsciiDoc document header.
+This designation includes attributes that are set via the API or CLI.
+
+[cols="2,3,^1,6a"]
+|===
+|Attribute |Value Type |Header Only |Example
+
+|xref:autofit-text.adoc[autofit-option]
+|flag (default: _not set_)
+|No
+|`:autofit-option:`
+
+|`<face>-cover-image`^[1]^
+|path^[2]^ {vbar} image macro^[3]^ +
+(format can be image or PDF)
+|Yes
+|`:front-cover-image: \image:front-cover.pdf[]`
+
+|`hyphens`^[5]^
+|language code {vbar} _blank_ to default to en_us (default: _not set_)
+|Yes
+|`:hyphens: de`
+
+|xref:icons.adoc[icons]
+|`font` {vbar} `image` (default: _not set_)
+|No
+|`:icons: font`
+
+|`footnotes-title`
+|String
+|Yes
+|`:footnotes-title: Endnotes`
+
+|`index-pagenum-sequence-style`
+|`term` {vbar} `page` {vbar} `range` (default: `term`)
+|No
+|`:index-pagenum-sequence-style: page`
+
+|`media`
+|`screen` {vbar} `print` {vbar} `prepress`
+|Yes
+|`:media: prepress`
+
+|`compress`
+|flag (default: _not set_)
+|Yes
+|`:compress:`
+
+|xref:optimize-pdf.adoc[optimize]
+|`screen` {vbar} `ebook` {vbar} `printer` {vbar} `prepress` {vbar} `default` (default: `default`)
+|Yes
+|`:optimize: prepress`
+
+|xref:pdf-outline.adoc[outline]
+|flag (default: _set_)
+|Yes
+|`:outline:`
+
+|xref:pdf-outline.adoc#title[outline-title]
+|flag {vbar} String (default: _set_)
+|Yes
+|`:outline-title: Outline`
+
+|xref:pdf-outline.adoc#levels[outlinelevels]
+|Integer {vbar} Integer:Integer (default: same as _toclevels_)
+|Yes
+|`:outlinelevels: 2`
+
+|xref:background-images.adoc[page-background-image]
+|path^[2]^ {vbar} image macro^[3]^
+|Yes
+|`:page-background-image: \image:bg.jpg[]`
+
+|xref:background-images.adoc[page-background-image-(recto {vbar} verso)]
+|path^[2]^ {vbar} image macro^[3]^
+|Yes
+|`:page-background-image-recto: \image:bg-recto.jpg[]`
+
+|`page-foreground-image`
+|path^[2]^ {vbar} image macro^[3]^
+|Yes
+|`:page-foreground-image: \image:watermark.svg[]`
+
+|xref:page-numbers.adoc[pagenums]
+|flag (default: _set_)
+|Yes
+|`:pagenums:`
+
+|`pdf-page-layout`
+|`portrait` {vbar} `landscape`
+|Yes
+|`:pdf-page-layout: landscape`
+
+|`pdf-page-margin`
+|xref:theme:measurement-units.adoc[Measurement] {vbar} xref:theme:measurement-units.adoc[Measurement[top,right,bottom,left\]]
+|Yes
+|`:pdf-page-margin: [1in, 0.5in]`
+
+|`pdf-page-margin-rotated`
+|xref:theme:measurement-units.adoc[Measurement] {vbar} xref:theme:measurement-units.adoc[Measurement[top,right,bottom,left\]]
+|Yes
+|`:pdf-page-margin-rotated: [0.5in, 0.25in]`
+
+|`pdf-page-mode`
+|`outline` {vbar} `none` {vbar} `thumbs` {vbar} `fullscreen` {vbar} `fullscreen outline` {vbar} `fullscreen none` {vbar} `fullscreen thumbs` (default: `outline`)
+|Yes
+|`:pdf-page-mode: fullscreen none`
+
+|`pdf-page-size`
+|https://github.com/prawnpdf/pdf-core/blob/0.6.0/lib/pdf/core/page_geometry.rb#L16-L68[Named size^] {vbar} xref:theme:measurement-units.adoc[Measurement[width, height\]]
+|Yes
+|`:pdf-page-size: [6in, 9in]`
+
+|`pdf-folio-placement`
+|`virtual` {vbar} `virtual-inverted` {vbar} `physical` {vbar} `physical-inverted`
+|Yes
+|`:pdf-folio-placement: physical`
+
+|`pdf-version`
+|`1.3` {vbar} `1.4` {vbar} `1.5` {vbar} `1.6` {vbar} `1.7` (default: `1.4`)
+|Yes
+|`:pdf-version: 1.7`
+
+|`pdfmark`^[4]^
+|flag (default: _not set_)
+|Yes
+|`:pdfmark:`
+
+|`scripts`^[6]^
+|`cjk` (default: _not set_)
+|Yes
+|`:scripts: cjk`
+
+|`text-align`^[7]^
+|xref:theme:text.adoc#text-align[Text alignment]
+|Yes
+|`:text-align: left`
+
+|xref:title-page.adoc#logo[title-logo-image]
+|path^[2]^ {vbar} image macro^[3]^
+|Yes
+|`:title-logo-image: \image:logo.png[top=25%, align=center, pdfwidth=0.5in]`
+
+|xref:title-page.adoc[title-page]
+|flag (default: _not set_)
+|Yes
+|`:title-page:`
+
+|xref:title-page.adoc#background[title-page-background-image]
+|path^[2]^ {vbar} image macro^[3]^
+|Yes
+|`:title-page-background-image: \image:title-bg.jpg[]`
+
+|`toc-max-pagenum-digits`^[8]^
+|Integer (default: `3`)
+|Yes
+|`:toc-max-pagenum-digits: 4`
+|===
+
+1. `<face>` can be `front` or `back`.
+2. A bare path is resolved relative to `base_dir`, which defaults to the document directory.
+3. The target of the image macro is resolved relative to `imagesdir` since it's defined in the AsciiDoc document (unlike in the theme, where it is resolved relative to the value of `pdf-themesdir`).
+4. Enables generation of the https://milan.kupcevic.net/ghostscript-ps-pdf/#marks[pdfmark^] file, which contains metadata that can be fed to Ghostscript when optimizing the PDF file.
+If you're using Ghostscript >= 8.54, this feature is not needed.
+5. Activates hyphenation for the language code specified (defaults to en_us) if the `text-hyphen` gem is available.
+If the `hyphens` attribute is set in the document, it overrides the `base-hyphens` key set in the theme.
+In either case, if the value is empty, then the value of the `lang` document attribute is used as the hyphenation language.
+6. Activates line break rules for CJK languages (specifically Chinese and Japanese).
+Chinese and Japanese are written without spaces (and may not use spaces when mixing with English words either).
+This setting allows a line break to be placed between any two CJK characters to accommodate wrapping.
+These languages also use different punctuation for pause, full stop, and dash, which are taken into account when breaking lines.
+7. The `text-align` document attribute is intended as a simple way to toggle text justification.
+The value of this attribute overrides the `base-text-align` key set by the theme.
+If a `text-<align>` role is set on a block element, that alignment always takes precedence over the theme.
+8. If the TOC overlaps the first page of content, increase this number.

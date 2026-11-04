@@ -1,0 +1,671 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora employs both convention and configuration to aggregate content and generate your site. Before setting up or migrating your repositories, let’s review some key concepts that could impact how you organize your documentation projects and content files to work with Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora can retrieve content source files from numerous git repositories by searching for files or their "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "symlinks"
+                  }
+                ],
+                "kind": "xref",
+                "target": "symlinks.html"
+              },
+              {
+                "kind": "text",
+                "value": " under a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "start path"
+                  }
+                ],
+                "kind": "xref",
+                "target": "playbook:content-source-start-path.html"
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "multiple start paths"
+                  }
+                ],
+                "kind": "xref",
+                "target": "playbook:content-source-start-paths.html"
+              },
+              {
+                "kind": "text",
+                "value": " in branches, tags, or a local worktree. The repositories Antora uses don’t have to be reserved exclusively for storing documentation (hence the start path). Antora can retrieve files from repositories that also host application code, tests, and other materials in sibling hierarchies. Antora relies on both "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convention"
+                  }
+                ],
+                "kind": "xref",
+                "target": "standard-directories.html"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration"
+                  }
+                ],
+                "kind": "xref",
+                "target": "playbook:configure-content-sources.html"
+              },
+              {
+                "kind": "text",
+                "value": " to identify the documentation content."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to fetch source files from multiple and multi-use repositories, Antora requires that the documentation files be:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Located under a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content source root"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "content-source-repositories.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Labeled with a file named "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "antora.yml"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "component-version-descriptor.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Organized into a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "standard set of directories"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "standard-directories.html"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although not required, we "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "strongly"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " recommend that you always use lowercase for filenames. Some filesystems are case sensitive, while others are not. By always using lowercase, you avoid any problems that occur if the filesystem, web server, or transfer tool does not preserve the casing."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "storing-your-content-source-files",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Storing your content source files"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once Antora collects the source files from all content source roots, it classifies each file by assigning metadata to it, which is used to uniquely identify the file within the site. The file’s identifier, called a resource ID, is used for creating references from pages, other resources, and the configuration. This step also implicitly partitions the source files into component versions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Antora decouples source files from their storage locations after it collects them. For all intents and purposes, the origin of each file is irrelevant. In other words, Antora never goes back to the filesystem or git repository to read the file once it’s discovered and loaded. Antora bases all of its file operations on the virtual filesystem (VFS) it creates after it collects the files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The only aspect of a file that maps back to the location on the filesystem is the family-relative path. And even this association is maintained merely as a convenience for the author. Aside from the family-relative path, all other parts of the file’s identity are based on associative metadata, such as the component name, version, module name, and family."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "antoras-virtual-filesystem",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Antora’s virtual filesystem"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "So how does a file get this metadata? All files in the same content source root inherit the component name and version from the component version descriptor file, named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "antora.yml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". These descriptor files help Antora sort and organize all of the collected source files into component versions. You can think of a component version as all of the documentation for a version of a project. For example, you’re reading a page in the {page-component-title} {page-component-display-version} component version right now."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "These "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "antora.yml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " files are how content that belongs to the same version of a project can be identified by Antora. It’s also how component versions are defined and populated implicitly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Inside a content source root, files are further grouped into module and family folders, which provide two more facets of a source file’s identity. Finally, the family-relative path is captured to uniquely identify a source file within a family, even across multiple repositories or git references."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "file-metadata",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "File metadata"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The location of a source file doesn’t dictate the location of the published file. Once a source file is loaded into Antora’s VFS, the file’s metadata is manipulated, which includes computing the file’s output location and URL. Each family of files has different rules for how these values are computed. The association between where the source file is found, where the published file is placed in the site, or how that file is accessed isn’t hardwired."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "What’s a component version?"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "component-version.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "What’s antora.yml?"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "component-version-descriptor.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to learn how to assign a component name, version and other optional information to groups of content source files."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "file-locations-and-urls",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "File locations and URLs"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git refnames, which includes the names of branches and tags, should only contain characters that do not need to be URL encoded. This rule is not enforced by git, but violating it can cause subtle problems in Antora."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "While the refname does not appear in the URL of published resources, it is used in references back to the file’s origin. Specifically, using characters in the refname which have to be URL encoded complicates the assembly of the edit URL for pages."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As an example, the character "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " violates this rule, which would have to be encoded as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "%23"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Although Antora will happily build the edit URL to include this character, the URL will not be interpreted as expected by the browser. That’s because "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " marks the boundary between the URL that’s sent to the server and the fragment that’s only seen by the browser. The result will be an incomplete URL and thus a 404 page."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It’s acceptable to use the universal directory separator, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", in refnames. By doing so, it effectively organizes the refs into a folder structure (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "r/3.0.x"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). However, this strategy can impact refname matching. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "*"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " character in a refname pattern does not match "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (it does not cross the boundary of a folder). Therefore, to match a refname such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "r/3.0.x"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", you must use the pattern "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "r/*"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "r*"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "git-refnames",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "git refnames"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "classifying-your-content-source-files",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Classifying your content source files"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "How to Organize Your Content Files"
+      }
+    ]
+  }
+}

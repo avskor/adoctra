@@ -1,0 +1,115 @@
+= Title Page
+Author Name
+v1.0, 2020-02-20
+:description: The title page contains the doctitle, author, date, and revision information.
+
+The Asciidoctor PDF converter introduces a dedicated title page at the start of the document.
+The title page contains the doctitle, author, date, and revision info.
+The title page can be styled using the theme and reserved page attributes.
+
+[#activate]
+== Activate the title page
+
+The title page is enabled if one of these conditions is met:
+
+* the `doctype` document attribute is set to `book`, or
+* the `title-page` document attribute is set with an empty value in the document header.
+
+The title page is only enabled by default for the `book` doctype.
+The `doctype` is set and assigned `book` either in the document header or using the CLI.
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+----
+
+To force the title page to be used for other doctypes, set the `title-page` attribute in the document header.
+
+[,asciidoc]
+----
+= Document Title
+:title-page:
+----
+
+If a front cover image is specified, the title page comes after the front cover.
+When the title page is enabled, the table of contents also gets its own page (or pages, if necessary).
+
+[#notitle-attribute]
+== Deactivate with notitle attribute
+
+For documents that declare the `book` doctype, the title page can be omitted by setting the `notitle` attribute in the AsciiDoc document header.
+(Its counterpart, `:!showtitle:`, does not work with Asciidoctor PDF.)
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+:notitle:
+----
+
+The title page can also be xref:theme:title-pages.adoc#deactivate[deactivated from the theme] by setting the value of the `title-page` category key to `false`.
+For all other doctypes, the title page is not added by default.
+In that case, setting the `:notitle:` attribute only removes the document title from the first page of content.
+
+== Author and revision information
+
+The author and revision information is displayed on the title page by default.
+If the document does not have a title page, you must use explicit references to this information in the text in order for it to be displayed.
+
+Here's an example of how to display the author and revision information in an article without a title page.
+
+[,asciidoc]
+----
+= Article Title
+Author Name
+v1.0, 2020-02-20
+
+[.metadata]
+{author} -- version {revnumber}, {revdate}
+
+Begin main content.
+----
+
+You can style this line by xref:roles.adoc#custom[defining a role] in a custom theme.
+
+[#logo]
+== Logo image
+
+You can place a logo image on the title page using the `title-logo-image` document attribute.
+Using an inline image macro, you can specify attributes to position and resize the image.
+The special `top` attribute is recognized in this context for setting the vertical position of the image.
+
+[,asciidoc]
+----
+= Document Title
+Author Name
+:title-logo-image: image:logo.png[top=25%,align=center,pdfwidth=0.5in]
+----
+
+The value of the `top` attribute is the distance from the top of the content area (just below the top margin).
+It can either be a fixed value (e.g., `1in`) or relative value (`10%`).
+A fixed value is converted to a point value.
+A percentage value is multiplied by the height of the content area (the area inside the top and bottom margins).
+The advantage of a fixed value is that it gives you precision.
+The advantage of a relative value is that it automatically adjusts for different page sizes.
+
+[#background]
+== Background image
+
+You can place a background image on the title page using the `title-page-background-image` document attribute.
+
+[,asciidoc]
+----
+= Document Title
+Author Name
+:title-page-background-image: image:title-bg.png[]
+----
+
+By default, page background images are automatically scaled to fit the bounds of the page (i.e., `fit=contain`) and centered (i.e., `position=center`).
+See xref:background-images.adoc[] to learn more.
+
+If you need to add two images to the title page, you can add one as a background image and the other as a logo image.
+To position the image added using a background image, you can either use `fit=none` in combination with the `position` attribute on the macro, or you can position the image on an image canvas matching the size of the page.
+When using the canvas technique, the background image could contributed several images to the page.
+You can then position the image added as a logo image as described in <<Logo image>>.

@@ -1,0 +1,63 @@
+= Asynchronous Listeners
+
+Antora calls listeners synchronously in the order they are registered.
+This is true even if a listener is marked asynchronous using the `async` keyword or the listener returns a Promise.
+Antora will await the completion of the listener invocation before calling the next listener (and thus before continuing its own operation).
+This behavior differs from the behavior of the built-in NodeEmitter in Node.js.
+
+The benefit of marking a listener as async, or returning a Promise, is that the listener can perform asynchronous operations.
+Of course, these operations will all be resolved before Antora proceeds, so they are made to behave in a synchronous fashion outside the boundaries of the function.
+
+NOTE: A Promise ends when the program calls `await` on it.
+Obviously, that requirement bubbles all the way up to the top-level function of the program.
+Antora hides away this detail by allowing you to either define an extension listener as async or return a Promise.
+
+== Define Async Listeners
+
+Let's look at an example of fetching a file from a URL and publishing it to the site.
+
+.fetch-and-publish-readme-extension.js
+[,js]
+----
+include::example$fetch-and-publish-readme-extension.js[lines=3..]
+----
+
+Notice that we have added the `async` keyword to the listener function.
+This allows us to the use the `await` keyword inside the function.
+
+As an exercise, you could try retrieving a file from each branch of each content source and adding it to the published site.
+To give you a hint, you would need to access the `playbook` variable to get a list of content sources.
+
+If you don't want Antora to wait for the completion of your asynchronous listener, you can either return an empty promise (e.g, `return Promise.resolve()`), or you can remove the `async` keyword from your listener.
+However, if you do so, you'll need to add a listener that listens for an event that is emitted later in the generator, such as `contextClosed`, so you can resolve the promise before Antora completes.
+
+Let's look at the same example as earlier, except it downloads the README.adoc in the background while the site is being generated.
+To help manage the state of the pending promise, it has also been rewritten as a xref:class-based-extension.adoc[class-based extension].
+
+.background-fetch-and-publish-readme-extension.js
+[,js]
+----
+include::example$background-fetch-and-publish-readme-extension.js[lines=3..]
+----
+
+Notice that only the `onBeforePublish` listener function is async so it can wait for the promise started by the `onPlaybookBuilt` listener function.
+The extension also now accepts the URL of the README as a configuration key named `readme_url`.
+
+== Use Async Functions
+
+When an listener is defined as async, you can use async functions.
+However, it's very important that any call to an async functions is proceed by the `await` keyword (i.e., awaited).
+Otherwise, it may continue to run even after Antora's context is already closed.
+Running code outside of Antora's context can result in unexpected behavior, especially if it uses resources managed by Antora, such as the logger.
+
+The following example demonstrates how to await an async function call.
+(Any function that returns a Promise is implicitly async).
+
+.call-async-function-extension.js
+[,js]
+----
+include::example$call-async-function-extension.js[lines=3..]
+----
+<.> Without the await keyword, the function is called, but the code the follows continues to be executed.
+If this happens, Antora's context may be closed before the logger is used by the async function.
+You would then see a message that the logger is being reinitialized.

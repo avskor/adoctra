@@ -1,0 +1,265 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page provides information for how to troubleshoot common problems and errors."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you get an error that reports that you have a \"Duplicate nav\", this is typically only the tip of the iceburg. The real problem is that you have two content sources that have the same component version and the same files. In other words, you have a conflict. It just so happens that Antora checks nav files before any other files."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When this error occurs, Antora will list the two content sources that are in conflict in the details of the message. Check "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora.yml"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " in both content sources and you’ll see that "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "version"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keys have the same values in both files."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To solve this problem, you either need to update the value of the version key in one of the two "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora.yml"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " files or remove one of the content sources."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "duplicate-nav",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Duplicate nav"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using content repositories hosted on GitHub, it’s possible that Antora will fail with an ECONNRESET error when cloning or fetching those repositories. This situation arises as a result of an GitHub networking policy. GitHub aggressively resets paused connections."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So what causes the paused connections? The answer is Node.js’ round-robin style concurrency model. Antora can be configured to use multiple connections to clone or fetch repositories concurrently. This strategy ensures optimal throughput in light of the fact that connections inevitably stall. The intended result is for these operations complete sooner."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "However, Node.js only services a single connection at a time (single-threaded model). So while one connection is being serviced, the other connections are in a paused state, even if the server is ready to respond. If the connection remains paused for too long, GitHub resets the connection."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To circumvent this problem, and ensure that git network operations always succeed, you can avoid setting the git fetch concurrency in your playbook (default: 1), or use a conservative value."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "git:\n  fetch_concurrency: 1"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more information about this key, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbook:git-fetch-concurrency.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "playbook:git-fetch-concurrency.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This problem is much less likely to happen in Antora 3.2.0 and greater since Antora now separates the fetch and scan operations. In other words, if it does pause a connection, it shouldn’t be for very long. Prior to Antora 3.2.0, Antora would scan the repository in the same tick as the connection, which lead to longer connection pauses."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "econnreset",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "ECONNRESET"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Troubleshooting Common Errors"
+      }
+    ]
+  }
+}

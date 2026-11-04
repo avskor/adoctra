@@ -1,0 +1,287 @@
+= Install and Run Antora Quickstart
+:listing-caption!:
+:url-demo: https://gitlab.com/antora/demo
+
+This quickstart walks you through the initial steps required to install Antora and generate your first documentation site.
+
+On this page, you’ll learn:
+
+* [x] How to install Node.js.
+* [x] How to install Antora.
+* [x] How to create your first Antora playbook.
+* [x] How to run Antora to generate a site based on the playbook.
+
+You can skip the installation steps by using the xref:antora-container.adoc[Docker image] provided by the Antora project.
+Instead of having to worry about installing Node.js and Antora, all you need is Docker or Podman to run Antora in a container.
+
+[#install-nodejs]
+== Install Node.js
+
+Antora is built to run on the Node.js JavaScript runtime environment and is verified to work on Linux, macOS, and Windows.
+At a minimum, Antora requires the Node.js version provided by {url-node-debian-stable}[Debian stable].
+However, we recommend that you use the {url-node-releases}[long term support (LTS) release of Node.js] labeled as *Active* on the graph.
+As of the start of the Antora {page-component-version}.x release line, the recommended Node.js version to use is v{version-node-major}.
+
+To see if you have Node.js installed, and to find out which version, open a terminal and type:
+
+ $ node -v
+
+This command should return a suitable Node.js LTS version number.
+For example:
+
+[subs=+attributes]
+ $ node --version
+ v{version-node}
+
+If you have a suitable version of Node.js installed on your machine, you're ready to <<install-antora,install Antora>>.
+
+If *no version number is displayed in your terminal*, you'll need to install Node.js.
+If you have Node.js installed, *but it isn't the active or current LTS version*, you'll need to upgrade Node.js.
+
+We recommend using nvm to install or upgrade Node.js, though you're free to take a different path.
+You can install the active (aka latest) LTS version of Node.js using nvm by running `nvm install --lts`.
+
+Follow one of the guides listed below to learn how to install nvm, then use it to install or upgrade Node.js on your platform.
+
+* xref:install:linux-requirements.adoc#install-nvm[Install nvm and Node.js on Linux]
+* xref:install:macos-requirements.adoc#install-nvm[Install nvm and Node.js on macOS]
+* xref:install:windows-requirements.adoc[Install nvm and Node.js on Windows]
+
+[#install-antora]
+== Install Antora
+
+To generate documentation sites with Antora, you need the Antora command line interface (CLI) and the Antora site generator.
+To install Antora, begin by making a new directory for your site named [.path]_docs-site_ and switch to it.
+
+ $ mkdir docs-site && cd docs-site
+
+Next, let's initialize a [.path]_package.json_ file and install the required packages within the playbook project so you can run the `antora` command using `npx`.
+
+[subs=+attributes]
+ $ node -e "fs.writeFileSync('package.json', '{}')"
+ifdef::page-component-version-is-latest[]
+ $ npm i -D -E antora
+endif::[]
+ifndef::page-component-version-is-latest[]
+ $ npm i -D -E antora@{page-component-version}
+endif::[]
+
+include::install:partial$npm-init.adoc[]
+
+Verify the `antora` command is available by running:
+
+ $ npx antora -v
+
+If the installation is successful, the command will report the version of the Antora CLI and site generator packages you specified.
+
+[subs=+attributes]
+ $ npx antora -v
+ @antora/cli: {release-version}
+ @antora/site-generator: {release-version}
+
+These two packages are pulled in transitively by the antora package.
+Both versions should be the same.
+The version can also be found in [.path]_package.json_.
+
+To upgrade Antora, update the version of the antora package in [.path]_package.json_ and run `npm i` again.
+
+You have the option of installing Antora globally so that the `antora` command is available on your PATH.
+To do so, pass the `-g` option to `npm i`.
+
+[subs=+attributes]
+ifdef::page-component-version-is-latest[]
+ $ npm i -g antora
+endif::[]
+ifndef::page-component-version-is-latest[]
+ $ npm i -g antora@{page-component-version}
+endif::[]
+
+You can verify that the `antora` command is available on your path by running:
+
+ $ antora -v
+
+We strongly recommend that you install Antora within the playbook project rather than globally.
+Installing Antora locally makes it easier to manage the version of Antora.
+It also ensures that the version of Antora matches the version for which the playbook was made.
+
+Now you're ready to create your first playbook.
+
+TIP: See xref:install:install-antora.adoc[Install Antora] for more detailed information and additional installation methods.
+
+== Create a playbook with remote sources
+
+To produce a documentation site, Antora needs a playbook, which is defined using a playbook file.
+The simplest way to start using Antora is to point the playbook at existing documentation stored in remote repositories (i.e., content sources).
+For this example, we'll use the content sources from the {url-demo}[Antora demo repositories].
+
+Using your preferred text editor or IDE, create a new file and populate it with the configuration information <<demo-playbook,listed below>>.
+Save this file as [.path]_antora-playbook.yml_ in the [.path]_docs-site_ directory you made in the previous step.
+
+.antora-playbook.yml
+[#demo-playbook,yaml]
+----
+site:
+  title: Docs Site
+  start_page: component-b::index.adoc # <.>
+content:
+  sources: # <.>
+  - url: https://gitlab.com/antora/demo/demo-component-a.git
+    branches: HEAD
+  - url: https://gitlab.com/antora/demo/demo-component-b.git
+    branches: [v2.0, v1.0]
+    start_path: docs
+ui: # <.>
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+----
+<.> A page from a component version to be used as the home page for your site.
+<.> The `sources` category contains the list of git repository locations, branch name patterns, and other repository properties that Antora uses when aggregating the site content.
+<.> The `ui` category contains keys that specify the location of the UI bundle and how it should be processed.
+
+TIP: See the xref:playbook:index.adoc[Antora playbook] for more detailed information about the playbook file.
+
+== Run Antora
+
+To generate the site, point the `antora` command at your playbook file.
+In the terminal, make sure you're in [.path]_docs-site_ directory, then type:
+
+ $ npx antora antora-playbook.yml
+
+Antora will clone the content and UI repositories and generate your documentation site into the default output directory and report the file URL to that directory in the terminal.
+
+To see the result, navigate to the provided URL in your browser, which renders the [.path]_index.html_ file located in the [.path]_docs-site/build/site_ directory.
+Congratulations!
+You've successfully built your first site with Antora.
+
+By default, Antora does not sync the repository once it clones it.
+Instead, it tries to work offline by using the repository in the cache it previously cloned.
+This default can create some confusion when getting started.
+Therefore, we recommend including the xref:playbook:runtime-fetch.adoc#fetch-option[`--fetch` option] in the command until you're more familiar with Antora.
+
+ $ npx antora --fetch antora-playbook.yml
+
+You can turn on the fetch behavior permanently by setting the xref:playbook:runtime-fetch.adoc#fetch-key[fetch key] in your playbook.
+
+TIP: For more detailed information about running Antora and troubleshooting help, see xref:run-antora.adoc[Run Antora to generate your site].
+
+== Create a playbook with a local source
+
+Antora also supports local content sources, which are git repositories that have been cloned or otherwise initialized on the current machine.
+What that means is that it's possible to create a site from a local repository that contains both the playbook and the content source(s) (i.e., a mono site).
+For this example, you can set up everything locally in the [.path]_docs-site_ directory created earlier without having to rely on any remote git repositories.
+
+To start, it's necessary to initialize the [.path]_docs-site_ as a local git repository.
+
+ $ git init
+   git commit --allow-empty -m init
+
+If you're adding Antora to an existing local git repository, this step is not required.
+
+Next, create enough of the xref:standard-directories.adoc[standard directory hierarchy] to store a couple of pages, the navigation file, and the component version descriptor for your content source root.
+This content source root could be placed at a start path such as [.path]_docs_, but we'll use the root of the repository for now.
+
+ $ mkdir -p modules/ROOT/pages
+
+Using your preferred text editor or IDE, create a the start page for the component version and populate it with a page title and some text.
+
+.modules/ROOT/pages/index.adoc
+[,asciidoc]
+----
+= Welcome!
+
+You are home.
+----
+
+Create one additional page so that you can study how the navigation is put together.
+
+.modules/ROOT/pages/new-page.adoc
+[,asciidoc]
+----
+= New Page
+
+You've found a new page.
+----
+
+Next, create a navigation file so that each page contains links to navigate to the other pages.
+
+.modules/ROOT/nav.adoc
+[,asciidoc]
+----
+* xref:new-page.adoc[]
+----
+
+Notice that the start page for the component version is not included.
+That's because it's automatically added as the root of the navigation tree.
+
+To finish putting together the content source root, create the component version descriptor, [.path]_antora.yml_.
+This file identifies a content source root and, in turn, defines a component version.
+We'll create a versionless component named *project-name*, though you make this a versioned component or even the xref:component-name-key.adoc#root-component[ROOT component].
+
+.antora.yml
+[,yaml]
+----
+name: project-name
+version: ~
+title: Project Name
+nav:
+- modules/ROOT/nav.adoc
+----
+
+Now that you have a local content source defined, you can create a playbook that uses it.
+Save the playbook file as [.path]_antora-playbook.yml_ adjacent to [.path]_antora.yml_ at the root of the [.path]_docs-site_ directory.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Docs Site
+  start_page: project-name::index.adoc
+content:
+  sources:
+  - url: .
+    branches: HEAD
+ui:
+  bundle:
+    url: https://gitlab.com/antora/antora-ui-default/-/jobs/artifacts/HEAD/raw/build/ui-bundle.zip?job=bundle-stable
+    snapshot: true
+----
+
+This repository defines the start page for the component version we created as the start page for the site.
+The `start_page` playbook key (under the `site` key) isn't required if the component version you created is the ROOT component.
+
+Here's how the file and directory structure inside the [.path]_docs-site_ directory should look when you're done.
+
+....
+📒 docs-site
+  📂 modules
+    📂 ROOT
+      📂 pages
+        📄 index.adoc
+        📄 new-page.adoc
+      📄 nav.adoc
+  📄 antora.yml
+  📄 antora-playbook.yml
+....
+
+You can now generate the site as you did before.
+
+ $ npx antora antora-playbook.yml
+
+Antora will generate your documentation site to the default output directory and report the file URL to that directory in the terminal.
+To see the result, navigate to the provided URL in your browser, which renders the [.path]_index.html_ file located in the [.path]_docs-site/build/site_ directory.
+
+To instruct git to ignore the output directory and any locally installed npm packages, create a [.path]_.gitignore_ file and populate it with the following contents:
+
+..gitignore
+----
+/build/
+/node_modules/
+----
+
+To learn more about local content sources, refer to xref:playbook:content-source-url.adoc#local-urls[Use local content repositories].
+Local content sources can be mixed with remote content sources in the same playbook, so try adding the remote content sources shown earlier in this quickstart to become familiar with how it works.
+
+== Learn more
+
+* Learn how to xref:organize-content-files.adoc[organize your content files] for Antora.

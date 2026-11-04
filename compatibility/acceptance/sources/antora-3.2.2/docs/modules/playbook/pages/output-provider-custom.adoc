@@ -1,0 +1,50 @@
+= Custom Provider
+
+WARNING: The custom provider is an alpha API and subject to change.
+
+== Use a custom output provider
+
+If the `provider` key doesn't specify a recognized built-in provider, Antora will attempt to require it as a Node.js module.
+This allows you to supply a custom provider.
+
+If the value begins with a dot (`.`), Antora will require the path relative to the playbook file.
+Otherwise, Antora will require the value as a Node.js module installed in the playbook project.
+
+The custom provider is a JavaScript function that matches the following signature:
+
+[,js]
+----
+async function (destConfig, files, playbook)
+----
+
+Here's a template you can use to get started.
+
+.custom-output-provider.js
+[,js]
+----
+module.exports = async function (destConfig, files, playbook) {
+  const to = destConfig.path || '_site'
+  console.log(`Publishing files to ${to}`)
+  for await (const file of files) {
+    console.log(`Writing file to ${file.path}`)
+  }
+  return {}
+}
+----
+
+The destConfig argument is an object containing key-value pairs that correspond to the properties of the xref:configure-output.adoc#destinations-key[destination specification].
+The files argument is a `ReadableStream` of virtual files (use `for await` to iterate over it).
+Each file is a `Vinyl` object that contains the properties `contents`, `path`, and `stat`.
+The playbook argument is the object containing key-value pairs from the playbook as a whole.
+
+Here's how to configure Antora to use this destination provider:
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  destinations:
+  - provider: ./custom-output-provider.js
+----
+
+If you specify the `path` key, it will override the default location, [.path]_++_site++_.

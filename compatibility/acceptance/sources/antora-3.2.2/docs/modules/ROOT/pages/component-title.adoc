@@ -1,0 +1,64 @@
+= Customize the Title
+
+The `title` key is used to assign a title to the component version (and, by relation, the component).
+The title is the formal, user-facing text for a component version, typically the proper name of the product, project, or subject matter.
+The title is also used for xref:how-component-versions-are-sorted.adoc[sorting the versions] in the explore panel of the default UI.
+
+The title doesn't affect page and resource IDs or the component name segment in the page URL.
+
+[#title-key]
+== title key
+
+The `title` key is optional.
+This key is set in a component version's [.path]_antora.yml_ file.
+The value is used by the reference UI wherever the component or component version is referenced, including the xref:navigation:index.adoc#component-menu[component version page menu], xref:navigation:index.adoc#component-dropdown[component version selector], and first breadcrumb position on a component version's pages.
+
+Although the title is set per component version, it should almost always be uniform across all versions of a component.
+Antora uses the title of the latest version as the title of the component.
+When viewing a specific version, such as in the breadcrumb navigation, the title of that version will be displayed instead.
+If the title differs between versions, it may confuse the reader.
+If you do need to change the title in a newer version, and you don't want to update older versions, you can customize the UI template to always use the title of the latest version.
+
+If `title` isn't set, the reference UI uses the xref:component-name-key.adoc[component name] (the value of the `name` key) instead.
+Unlike `name`, the value of `title` can contain spaces, uppercase letters, and a broader range of characters (e.g., `SUSE Manager`, `APIkit`).
+
+.antora.yml
+[,yaml]
+----
+name: colorado
+title: Colorado ∆
+version: '5.6'
+----
+
+This key is useful when a project's name contains spaces or characters that break Antora's page and resource IDs, prevent portability between web servers, or aren't recommended in URLs.
+Also, if the name of your project changes, you can change the value of the `title` key but not have to update page and resource IDs or redirect URLs.
+
+[#assign-title]
+== Assign a title to a component version
+
+Let's expand on the [.path]_antora.yml_ example where you previously learned xref:component-name-and-version.adoc#assign-name-and-version[how to assign a component name and version].
+The project's official name is _Silver Leaf_, and the team wants this name to be displayed in the UI.
+Since `name` can't contain blank spaces, let's set `title` in the component version's [.path]_antora.yml_ file.
+
+. Open the component version's [.path]_antora.yml_ file in the text editor or IDE of your choice.
++
+.antora.yml for the component version silver-leaf 7.1
+[,yaml]
+----
+name: silver-leaf
+version: '7.1'
+----
+
+. On a new line, type `title`, directly followed by a colon (`:`).
+. Insert a blank space after the colon, and then type the value you want to assign to `title`.
++
+[,yaml]
+----
+name: silver-leaf
+title: Silver Leaf
+version: '7.1'
+----
+
+. Save the file.
+
+Now, the UI will display _Silver Leaf_ in the component version page menu, component version selector, and page breadcrumbs.

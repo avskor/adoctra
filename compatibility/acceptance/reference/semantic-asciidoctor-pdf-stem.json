@@ -1,0 +1,305 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When converting to HTML, Asciidoctor relies on the JavaScript-based MathJax library to parse and render the STEM expressions in the browser when the page is loaded. The HTML converter wraps the expressions in special markup so MathJax can find and process them. However, unlike Asciidoctor’s built-in HTML converter, Asciidoctor PDF does not provide native support for STEM blocks and inline macros (i.e., asciimath and latexmath)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to insert a rendered expression into the PDF, the toolchain must parse the expressions and convert them to a format the PDF writer (Prawn) can understand. That typically means converting to an image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One solution that provides this capability is an extension named "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor Mathematical"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#mathematical"
+              },
+              {
+                "kind": "text",
+                "value": ", which is covered in the next section."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor Mathematical"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/asciidoctor/asciidoctor-mathematical"
+              },
+              {
+                "kind": "text",
+                "value": " is an extension that processes STEM blocks and inline macros and converts them to a PDF-compatible format. After the document has been parsed, the extension locates each asciimath, latexmath, and stem block and inline macro, converts the expression to an image, and replaces the expression with an image. It uses Mathematical to render the LaTeX notation as an image. If the expression is AsciiMath, it first uses AsciiMath gem to convert to LaTeX. Conversion then proceeds as normal."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor Mathematical is a Ruby gem that uses native extensions. It has a few system prerequisites which limit installation to Linux and macOS. Refer to the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "installation section"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/asciidoctor/asciidoctor-mathematical#installation"
+              },
+              {
+                "kind": "text",
+                "value": " in the Asciidoctor Mathematical README to learn how to install it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Once Asciidoctor Mathematical is installed, you can enable it when invoking Asciidoctor PDF using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-r"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " flag:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor-pdf -r asciidoctor-mathematical sample.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re invoking Asciidoctor PDF via the API, you need to require the Asciidoctor Mathematical gem before invoking Asciidoctor PDF."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require 'asciidoctor-mathematical'\nrequire 'asciidoctor-pdf'\n\nAsciidoctor.convert_file 'sample.adoc', backend: 'pdf', safe: :safe"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "activate-asciidoctor-mathematical",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Activate Asciidoctor Mathematical"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To get the best quality output and maximize the speed of conversion, we recommend configuring Asciidoctor Mathematical to convert equations to SVG. You control this setting using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "mathematical-format"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " AsciiDoc attribute:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor-pdf -r asciidoctor-mathematical -a mathematical-format=svg sample.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Refer to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "README"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://github.com/asciidoctor/asciidoctor-mathematical#readme"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for Asciidoctor Mathematical to learn about additional settings and options."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "mathematical-format",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "mathematical-format attribute"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "mathematical",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Asciidoctor Mathematical"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "STEM"
+      }
+    ]
+  }
+}

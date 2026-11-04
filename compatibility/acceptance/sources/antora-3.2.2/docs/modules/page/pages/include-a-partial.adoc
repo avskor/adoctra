@@ -1,0 +1,473 @@
+= Include a Partial
+:page-aliases: asciidoc:include-partial.adoc
+// URLs
+:url-include: {url-asciidoc}/directives/include/
+:url-tags: {url-asciidoc}/directives/include-tagged-regions/
+:url-leveloffset: {url-asciidoc}/directives/include-with-leveloffset/
+
+A partial can be inserted into any page or another partial in your site using the AsciiDoc include directive and the partial's resource ID.
+
+[NOTE]
+====
+If you aren't familiar with the Antora resource ID and its coordinates, see:
+
+* xref:resource-id.adoc[]
+* xref:resource-id-coordinates.adoc[]
+====
+
+== AsciiDoc include directive for partials
+
+An AsciiDoc include directive inserts content from a partial's source file into another partial or a page.
+The include directive accepts the xref:resource-id.adoc[Antora resource ID] of partials, examples, and pages as a value.
+
+Although a partial is typically an AsciiDoc fragment, a partial can be any text document with no restriction on the file's extension.
+If the partial is not AsciiDoc, you have to be sure you're inserting into a place in the AsciiDoc document that accepts non-AsciiDoc content, such as a diagram block, a code block, or CSV table.
+If the partial is a code example, you're encouraged to store it as an example rather than a partial since an example is a specialized form of a partial.
+This page focuses on partials which are AsciiDoc files.
+
+<<ex-base>> shows the structure of an include directive with the fully qualified resource ID of a partial.
+Because the include directive is used to reference other resources, the `partial$` family coordinate must be specified in the partial's resource ID when it's assigned to an include directive.
+
+.Include directive assigned the fully qualified resource ID of a partial
+[#ex-base]
+----
+\include::version@component:module:partial$file-coordinate-of-target-partial.adoc[optional attribute]
+----
+
+At a minimum, an include directive consists of the directive's prefix (`include::`), the resource ID of the target partial, and a set of square brackets (`[]`).
+You can specify optional attributes within the square brackets as key-value pairs separated by commas.
+[[target]]The [.term]*target partial* is the source file of a partial that's being referenced by the current page.
+The target partial is referenced by assigning its resource ID to an include directive in the content of the current page.
+[[current]]The [.term]*current page* is the page source file containing the include directive that references the target partial.
+
+When Antora runs, content from the target partial is inserted into the current page <<placement,at the location where the include directive is entered>>.
+The target partial's content is converted after it's inserted into the current page.
+This means the current page's component version, module, attributes, and other elements are applied to or may impact the content included from the target partial.
+See xref:partials.adoc#current-context[Current page context and structure] to learn more.
+
+[#partials-root]
+== Insert a partial into a page
+
+Let's break down the AsciiDoc include directive and resource ID coordinates you need to insert a <<target,target partial>> into the <<current,current page>>.
+
+. In your IDE or plain text editor, open the page where you want to insert the partial.
+For this step and the subsequent steps, let's assume you've opened the file [.path]_ranges.adoc_.
++
+--
+.ranges.adoc (current page)
+----
+= Hike the Ranges
+
+== Terrain
+
+Above the treeline, the trail becomes a hard scramble.
+----
+
+The current page, [.path]_ranges.adoc_, belongs to the component version _colorado 5.2_ and module _ROOT_, shown in <<ex-co>>.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 pages <.>
+      📄 index.adoc
+      📄 ranges.adoc
+    📂 partials <.>
+      📄 treeline-warning.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines the _ROOT_ module
+<.> Defines subsequent files as pages
+<.> Defines subsequent files as partials
+--
+
+. In the current page, select the line where you want the partial's content to be inserted.
+At the beginning of the line, enter the name of the directive followed by two colons, `include::`.
++
+.ranges.adoc (current page)
+[listing,subs=+quotes]
+----
+Above the treeline, the trail becomes a hard scramble.
+
+**include::**
+----
+
+. Let's reference the target partial, [.path]_treeline-warning.adoc_, from the current page.
+Assign the resource ID of the target partial to the include directive.
+Both [.path]_treeline-warning.adoc_ and [.path]_ranges.adoc_ belong to the same component version and module (see <<ex-co>>).
+Therefore, only the `partial$` family coordinate and file coordinate of the target partial need to be specified.
++
+--
+.ranges.adoc (current page)
+[listing,subs="+quotes"]
+----
+Above the treeline, the trail becomes a hard scramble.
+
+include::**partial$treeline-warning.adoc**
+----
+
+The file coordinate for the [.path]_treeline-warning.adoc_ partial is `treeline-warning.adoc`.
+The target partial's file coordinate consists solely of its filename and file extension because [.path]_treeline-warning.adoc_ is stored at the root of the [.path]_partials_ directory.
+
+NOTE: By default, the include directive assumes the family coordinate is `page$` when the coordinate isn't specified.
+If you forget to use the `partial$` coordinate, Antora will report an error because it won't be able to find the partial.
+--
+
+. Directly after the resource ID of the target partial, complete the directive with a set of square brackets (`+[]+`).
++
+--
+.ranges.adoc (current page)
+[listing,subs="+quotes"]
+----
+Above the treeline, the trail becomes a hard scramble.
+
+include::partial$treeline-warning.adoc**[]**
+----
+
+The brackets of the include directive can contain an optional list of attributes, such as `lines`, `tag`, or `tags`.
+Attributes are entered as key-value pairs separated by commas.
+See the {url-include}[AsciiDoc include directive documentation^] for full details about the `lines`, `tag`, and `tags` syntax.
+--
+
+That's it!
+You've created an include directive that will insert the target partial into the current page.
+
+The preceding instructions showed you how to insert a partial into a page under the most common scenario--the target partial and current page belong to the same component version and module and the target partial is stored at the root of a [.path]_partials_ folder.
+However, if the target partial is stored in a subdirectory of the [.path]_partials_ directory, its file coordinate must specify the <<relative-path,partials-relative directory path in addition to its filename and file extension>>.
+
+.current-page.adoc
+[#ex-file]
+----
+include::partial$target-partial-filename.adoc[] <.>
+
+include::partial$path/to/target-partial-filename.adoc[] <.>
+
+include::partial$./target-partial-filename.adoc[] <.>
+----
+<.> File coordinate of the target partial when it's stored at the root of the [.path]_partials_ directory.
+<.> File coordinate of the target partial when it's stored in a subdirectory of the [.path]_partials_ directory.
+<.> File coordinate of the target partial when the target partial and current page are stored in subdirectories with parallel family-relative directory paths.
+_This is an advanced use case._
+
+Also, you'll need to specify additional resource ID coordinates when the target partial and current page don't belong to the <<modules,same module>> or <<component-versions,component version>>.
+The following sections provide examples showing the various resource ID scenarios.
+
+[#relative-path]
+=== File coordinate with partials-relative directory path
+
+The __partials__-relative directory path of the <<target,target partial>> is required in its file coordinate when it's stored in a subdirectory of the [.path]_partials_ directory.
+
+.File coordinate when the target partial is stored in a subdirectory of a partials directory
+[#ex-subdir-base]
+----
+\include::partial$path/to/target-partial-filename.adoc[optional attribute]
+----
+
+Let's use the files that belong to the component version in <<ex-co-subdir>> as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-subdir]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita <.>
+    📂 pages <.>
+      📄 ridge.adoc
+    📂 partials <.>
+      📂 climate <.>
+        📄 gear-list.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines a module named _la-garita_
+<.> Defines subsequent files as pages
+<.> Defines subsequent files as partials
+<.> A subdirectory in _partials_ containing the source files of partials
+
+Let's reference [.path]_gear-list.adoc_ from [.path]_ridge.adoc_.
+As you can see in <<ex-co-subdir>> above, the partial and page belong to the _la-garita_ module.
+In <<ex-subdir>>, an include directive in the [.path]_ridge.adoc_ page (current page) references the [.path]_gear-list.adoc_ file (target partial).
+
+.ridge.adoc (current page)
+[#ex-subdir]
+----
+== Plan your hike
+
+\include::partial$climate/gear-list.adoc[]
+----
+
+As shown in <<ex-subdir>>, the family coordinate is `partial$` and the file coordinate for [.path]_gear-list.adoc_ is `climate/gear-list.adoc`.
+The file coordinate for [.path]_gear-list.adoc_ consists of its [.path]__partials__-relative directory path, filename, and file extension because it's stored in the subdirectory [.path]_climate_.
+
+TIP: In special circumstances where the __partials__-relative directory path of the target partial and the __pages__-relative directory path of the current page are parallel, the __partials__-relative directory path can be replaced with the relative path token, `./`.
+
+[#modules]
+== Include a partial from another module
+
+When the <<target,target partial>> and the <<current,current page>> don't belong to the same module, you must specify the target partial's xref:resource-id-coordinates.adoc#id-module[module], xref:resource-id-coordinates.adoc#id-family[family], and xref:resource-id-coordinates.adoc#id-resource[file coordinates] in the include directive.
+
+.Module, family, and file coordinates assigned to an include directive
+[#ex-module-base]
+----
+include::module:partial$target-partial-filename.adoc[optional attribute] <.>
+
+include::module:partial$path/to/target-partial-filename.adoc[optional attribute] <.>
+----
+<.> Assign the module, `partial$`, and file coordinates of the target partial to the include directive when the target partial and current page belong to the same component version but not the same module.
+The target partial's file coordinate is its filename and file extension when it's <<partials-root,stored at the root of a _partials_ family directory>>.
+<.> If <<relative-path,the target partial is stored in a subdirectory of a _partials_ directory>>, the target partial's file coordinate must specify its __partials__-relative directory path, filename, and file extension.
+
+Let's use the files that belong to the component version shown in <<ex-co-mod>> as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-mod]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita <.>
+    📂 pages <.>
+      📄 ridge.adoc
+  📂 ROOT <.>
+    📂 partials <.>
+      📄 treeline-warning.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines a module named _la-garita_
+<.> Defines subsequent files as pages
+<.> Defines a module named _ROOT_
+<.> Defines subsequent files as partials
+
+Let's insert the [.path]_treeline-warning.adoc_ partial into the [.path]_ridge.adoc_ page.
+That means the source file [.path]_treeline-warning.adoc_ is the target partial and [.path]_ridge.adoc_ is the current page.
+As shown in <<ex-co-mod>> above, the [.path]_ridge.adoc_ page belongs to the _la-garita_ module, and the [.path]_treeline-warning.adoc_ partial belongs to the _ROOT_ module.
+
+<<ex-module>> shows an include directive in [.path]_ridge.adoc_ that references the partial [.path]_treeline-warning.adoc_.
+The module, `partial$`, and file coordinates of the target partial are assigned to the include directive.
+
+.ridge.adoc (current page)
+[#ex-module]
+----
+\include::ROOT:partial$treeline-warning.adoc[]
+----
+
+As shown in <<ex-module>>, the target partial's module coordinate is `ROOT`, its family coordinate is `partial$`, and its file coordinate is `treeline-warning.adoc`.
+
+[#component-versions]
+== Include a partial from another component
+
+When the <<target,target partial>> and <<current,current page>> don't belong to the same documentation component, specify the partial's xref:resource-id-coordinates.adoc#id-version[version, component, module, family, and file coordinates] in the resource ID assigned to the include directive.
+
+.Version, component, module, family, and file coordinates assigned to an include directive
+[#ex-component-version-base]
+----
+include::version@component:module:partial$target-partial-filename.adoc[] <.>
+
+include::version@component:module:partial$path/to/target-partial-filename.adoc[] <.>
+
+include::component:module:partial$file-coordinate-of-target-partial.adoc[] <.>
+----
+<.> Assign the version, component, module, family, and file coordinates of the target partial to the include directive when the target partial and current page don't belong to the same component version.
+The target partial's file coordinate is its filename and file extension when the target partial is <<partials-root,stored at the root of a _partials_ family directory>>.
+<.> If <<relative-path,the target partial is stored in a subdirectory of a _partials_ directory>>, the target partial's file coordinate must specify its __partials__-relative directory path, filename, and file extension.
+<.> If the version coordinate isn't specified, Antora uses the <<latest-version,latest version of the target partial's component>> to complete the resource ID at runtime.
+This behavior only applies when the target partial and current page belong to different docs components.
+
+Let's use the files that belong to the component versions _colorado 5.2_ (<<ex-co-v>>) and _wyoming 1.0_ (<<ex-wy>>) as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-v]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 pages <.>
+      📄 index.adoc
+    📂 partials <.>
+      📄 treeline-warning.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines the _ROOT_ module
+<.> Defines subsequent source files as pages
+<.> Defines subsequent source files as partials
+
+.Directories and files assigned to wyoming 1.0
+[listing#ex-wy]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 sierra-madre <.>
+    📂 pages <.>
+      📄 elevation.adoc
+----
+<.> Defines the component version as _wyoming 1.0_
+<.> Defines a module named _sierra-madre_
+<.> Defines subsequent files as pages
+
+Using files from <<ex-co-v>> and <<ex-wy>>, let's reference [.path]_treeline-warning.adoc_ (target partial) from [.path]_elevation.adoc_ (current page).
+The [.path]_treeline-warning.adoc_ partial belongs to the component version _colorado 5.2_.
+The [.path]_elevation.adoc_ page belongs to the component version _wyoming 1.0_.
+
+The include directive in <<ex-across-components>> will embed the content of the [.path]_treeline-warning.adoc_ partial into the [.path]_elevation.adoc_ page.
+
+.elevation.adoc (current page)
+[#ex-across-components]
+----
+\include::5.2@colorado:ROOT:partial$treeline-warning.adoc[]
+----
+
+As shown in <<ex-across-components>>, the target partial's version coordinate is `5.2`, its component coordinate is `colorado`, its module coordinate is `ROOT`, its family coordinate is `partial$`, and its file coordinate is `treeline-warning.adoc`.
+You could also specify the resource ID for [.path]_treeline-warning.adoc_ as `5.2@colorado::partial$treeline-warning.adoc` (notice the module coordinate `ROOT` seems to be missing).
+When the target partial's component coordinate is specified, and the target partial belongs to the _ROOT_ module, the module coordinate `ROOT` doesn't have to be explicitly specified.
+However, you must still enter the colon (`:`) that would follow the module coordinate.
+This shorthand only works when a component coordinate is specified and the module coordinate of the target partial is `ROOT`.
+
+[#latest-version]
+=== Use the latest version of a partial
+
+TIP: This behavior only applies when the target partial and current page belong to different docs components!
+
+If a version isn't specified in the resource ID assigned to an include directive, *and the target partial and current page don't belong to the same component*, Antora uses the version coordinate of the xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version] of the target partial's component to complete the resource ID at runtime.
+
+Let's use the files that belong to the component versions _colorado 5.2_ (<<ex-co-latest>>), _wyoming 1.0_ (<<ex-wy1>>), and _wyoming 1.5_ (<<ex-wy-latest>>) as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-latest]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita
+    📂 pages
+      📄 willow-creek.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+
+.Directories and files assigned to wyoming 1.0
+[listing#ex-wy1]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 sierra-madre
+    📂 pages
+      📄 elevation.adoc
+    📂 partials
+      📄 bears.adoc
+----
+<.> Defines the component version as _wyoming 1.0_
+
+.Directories and files assigned to wyoming 1.5
+[listing#ex-wy-latest]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 sierra-madre
+    📂 pages
+      📄 elevation.adoc
+    📂 partials
+      📄 bears.adoc
+----
+<.> Defines the component version as _wyoming 1.5_
+
+Let's reference the [.path]_bears.adoc_ partial (target partial) from the [.path]_willow-creek.adoc_ page (current page).
+[.path]_willow-creek.adoc_ belongs to component version _colorado 5.2_.
+There are two files named [.path]_bears.adoc_ that belong to the _wyoming_ component, _sierra-madre_ module, and _partials_ family.
+One [.path]_bears.adoc_ belongs to version _1.0_, the other [.path]_bears.adoc_ to version _1.5_.
+
+<<ex-across-components-latest>> shows an include directive referencing [.path]_bears.adoc_ (target partial) from [.path]_willow-creek.adoc_ (current page).
+Notice that the target partial's version coordinate isn't specified.
+
+.willow-creek.adoc (current page)
+[#ex-across-components-latest]
+----
+\include::wyoming:sierra-madre:partial$bears.adoc[]
+----
+
+When Antora runs, it will identify _wyoming 1.5_ as the latest version of the _wyoming_ component according to its xref:ROOT:how-component-versions-are-sorted.adoc#version-sorting-rules[version sorting rules] and xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version criteria].
+Because a version coordinate isn't specified in <<ex-across-components-latest>>, Antora will complete the resource ID assigned to the include directive using the version coordinate -- `1.5` -- from the latest _wyoming_ component.
+
+WARNING: This behavior of linking to the latest version only applies when the version coordinate is unspecified and the target partial and current page belong to different components.
+If the version and component coordinates aren't specified in the resource ID, Antora assumes the target partial belongs to the same component version as the current page and uses the current page's version and component coordinates to complete the target partial's resource ID.
+
+[#references-in-partial]
+== Use references in a partial
+
+You must be mindful when using references (e.g., xrefs) in a partial.
+That's because a reference does not take the location of the partial into account.
+Rather, the reference is made relative to the page in which the partial is included.
+Therefore, when a reference such as an xref is used in a partial, that reference must be as specific (i.e., qualified) as the broadest context in which the partial is included.
+
+For example, if the partial is included in exactly one page, the reference can be as general as fragment.
+
+----
+See <<the-example>>.
+----
+
+In this case, the page is implied.
+
+If the partial is included in more than one page, then the reference must at least include the page coordinate of the page that contains the fragment.
+
+----
+See xref:the-page.adoc#the-example[The Example]
+----
+
+If the partial is included in more than one module, then the reference must also include the module name of the page that contains the fragment.
+
+----
+See xref:the-module:the-page.adoc#the-example[The Example]
+----
+
+This rule is true for all types of references, including images.
+The rule does not apply to nested includes since includes are aware of their own context.
+
+[#placement]
+== Include directive placement
+
+An include directive is placed at the beginning of a new line.
+The content from the target partial will be displayed as a standalone block when you enter an empty line above and below the include directive.
+You can attach content from the target partial to a block in the current page by placing the include directive on a new line directly adjacent to the content to which it should be attached.
+
+.current-page.adoc
+----
+A paragraph in the page.
+
+include::partial$cli-options.adoc[tag=compass] <.>
+
+A line of content.
+include::partial$addendum.adoc[] <.>
+Another line of content.
+----
+<.> To display the included content as a standalone block, make sure there is an empty line above the include directive and after the include directive.
+<.> To attach the included content to a block in the current page, enter the include directive on a new line directly above, between, or below the content lines of the block.
+
+[#include-diagram]
+== Include diagram source
+
+If you use diagrams in your pages that are generated from source, you may want to store the diagram's source in a separate file.
+It's up to you whether to store that source as an example or partial.
+Since the source is not a code example, a partial seems like the more logical place.
+
+Create a folder under the partials directory and name it diagrams.
+Then, store the source of your diagram in that folder.
+Let's assume the file is named [.path]_partials/diagrams/my-schema.puml_.
+You can now include that source into your page as follows:
+
+.Include the source of a diagram
+----
+[plantuml,my-schema,svg]
+....
+\include::partial$diagrams/my-schema.puml[]
+....
+----
+
+You can refer to diagram sources in other modules, versions, or components, just like with other partials.
+
+== Learn more
+
+* xref:include-an-example.adoc[]
+* xref:include-a-page.adoc[]
+* xref:resource-id.adoc[]
+
+.*AsciiDoc and Asciidoctor resources*
+* {url-leveloffset}[Offset section headings with leveloffset^]
+* {url-tags}[Select regions of content with tags^]
+* {url-include}[AsciiDoc include directive^]

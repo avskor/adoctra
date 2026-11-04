@@ -1,0 +1,224 @@
+= Text Styles
+:description: The theming language provides keys for aligning, decorating, sizing, styling, and transforming text.
+
+[#text-align]
+== Text alignment
+
+The `text-align` key is used to align text horizontally within the text box.
+It has the same function as the `text-align` property in CSS.
+The text can be aligned using the following keywords:
+
+center:: Text is centered within the text box.
+justify:: Text is spaced out to align evenly with both sides of the text box.
+left:: Text is aligned to the left side of the text box.
+right:: Text is aligned to the right side of the text box.
+inherit:: *Only applies to the caption text of block images (`image-caption`) and tables (`table-caption`).*
+The value `inherit` resolves to the alignment of the block.
+Further information about using `inherit` on image caption text and table caption text can be found on xref xref:block-images.adoc#caption-text-align[Block Image Styles] and xref:tables.adoc#caption-text-align[Table Styles], respectively.
+
+The `text-align` key is distinct from the similarly-named `align` key.
+The xref:blocks.adoc#align[align key] aligns a block element horizontally within its container.
+
+The base `text-align` can be set using the `text-align` document attribute, which takes precedence over the value in the theme.
+If a `text-<align>` role (e.g., `text-center`) is set on a block element it overrides the value from the theme.
+
+[#decoration]
+== Decoration
+
+The `text-decoration` key specifies the type of decoration, such as an underline, that is applied to the text.
+It accepts the following keywords:
+
+line-through:: A line is drawn across the text.
+This is commonly referred to as a strikethrough.
+none:: Clears an inherited value and no decoration is applied to the text.
+underline:: A line is drawn beneath the text.
+
+When a key category allows the `text-decoration` key to be set, you can usually specify a `text-decoration-color` and `text-decoration-width`, too.
+
+[#font-size]
+== Font size
+
+The `font-size` key specifies the size of the font.
+The font size may be specified either as a fixed value (e.g., `12`) or a relative value (e.g., `0.8em`).
+Font sizes are most often specified as a fixed value, though there are important cases when a relative value is more suitable.
+The font size always resolves to a point value when text is written to the PDF.
+
+IMPORTANT: The `base-font-size` must always be a number.
+That's because the value of this key is the reference value on which relative font values (e.g., `0.75rem`) are based.
+
+If the font size is specified as a number, or a number with a fixed unit of measurement (e.g., `px`), that value is converted to points.
+The conversion to points is done when the theme is loaded.
+The `font-size` key on the `base` category, as well as min, large, and small font size keys, must always be specified as a fixed value.
+
+The only time this value is not used as specified is when the element is inside a table.
+If the font size on the table or AsciiDoc table cell differs from the base font size, all nested content is scaled by that ratio.
+
+If the font size has relative units, `em`, `%`, or `rem`, then the value will be computed at the point of use.
+
+* If the value has the unit `em`, then that value will be multiplied by the current font size.
+* If the value has the unit `%`, then that value will be divided by 100, then multiplied by the current font size.
+* If the value has the unit `rem`, then that value will be multiplied by the base font size.
+
+For example, if the font size is `0.75em` and the current font size is `12`, then the font size will be `9`.
+
+Relative font sizes are best suited for inline elements, such as a codespan.
+Only use a relative font size when the font size should always be scaled relative to either the parent element (`em` or `%`) or base font size (`rem`).
+
+[#line-height]
+== Line height
+
+The `line-height` key specifies the height of the box in which a single line of text is positioned.
+This theme key is used to control the spacing between wrapped lines.
+
+The line height value is a multiplier of the <<font-size,font size>>.
+A line height value of 1 means that the height of the line should be equivalent to the height of the font.
+In this case, a wrapped line will start directly below the previous line, with no extra vertical space.
+A line height value of 2 means that the height of the line should be equivalent to twice the height of the font.
+In this case, there will be extra space between wrapped lines than what the text occupies.
+If the value is greater than 1, the text is positioned equidistant between the top and bottom of the line's box.
+
+The impact of the line height and how it's computed is more complex than it would seem at first glance.
+Even if you set the value to 1, you may notice extra space between wrapped lines.
+As you're no doubt aware, not all characters have the same height (e.g., `x` vs `X`).
+Furthermore, some characters have vertical strokes that rise above the lowercase letter `x` (ascenders) and some have strokes that drop below the lowercase letter `x` (descenders).
+We refer to the height of the lowercase letter `x` the x-height.
+The x-height is always less than--and can vary considerably from--the effective height of the font.
+//Some fonts add even more space above the ascenders and descenders than what's required for them to fit in the line's box.
+//All this extra space translates into a built-in line height.
+//(The font size is really a rough approximation of the height, not an exact value).
+
+[NOTE]
+====
+Many fonts contain built-in line height.
+As a result, the size of the font may appear to take up more room than the number of points you specify.
+You can compensate for this difference by adjusting the line height value in your theme.
+
+In particular, the Noto font family has a built-in line height of 1.36.
+Thus, if you set the line height in your theme to 1, you're really setting it to 1.36.
+If you want a line height of 1.5, set the line height to 1.1 in your theme.
+====
+
+You can study the built-in line height by setting the `base-line-height` key to 1, the `mark-border-offset` key to 0, then applying the #mark# formatting to various characters, words, and phrases.
+
+[,asciidoc]
+----
+#x# #Hg# #Adjective# #Jog# +
+#Hg# #x#
+----
+
+The background color under the marked text stretches across the entire built-in line height.
+This reveals the difference between the height of the text and the height of the line.
+If you increase the line height value, you'll see spacing appear between the background color stripes of wrapped lines.
+
+WARNING: If the `line-height` value is < 1, you risk causing the text in adjacent lines to overlap.
+
+The reserved height for ascenders and descenders, which can differ, also impacts how the text is positioned vertically within the line height.
+The text is positioned so that the space above and ascender and the space below a descender are equivalent.
+If the text has no ascenders or descenders (e.g., `x`), it can appear slightly higher or lower in the line than expected.
+It all depends on the properties of the font.
+You can observe this behavior by testing the previous example with different fonts.
+Try change the font family (e.g., `Helvetica` or `Times-Roman`) to see what impact it has.
+
+When you're choosing a line height value, study the interplay between characters with ascenders (e.g, `h`) and descenders (e.g., `y`).
+Use marked text to reveal the space occupied by a single line.
+Adjust the line height value until the spacing between the lines matches what you expect.
+
+[#font-style]
+== Font style
+
+The `font-style` key specifies the font variant in a font family that the text should use.
+The key accepts the following keywords:
+
+bold:: Text is styled using the bold variant of a font family.
+bold_italic:: Text is styled using the bold italic variant of a font family
+italic:: Text is styled using the italic variant of a font family.
+normal:: Text is styled using the normal font variant in a font family.
+normal_italic:: The style of the text is reset to normal, and then the text is styled using the italic variant of a font family.
+
+Usually, you can specify a font style wherever you can set a font family (`font-family`).
+The converter uses the values of both keys in combination to locate the correct font within a font stack.
+
+[#transform]
+== Transform
+
+The `text-transform` key changes the case of the text.
+It accepts the following keywords:
+
+capitalize:: Transforms the first letter of each word to a capital letter.
+lowercase:: Transforms all the text to lowercase letters.
+none:: Clears an inherited value and no case transformation is applied to the text.
+smallcaps:: Replaces lowercase ASCII letters (a-z) with their small capital variant.
+Lowercase letters outside the ASCII range are not transformed.
+uppercase:: Transforms all the text to capital letters.
+
+The `text-transform` key can't be set on the xref:base.adoc[base category].
+
+If you want the smallcaps transformation to support letters beyond the a-z range, you can do so by overridding the `smallcaps` method in an extended converter.
+
+[,ruby]
+----
+class MyPDFConverter < (Asciidoctor::Converter.for 'pdf')
+  register_for 'pdf'
+  
+  def smallcaps string
+    string = super
+    string = string.gsub 'é', %(\u1d07\u0301)
+    string
+  end
+end
+----
+
+This transformation can be automated using `String#unicode_normalize` with the `:nfd` form.
+This method will rewrite all characters with diacritical marks so that the diacritical mark is added using a combining character (i.e., a two graphene form).
+
+[,ruby]
+----
+class MyPDFConverter < (Asciidoctor::Converter.for 'pdf')
+  register_for 'pdf'
+  
+  def smallcaps string
+    string = string.unicode_normalize :nfd unless string.ascii_only?
+    super
+  end
+end
+----
+
+The smallcaps transformation for extended Latin characters (e.g., characters that include an accent) typically requires the addition of a combining character, such as the combining acute accent in the example above).
+Therefore, you must ensure that the font you're using supports these combining characters (meaning it provides the necessary glyphs).
+
+[#superscript]
+== Superscript
+
+Text formatted as superscript, which includes footnote number references in the body, are displayed in a smaller font size (58.3%) and raised above the baseline (offset by 85% of the ascender height).
+It's not currently possible to influence the font size and text position of superscript text using the theme.
+These settings are hardcoded into Asciidoctor PDF and Prawn, respectively.
+However, you can adjust them in a Prawn patch by requiring the following Ruby script:
+
+[,ruby]
+----
+Prawn::Text::Formatted::Arranger.prepend (Module.new do
+  def initialize(*)
+    super
+    @sub_and_sup_relative_size = 0.75
+  end
+end)
+
+Prawn::Text::Formatted::Fragment.prepend (Module.new do
+  def y_offset
+    superscript? ? 0.5 * ascender : super
+  end
+end)
+----
+
+Adjust the relative size and y offset values as you see fit.
+
+[#border-background-color]
+== Border and background color 
+
+For inline elements that support a border or background color, the decoration is fit to the text by default.
+That means it stretches from the start of the first character to the end of the last character horizontally and across the entire built-in line height of the text vertically.
+The `line-height` key on the block element (e.g., paragraph) does not affect the decoration.
+
+To extend the decoration out evenly on both axes, set the `border-offset` key to a positive number.
+This setting does not affect the layout of the text.
+It only swells the extent of the decoration under it.

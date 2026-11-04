@@ -1,0 +1,137 @@
+= Content Source Versioning Methods
+:page-aliases: component-versions.adoc
+
+This page describes several methods you can use for managing versions of your content.
+While these recommendations are most applicable to software documentation, they can apply for other content as well.
+
+== Version content using branches
+
+Using this method, you store each xref:component-version.adoc[documentation version] in a branch of a git repository, just like you use branches to store version lines of a software project.
+You then set the xref:playbook:content-branches.adoc[branches key] on the content source to tell Antora which branches to use.
+The name of the branch itself _does not_ matter.
+It's the xref:component-version-key.adoc[version key] in the xref:component-version-descriptor.adoc[component version descriptor] or playbook that determines the version.
+
+Using branches to version content is the method we recommend starting with when using Antora.
+Branches are ideally suited for managing multiple versions of the same content.
+
+If you haven't used branches for versioning before, you may have stored versions in folders.
+If we were to use version folders to store documentation versions all in a single branch, then we'd have to explicitly copy all the files in a version to a new folder to create a new version.
+In doing so, we'd no longer be able to rely on git to compare, manage, and merge different versions of the same document.
+
+If we were to use tags to store documentation versions, then we wouldn't be able to update the documentation once the tag was made, effectively freezing the documentation from receiving updates.
+
+Branches offer the right balance.
+By creating a new branch from an existing reference in the repository to hold a new version, the repository only stores what's changed since that branch point.
+And that branch can receive updates at any time.
+That's what git does best.
+
+Branches map well to the system of references provided by git and are flexible enough to allow documentation to be updated freely.
+
+== Version content using tags
+
+Using this method, you store each xref:component-version.adoc[documentation version] in a tag of a git repository, just like you use tags to store software releases.
+You then set the xref:playbook:content-tags.adoc[tags key] on the content source to tell Antora which tags to use.
+Tags provide many of the same benefits of branches, but with some notable downsides.
+
+Like branches, tags allow you to compare different instances of a file across versions and the repository only stores what's changed since the previous tag point.
+The downside of tags is that, once created, you can't update them like you can with branches.
+So, if you find a typo, or need to add an example, you can't edit the content in a tag.
+It's frozen.
+You'd have to delete and recreate the tag, or create a new tag and point to it, in order to publish your updates.
+
+If you decide to version content using tags, despite the drawbacks, we *strongly* recommend using dedicated tags for documentation (e.g., docs/2.0.1 to follow release/2.0.1).
+In doing so, you provide a window to update the documentation after the software tag is created and before the documentation for that software is frozen (by tagging it).
+Otherwise, you'd have to ensure all documentation updates are in before the software is released, which is rarely the case.
+(The alternative is to release the software so frequently that missing the software release is no big deal).
+
+== Version content using folders
+
+Using this method, you store each xref:component-version.adoc[documentation version] in a folder in a single reference (branch or tag) of a repository.
+You then set the xref:playbook:content-source-start-paths.adoc[start_paths key] on the content source to tell Antora which directories to consider to locate those folders and the branches or tags key to point Antora to the reference where the directories are located.
+The name of the folder itself _does not_ matter.
+It's the xref:component-version-key.adoc[version key] in the xref:component-version-descriptor.adoc[component version descriptor] that determines the version.
+
+We generally recommend against using this method since you lose a lot of the advantages that git affords you, as previously described.
+However, it can be useful when the documentation for a lot of different versioned software components coexist in the same repository.
+In this scenario, references (branches or tags) don't work well since a reference for a single software component will carry with it unrelated (and likely outdated) documentation from another software component.
+That kind of arrangement doesn't fit with git's model.
+And it can be confusing for writers.
+
+Using folders to version content is arguably the easiest system for the writer to use.
+The writer can clone the content source repository and immediately edit files across all versions without having to do any branch switching.
+Although the writer can no longer rely on git to compare, manage, and merge different versions, and each version starts as a complete copy of the previous one, the productivity benefits of having all the files together may win out.
+That's why Antora supports this method.
+However, keep in mind that by using xref:playbook:content-worktrees.adoc[multiple worktrees], it's possible to achieve a similar setup using branches that doesn't sacrifice the ability to use git's revision control mechanisms.
+
+You should only consider versioning content using folders if either the repository hosts versioned documentation for many different components or your writers are unable to work with branches.
+
+== Documentation versions and software releases
+
+We view documentation as the explanation for the software in a release line.
+The documentation describes the software that has been published.
+Thus, it should be possible to update the documentation even after the software has been released (perhaps even long after).
+
+The documentation lifecycle isn't bound to the software lifecycle, but rather follows it.
+In many cases, the documentation isn't ready when the software release was made and still needs work (otherwise, you end up putting immense, often unreasonable, pressure on the documentation team).
+In other cases, new information is discovered about a software release that needs to be added to the documentation for that release.
+
+If the software adheres to https://semver.org[semantic versioning^], we generally recommend mapping the documentation version to the minor version of the software (e.g., 1.0, 1.1, 2.0, etc.).
+This mapping is possible when the software is managed using branches that follow a minor release line (e.g., v1.0.x, v1.1.x, v2.0.x, etc.).
+
+Mapping the documentation version to a minor version line of the software works because, generally, documentation isn't tied to patch releases.
+Often times, the documentation is updated to include information that was previously missed.
+And that information can be added at any time before or after the next patch release.
+
+In summary, we typically advise against building documentation for software releases from tags.
+Documentation is the explanation of the software, not the software itself.
+It needs to be possible to update documentation after a version of the software is frozen and released.
+If you do use tags, we strongly recommend using tags for documentation that are distinct from the tags for the software releases.
+
+=== Tags for prereleases
+
+Where tags fit well is when you're publishing documentation for a prerelease.
+In a prerelease line, new features can be added well before the software is published.
+Those new features may be accompanied by documentation that describe those features.
+As a result, the documentation references features which are not yet available.
+If Antora publishes the documentation from the prerelease branch, the user can be misled into thinking certain features are available, when in fact they are not.
+
+To solve this problem, you can pull the documentation from the tag for the last prerelease instead.
+By publishing the documentation for a prerelease from a tag, you can lock the documentation to only what was available when the software was released.
+That way, you don't publish documentation for features that aren't yet available.
+
+The only caveat is that documentation which doesn't make it in before the prerelease gets tagged won't be available until the next prerelease--the same limitation of using tags as previously described.
+However, it's less of a concern in this case since a prerelease is, by it's very nature, not considered complete and can be followed by other prereleases.
+
+== Learn more
+// The list items IDs exist because they're the previous section IDs for sections that were originally in the aliased page, but have now become their own pages.
+
+* xref:component-name-and-version.adoc[]
+* xref:how-component-versions-are-sorted.adoc[]
+* xref:component-with-no-version.adoc[]
+
+////
+This section is going to become a new page
+
+== Setting the version for a branch
+
+To assign a version to a component version stored in a particular branch, you set the xref:component-version-key.adoc[version key in the component version descriptor]:
+
+[source,yaml]
+----
+name: versioned-component
+version: '2.1'
+title: Versioned Component
+----
+
+This component version descriptor communicates that the files taken from this branch contribute to the `2.1` version of the component named `versioned-component`.
+The name of the branch where the component version's source files are stored could be _v2.1_ or _v2.1-beta_.
+It doesn't matter.
+
+The component version descriptor is the only file you have to update when creating a new branch.
+All the page references for that component version should be relative to the version, so you shouldn't need to update any links.
+The next time you run Antora on the repository, you'll see a new version in the component explorer drawer.
+
+You may need to add the xref:playbook:configure-content-sources.adoc#branches[branch to your playbook file].
+Keep in mind that content sources are filtered by branch name, not by the version they contain.
+That's because xref:component-structure.adoc#distributed[a single component version's source files can be located in multiple branches, or even multiple repositories].
+////

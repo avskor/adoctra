@@ -1,0 +1,139 @@
+= Publish to GitHub Pages
+
+Antora is designed to create sites that run anywhere, whether it be on a static web host or the local filesystem.
+However, some hosts offer "`features`" that mess with Antora's output.
+GitHub Pages is one of those hosts.
+
+== Jekyll and underscore files
+
+By default, GitHub Pages runs all files through another static site generator named Jekyll (even if your repository is not set up to use Jekyll).
+Since Antora already produces a ready-made site, there's absolutely no need for this step.
+But it's more than just the wasted effort.
+
+Jekyll has the nasty side effect of removing all files that begin with an underscore (`+_+`).
+Why is this a problem?
+By default, Antora puts UI files in a folder named `+_+`.
+It also places images inside the folder named `+_images+`.
+When Jekyll comes through, it wipes out these folders.
+As a result, you get no UI and no images.
+
+== .nojekyll
+
+Fortunately, there's a way to disable this "`feature`" of GitHub Pages.
+The solution is to add a [.path]_.nojekyll_ file to the root of the published site (i.e., the output directory configured in your playbook).
+
+The presence of the [.path]_.nojekyll_ file at the root of the `gh-pages` branch tells GitHub Pages not to run the published files through Jekyll.
+The result is that your Antora-made site will work as expected.
+
+Let's look at two ways to create the [.path]_.nojekyll_ file when you run Antora.
+
+=== Touch the file manually
+
+One way to add this file is to touch the [.path]_.nojekyll_ file in the output directory after Antora runs, but before committing the files to GitHub Pages.
+For example:
+
+ $ touch build/site/.nojekyll
+
+Fortunately, there's way to do this without having to run a separate command.
+
+=== Use the supplemental UI
+
+To avoid the need for the extra command, the other way to do it is to inject the file using Antora's xref:playbook:ui-supplemental-files.adoc[supplemental UI] feature.
+To do so, add the following `supplemental_files` block under the `ui` category in your playbook file:
+
+.antora-playbook.yml that adds .nojekyll file using supplemental UI
+[,yaml]
+----
+ui:
+  bundle:
+    url: <url-of-bundle-goes-here>
+  supplemental_files:
+  - path: ui.yml
+    contents: |
+      static_files:
+      - .nojekyll
+  - path: .nojekyll
+----
+
+This configuration defines files from memory.
+The first file, [.path]_ui.yml_, tells Antora which files to promote to the root of the site (outside the UI folder) using the `static_files` key.
+The second file, [.path]_.nojekyll_, gets written to the root of the published site.
+Since the `contents` key is absent, Antora will create an empty file (the equivalent of the `touch` command from above).
+
+== Using GitHub Actions
+
+If your playbook repository is hosted on GitHub, you can configure a GitHub Actions workflow to build and publish your site to GitHub Pages.
+The benefit of using GitHub Actions is two-fold.
+First, you don't have to worry about copying the published files to the gh-pages branch for publishing.
+Second, you don't have to worry about the [.path]_.nojekyll_ file since the action handles it for you.
+Let's get started!
+
+<<github-actions-workflow>> shows an example of a GitHub Actions workflow that uses the latest stable release of Antora to build and publish your site to GitHub Pages.
+This workflow assumes that the name of the default branch of your playbook repository is _main_, that the name of your playbook file is [.path]_antora-playbook.yml_, and that Antora is configured to publish the files to the [.path]_build/site_ directory.
+If your site uses different settings, you'll need to update the values in the workflow file accordingly.
+
+..github/workflows/publish.yml builds the Antora site and deploys it to GitHub Pages using GitHub Actions
+[#github-actions-workflow,yaml]
+----
+include::example$github-actions-workflow.yml[]
+----
+
+As <<github-actions-workflow>> shows, you can install and invoke Antora directly from the workflow.
+This workflow installs a specific release of Antora (both the CLI and site generator packages) and then uses the Antora CLI in the workflow.
+The workflow then uses the peaceiris/actions-gh-pages action to publish the site, along with the required [.path]_.nojekyll_ file, to GitHub Pages.
+
+To install and use a different version of Antora, append a version to the package name, such as `antora@3.0.3`.
+
+Let's now take this a step further by adding the https://gitlab.com/antora/antora-lunr-extension[Antora Lunr Extension] to incorporate a search widget in the built site.
+First, you need to update your playbook repository and UI to meet the minimum requirements of the Antora Lunr Extension as described in the https://gitlab.com/antora/antora-lunr-extension#usage[README] for that project.
+Once that's done, return to the GitHub Actions workflow and configure it to install the extension at the same time it installs Antora.
+The result is shown in <<github-actions-workflow-with-lunr>>.
+
+..github/workflows/publish.yml includes the Antora Lunr Extension
+[#github-actions-workflow-with-lunr,yaml]
+----
+include::example$github-actions-workflow-with-lunr.yml[]
+----
+
+To install and use a different version of the Antora Lunr Extension, append a version to the package name, such as `@antora/lunr-extension@1.0.0-alpha.5`.
+
+== Using a custom domain
+
+You can serve your site from a different URL than the default <username>.github.io using a GitHub Pages custom domain.
+
+If you're publishing your site <<Using GitHub Actions>> as the source, then you can configure your custom domain from the menu:Settings[Pages] configuration screen in the GitHub web interface.
+No other action is required in the CI workflow.
+
+On the other hand, if you're publishing your site from a branch (e.g., gh-pages), then you need to write the custom domain to a CNAME file at the root of the site.
+In order to do so, add the following step to your GitHub Actions workflow file (or the equivalent for whatever CI pipeline you're using) after running Antora.
+
+[,yaml]
+----
+- name: Create CNAME file
+  run: echo my-domain-name.com > build/site/CNAME
+----
+
+Alternately, you can use a supplemental UI to add the CNAME file, similar to how the .nojekyll file was added earlier.
+
+.antora-playbook.yml that adds CNAME file using supplemental UI
+[,yaml]
+----
+ui:
+  bundle:
+    url: <url-of-bundle-goes-here>
+  supplemental_files:
+  - path: ui.yml
+    contents: |
+      static_files:
+      - CNAME
+  - path: CNAME
+    contents: |
+      my-domain-name.com
+----
+
+This configuration defines files from memory.
+The first file, [.path]_ui.yml_, tells Antora which files to promote to the root of the site (outside the UI folder) using the `static_files` key.
+The second file, [.path]_CNAME_, gets written to the root of the published site and contains the custom domain name, as required by GitHub Pages when publishing from a branch.
+The benefit of this approach is that it does not require an extra step in the CI workflow.
+
+Refer to https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site[Managing a custom domain for your GitHub Pages site^] in the GitHub documentation for more information about using a custom domain and how to activate it.

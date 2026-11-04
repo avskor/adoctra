@@ -1,0 +1,122 @@
+= Worktrees
+
+To complement branches, Antora can be configured to use the worktree linked to any branch it discovers in a local repository.
+This behavior is controlled using the `worktrees` key.
+The `worktrees` key accepts a boolean value or a list of exact worktree names, name patterns, or symbolic names.
+
+Worktrees are only relevant for branches, not tags.
+
+[#worktrees-key]
+== worktrees key
+
+The `worktrees` key is optional.
+The key can be specified directly on the `content` key (which changes the default value for all content sources) or on an individual content source (which overrides the inherited default value).
+The `worktrees` key accepts a boolean value or list.
+Each value in the list can be an exact worktree name (e.g., `v2.3`, `main`, etc.), a positive or negative name pattern (e.g., `+v2.*+`, `+v@({1..9})*({0..9}).+({0..9}).x+`, etc.), or a symbolic name (e.g., `.`).
+The list of name patterns can be any combination of these value types, with one caveat.
+
+NOTE: The worktrees key don't select content itself.
+Instead, it makes worktrees available to be selected by the branches key.
+If the current branch of a worktree matches one of branches selected, then Antora uses the files from that worktree.
+So we can say that worktrees are used by association when their branch is selected.
+
+There are a few things to note about worktrees.
+Typically, a worktree has the same name as the branch from which it was created, but not always.
+The main worktree does not have a formal name and is therefore represented in Antora by the symbolic name `/.` (to symbolize the current directory at the main repository root).
+
+NOTE: The main worktree is not necessarily linked to the main branch.
+The fact that they are both use the term "`main`" is merely coincidental.
+
+If the `worktrees` key is not specified, Antora automatically uses the <<default,default filter>>.
+
+[#default]
+== Default worktrees filter
+
+When the `worktrees` key isn't set on a content source, Antora use the [.term]*default worktrees filter*, `.`.
+That means Antora will use the main worktree of the (local) repository (represented as `.`) if the current branch of that worktree is selected by the `branches` filter.
+If such a match is made, Antora uses the files from that worktree instead of the files from the git tree for that branch.
+
+You can override the default filter by setting the `worktrees` key directly on the `content` parent key.
+
+== Use all worktrees
+
+By default, Antora does not scan for linked worktrees.
+You can use the `worktrees` key to customize this behavior.
+To enable the use of all worktrees, simply set the `worktrees` key to the boolean value `true`.
+
+.antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: /path/to/repo-a/main
+    branches: [v1.0, v2.0, main]
+    worktrees: true
+----
+
+Antora will discover linked worktrees regardless of whether the `url` points to the main worktree or a linked worktree of the reository (or even the bare repository).
+
+=== Linked worktree as content source
+
+Antora supports using a linked worktree directly as a content source.
+(Antora discovers the corresponding git repository by following the .git file in that directory.)
+If you don't specify the worktrees key, Antora automatically selects the current (linked) worktree.
+You can then use the files in that worktree by using `HEAD` as the value of the `branches` key.
+
+If you start from a linked worktree, and want to use the main worktree, then you can use the symbolic name `/.` to refer to the main worktree.
+
+== Don't use any worktrees
+
+If you want Antora to bypass all worktrees, set the value of the `worktrees` key to the keyword `false`.
+In this case, Antora will always read files from the git tree.
+
+.antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: /path/to/repo-a/main
+    branches: [v1.0, v2.0, main]
+    worktrees: false
+----
+
+== Specify worktrees by keyword
+
+The `worktrees` key accepts the following keyword values:
+
+true:: Use all worktrees (the main worktree and all linked worktrees).
+false (or ~):: Do not use any worktrees (not the main worktree or any linked worktrees).
+/.:: Use only the main worktree.
+.:: Use only the current worktree. (default)
+*:: Use only the linked worktrees.
+
+The boolean values `true` and `false` can only be used as a singular value, not as an entry in the list.
+The symbolic names `.` and `/.` cannot be negated.
+
+If your repository only has a main worktree, then `.` and `/.` act the same.
+If the content source points to a linked worktree, then `.` matches that worktree and `/.` must be used to match the main worktree.
+
+== Specify worktrees by glob pattern
+
+If you want more fine-grained control over which worktrees Antora uses, you can specify a list of glob patterns.
+You refer to worktrees by their name, which is often the branch name to which they are linked (but not always).
+Thus, the glob pattern works the same as described on the xref:content-branches.adoc[] page.
+If you want to refer to the current worktree, you do so using the `.` keyword.
+If you want to refer to the main worktree, you do so using the `/.` keyword.
+
+Let's configure Antora to use the main worktree as well as the linked worktree for the v2.0 branch.
+The files for the v1.0 branch will be read from the git tree, even if there is a linked worktree associated with that branch.
+
+.antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: /path/to/repo-a/main
+    branches: [v1.0, v2.0, main]
+    worktrees: [., v2.0]
+----
+
+== Configure multiple worktrees
+
+To learn how to configure multiple worktrees, refer to xref:author-mode.adoc#multiple-worktrees[this guide] on the Author Mode page.

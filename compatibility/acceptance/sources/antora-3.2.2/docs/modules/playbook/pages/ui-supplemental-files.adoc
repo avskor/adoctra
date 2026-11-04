@@ -1,0 +1,139 @@
+= Supplemental UI
+
+You can specify supplemental UI files to augment the UI bundle.
+These files are referred to collectively as the [.term]*supplemental UI* because they supplement the files provided by the UI bundle.
+
+The supplemental UI is useful for customizing an existing UI bundle without having to create a new one.
+It should not, however, be used as a replacement for developing a custom UI bundle.
+Rather, it should be used to make a few minor adjustments or additions to suit a particular environment.
+One such example is a favicon.
+Since the favicon is part of the brand identity, you may want to use an off-the-shelf UI bundle, but add your own favicon to it.
+You can use the supplemental UI to accomplish this goal.
+
+== How it works
+
+The supplemental UI is overlaid onto the files in the loaded UI bundle.
+If the path of a file in the supplemental UI does not match the path of a file in the UI bundle, that file is added to the files from the UI bundle.
+If the path of a file in the supplemental UI matches the path of a file in the UI bundle, the file from the supplemental UI replaces the file from the UI bundle.
+The files in the supplemental UI are not otherwise processed.
+
+[#supplemental-files-key]
+== supplemental_files key
+
+The supplemental UI is configured using the `supplemental_files` key under the `ui` category key.
+The key accepts either the path of a directory that contains the supplemental files or a map of virtual files.
+Currently, these two value types are mutually exclusive.
+
+=== Directory
+
+If the value of the `supplemental_files` key is a string, Antora assumes this value is the path of a directory.
+The value may be specified as a relative or absolute filesystem path.
+include::partial$relative-path-rules.adoc[]
+
+[#ex-dir,yaml]
+----
+ui:
+  supplemental_files: ./supplemental-ui
+----
+
+Antora scans this directory for files and adds them to the loaded UI bundle.
+The directory is assumed to be the root of the UI hierarchy.
+Therefore, the UI path is the path of the file relative to this directory.
+
+Let's assume you want to replace the [.path]_head-meta_ partial with your own.
+Create the file at [.path]_supplemental-ui/partials/head-meta.hbs_ relative to the playbook file.
+Next, populate it with HTML and any optional template logic that you want to include.
+
+.supplemental-ui/partials/head-meta.hbs
+[,hbs]
+----
+{{#with site.keys.googleSiteVerification}}
+<meta name="google-site-verification" content="{{this}}">
+{{/with}}
+----
+
+Antora will now use this partial in place of the [.path]_head-meta_ partial provided by the UI.
+
+=== Virtual files
+
+As an alternative to a directory, you can specify the supplemental UI files directly in the playbook as virtual files.
+If the value of the `supplemental_files` key is an array, Antora assumes that each entry is a virtual file.
+A virtual file entry consists of two keys, `path` and `contents`.
+The `path` key is the relative path of the file in the UI (e.g., [.path]_partials/head-meta.hbs_).
+The contents can be the specified directory or sourced from a file on the filesystem.
+
+If the value of the `contents` key is a single line and ends with a file extension (e.g., `.hbs`), Antora assumes the value is the path of a file specified as a relative or absolute filesystem path.
+Otherwise, Antora uses the value as entered as the contents.
+If Antora determines the value is a file path, it reads the file and assigns the contents to the virtual file.
+If you omit the `contents` key, Antora will create an empty file.
+
+Let's assume you want to replace the [.path]_head-meta_ partial with your own.
+You can define it as a virtual file in the playbook:
+
+[,yaml]
+----
+ui:
+  supplemental_files:
+  - path: partials/head-meta.hbs
+    contents: |
+      {{#with site.keys.googleSiteVerification}}
+      <meta name="google-site-verification" content="{{this}}">
+      {{/with}}
+----
+
+You could also put the contents in a file and reference it from the virtual file entry:
+
+[,yaml]
+----
+ui:
+  supplemental_files:
+  - path: partials/head-meta.hbs
+    contents: ./supplemental-ui/partials/head-meta.hbs
+----
+
+If you are only defining a few small files, you can usually manage to define them directly in the playbook.
+If the files are larger, or you need to share them between multiple playbooks, its best to store them in separate files.
+
+== Static files
+
+By default, publishable assets provided by the supplemental UI, such as images and JavaScript files, are published to the xref:ui-output-dir.adoc[UI output directory].
+It's possible to configure certain files to be published to the root of the published site.
+These files are referred to as [.term]*static files*.
+Static files are identified using the UI descriptor, [.path]_ui.yml_, which also must be provided by the supplemental UI.
+The UI descriptor is a YAML file that configures certain aspects of the UI.
+
+To create a static file, first create a file in the supplemental UI, typically outside of any of the standard folders.
+A good example of a static file is the favicon, [.path]_favicon.ico_, at the root of the site.
+Let's assume you have put a favicon in the [.path]_supplemental-ui_ directory.
+If you're loading the supplemental UI from a path, add a [.path]_ui.yml_ file with the following contents:
+
+.ui.yml
+[,yml]
+----
+static_files:
+- favicon.ico
+----
+
+The `static_files` key accepts an array of strings.
+Each entry is the relative path to the file within the UI (it should not begin with a forward slash).
+Antora will pick up this file, see that the favicon is a static file, and publish it to the root of the site instead of the UI output directory.
+
+If you're defining the supplemental UI as virtual files, you need to add an entry for both the favicon and [.path]_ui.yml_ file.
+
+.antora-playbook.yml
+[,yml]
+----
+ui:
+  supplemental_files:
+  - path: favicon.ico
+    contents: ./supplemental-ui/favicon.ico
+  - path: ui.yml
+    contents: |
+      static_files:
+      - favicon.ico
+----
+
+WARNING: If the UI bundle contains a [.path]_ui.yml_ file, you will need to replicate its contents when redefining it for the supplemental UI.
+That's because the file in the supplemental UI overwrites the file provided by the UI bundle.
+
+Although the supplemental UI provides a convenient way to add static files to the site, you may want to consider using an xref:extend:extensions.adoc[extension] instead.

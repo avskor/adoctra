@@ -1,0 +1,101 @@
+= Partials
+:page-aliases: partials-and-content-snippets.adoc, create-a-partial.adoc
+
+== Reusable, single source content
+
+Partials are good for storing snippets of content, such as common descriptions, project introductions, terminology, frequent admonitions, and reference tables, that you reuse in one or more pages throughout your site.
+Changes you make to a partial will disseminate to all of the pages where you referenced the partial the next time you build your site.
+
+== Partial filenames and file extensions
+
+Partial files are stored in a xref:ROOT:partials-directory.adoc[_partials_ directory].
+A partial file is usually marked up with AsciiDoc and saved with the  _.adoc_ file extension.
+However, a partial isn't required to be an AsciiDoc file and, unlike publishable resources, a partial file without a file extension isn't treated as a xref:ROOT:standard-directories.adoc#hidden-files[hidden file].
+Antora will load a partial that doesn't have a file extension into its content catalog and assign the partial a resource ID for referencing.
+
+// tag::filename[]
+When saving a new partial file, keep the following filename requirements and recommendations in mind:
+
+* *Spaces aren't recommended* in partial filenames.
+While the AsciiDoc include directive does accept spaces in the target, some editing tools may not support it and is thus not recommended.
+* *Uppercase letters and spaces aren't recommended* in partial filenames.
+Some file systems aren't case sensitive.
+Therefore, file conflicts could occur when using git depending on the file system a writer is using.
+* Save a partial file with the _.adoc_ extension when it's an AsciiDoc file, otherwise use the valid file extension for the file type.
+You should only save a partial without a file extension when it's common industry practice for that specific file type to not have an extension.
+Not using the correct file extension when saving a partial file may limit your ability to apply some Antora extensions or upgrade to future capabilities.
+// end::filename[]
+
+Antora doesn't publish partial files as individual site pages.
+A xref:include-a-partial.adoc[partial must be referenced by an include directive] from a page, or resource that's eventually included in a page, for the partial's content to be published.
+
+== Create a partial file
+
+A partial is usually regular content marked up with AsciiDoc.
+Unlike a page, a partial doesn't have any required structural elements, such as a title, though it can contain such elements.
+In the next section, you'll see how to create a new partial file and mark it up with AsciiDoc.
+
+=== Set up an AsciiDoc partial file
+
+. Open a new file in your IDE or plain text editor.
+
+. On the first line of the file, enter your content, such as paragraph text, a table, or an attribute entry.
+In this example, let's create an admonition that's going to be used on several pages throughout a site.
++
+----
+[WARNING]
+====
+High, open places above the treeline are awe-inspiring--
+but you need to be prepared for the altitude and
+rapidly changing weather conditions.
+====
+----
+
+. Once you finish creating your content, save the file with the extension `.adoc` in a [.path]_partials_ directory.
++
+[listing]
+----
+📂 modules
+  📂 ROOT
+    📂 pages
+      📄 a-source-file.adoc
+    📂 partials
+      📄 treeline-warning.adoc
+----
+
+You've created a partial!
+Now, it's ready to be included in a page.
+Regardless of the component version a partial belongs to, it can be referenced by any page or partial in your site using the partial's resource ID and xref:include-a-partial.adoc[AsciiDoc include directive].
+You can even select regions or lines from a partial, instead of all of the partial's content, and insert only those regions or lines using the include directive's `tag`, `tags`, or `lines` attributes.
+
+[#current-context]
+== Current page context and structure
+
+As you create the content in a partial, there are certain AsciiDoc elements that you may need to adjust according to the current page's context and structure.
+A partial is converted after it's inserted into a page.
+Therefore, the current page's component version, module, attributes, and other elements are applied to and may impact the included content.
+
+=== Referencing pages and resources
+
+Xrefs:: If the partial is included in pages that belong to other modules or docs components, you need to specify the resource ID of a target page or attachment that's assigned to an xref macro in the partial's content accordingly.
+The number of resource ID coordinates required depends on the component version and module of the current page into which the partial is being inserted in relation to the target attachment or page being referenced by an xref macro in the partial's content.
+
+Images, examples, and other partials:: A partial can reference other partials and examples using the include directive and images using the image macros.
+Like when entering resource IDs in xrefs, the resource ID of the target resource may need additional coordinates specified depending on the component version and module of the current page that partial is being included into and the resource being referenced in the partial.
+
+=== Section headings
+
+A partial can contain section headings.
+You may need to use the `leveloffset` attribute to adjust the partial's heading levels, depending on where you enter the referencing include directive in a current page.
+
+=== Inline, block, and section IDs
+
+Element IDs in a partial can't conflict with the element IDs of the page into which it's being inserted.
+
+=== Attributes
+
+xref:attributes.adoc[Attributes] can be set, assigned, and referenced in a partial.
+When an attribute is referenced in a partial, either the partial, current page, or current page's component version descriptor must set and assign a value to the attribute.
+
+If an attribute is set and assigned a value in a partial, the attribute will be available in the current page starting from the point where the partial is included.
+In such cases, the partial's attribute will override an attribute with the same name that is set or unset in the current page's header or soft set or unset from the current page's component version descriptor.

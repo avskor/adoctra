@@ -1,0 +1,114 @@
+= Use Author Mode
+:url-git-worktree: https://git-scm.com/docs/git-worktree
+
+* [x] How to activate author mode.
+
+Although the primary function of Antora is to generate a site for publishing, it also serves as a tool for the author.
+By configuring Antora to use a local repository, you can preview local content, including content you haven't committed.
+
+== Activate author mode
+
+Author mode is activated when you configure the playbook to use a local clone for one or more of the content repositories.
+Antora will use the repository as it is on your local machine instead of cloning it from its remote location.
+This scenario assumes you've already cloned a repository and want to incorporate it into the site generation.
+
+To begin, create a folder named [.path]_workspace_ in your project.
+
+ $ mkdir workspace
+
+Switch to the newly created directory and clone one of the repositories:
+
+ $ git clone https://github.com/my-antora-demo/server-docs workspace/server-docs
+
+Next, make a copy of your playbook file for local use.
+In the example below, [.path]_antora-playbook.yml_ is copied and the new file is named [.path]_local-antora-playbook.yml_.
+
+ $ cp antora-playbook.yml local-antora-playbook.yml
+
+Next, open your new playbook file and configure it to use the cloned repository instead of the remote repository.
+You can specify the repository either as a xref:content-source-url.adoc#local-urls[path relative to the playbook file or as an absolute path].
+
+.local-antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: ./workspace/server-docs
+    branches: HEAD # <.>
+----
+<.> In author mode, you usually want to use the currently checked out HEAD of the local repository
+
+Build your Antora site using the new playbook file.
+
+ $ antora local-antora-playbook.yml
+
+The contents of your local repository will be incorporated into the pipeline.
+
+NOTE: If your [.path]_workspace_ directory is inside of your playbook repository, it is best to add it to your `.gitignore` file so as not to push it to the remote.
+
+[#multiple-worktrees]
+== Use multiple worktrees
+
+In the previous section, you learned how to configure Antora to use a local repository with a single worktree.
+If your repository only has a single content branch, this setup works great.
+However, once you start working with multiple branches, using a single worktree is not ideal.
+It means having to switch branches each time you need to read or update files in a different component version, making shuffling files between versions very difficult.
+That's where multiple worktrees comes into play.
+
+A local git repository can support multiple worktrees.
+The location of the local repository still acts as the main worktree.
+Using the {url-git-worktree}[`git worktree`^] command, you can associate additional worktrees with the repository, each mapped to a discrete branch.
+The new worktree is called a [.term]*linked worktree*.
+It lives in a directory that's separate from the main worktree.
+That means you can effectively have more than one branch checked out at a time for a single repository.
+
+Antora recognizes linked worktrees attached to a local content source, provided you have enabled this feature, and will use them if they match one of the branch patterns specified in the playbook.
+To enable this feature, add `worktrees: true` to the entry for the content source in the Antora playbook.
+
+Follow these steps to set up a local content source with multiple worktrees:
+
+. Clone the playbook repository.
+. In the folder that git creates for the clone, make a folder named [.path]_workspace_.
+. Switch to the [.path]_workspace_ folder and make another folder to hold the worktrees for your content repository (e.g., [.path]_workspace/software-with-docs_) (Note that this is not a git repository).
+. Switch to that folder.
+. Clone the content repository to the folder main (or whatever your default branch is) (e.g., `git clone \https://github.com/my-antora-demo/server-docs main`)
+. Switch to that folder.
+. Now create a worktree for each branch you want to edit using git worktree.
+For example: `git worktree add ../6.0 6.0`.
+The first argument to `git worktree add` is the location of the worktree and the second is the name of the branch.
+Typically, you'll name the worktree folder using the name of the branch.
+. Now return to the playbook repository (where [.path]_antora-playbook.yml_ is located) and open the author playbook named [.path]_local-antora-playbook.yml_ as described in the previous section, creating it if necessary.
+. In your playbook file, change the URL for the content repository to point to the cloned repository inside the workspace (e.g., ./workspace/software-with-docs/main).
+You have to point Antora to the main worktree, not one of the linked worktrees.
+. In that same content source entry, enable the xref:content-worktrees.adoc[worktrees feature] by adding `worktrees: true`.
+
+Repeat steps 3-10 for each content repository you want to work with.
+
+Now when Antora scans for branches, it will automatically discover the worktrees you have linked and read the files from it (instead of reading them from the git tree).
+With this setup, you can use the playbook repository as your home base and organize all your content repositories and branches underneath it for authoring.
+
+TIP: You could create a script in the playbook repository to automate the process of setting up this authoring environment.
+
+To learn more about git worktrees and how to use them, refer to the {url-git-worktree}[git-worktree page^] in the git documentation.
+
+== Author mode order of operations
+
+You may be wondering what branches the generator selects when the repository is local and whether it will pick up your uncommitted changes.
+Here's how a local repository is handled:
+
+* The repository contents on your local machine are used instead of the contents from its remote storage location.
+//being cloned from its remote storage location  into build/sources.
+* The local repository is not updated from its remote storage location; Antora assumes the author will manage the repository (explicitly calling `git fetch` or `git pull` on the repository as needed).
+
+Here's how the branches are selected in author mode:
+
+* Both local branches and remote branches associated with the remote `url` are considered.
+* If a local branch has the same name as a remote branch, the local branch is chosen.
+* The contents of the worktree get used in place of the files from the current branch.
+Aside from its name, the current branch is effectively ignored.
+* The current branch of your worktree must match the `branches` filter configured on the `url` entry.
+If not, the working tree will be ignored.
+You can use the xref:content-branches.adoc#current-worktree[reserved HEAD value] to ensure the current working tree is always used.
+
+If you want to use multiple worktrees, simply clone the repository multiple times and configure multiple entries in the playbook.
+You can use the `branches` key to xref:content-branches.adoc[filter out the names of branches you don't want].

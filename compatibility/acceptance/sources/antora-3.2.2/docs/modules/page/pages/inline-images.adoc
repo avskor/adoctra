@@ -1,0 +1,109 @@
+= Add Inline Images
+:colon: :
+
+On this page, you'll learn:
+
+* [x] The structure of the AsciiDoc inline image macro.
+* [x] How to insert an inline image using its resource ID.
+
+== AsciiDoc inline image macro
+
+An AsciiDoc inline image macro is used to embed the source file of an image into a partial or page.
+The inline image macro accepts the xref:resource-id.adoc[Antora resource ID] of PNG, JPG, SVG, and GIF (static and animated) image files as a value.
+
+When Antora runs, the image file referenced by the inline image macro is embedded in the flow of another element, such as a sidebar block, and displayed in the published page.
+For example, this is an SVG image image:blue-dot.svg[] that's embedded in this paragraph using the inline image macro.
+
+=== Inline image macro structure
+
+<<ex-inline-base>> shows the structure of an inline image macro.
+
+.Inline image macro
+[#ex-inline-base]
+----
+This sentence contains an inline image:resource-id-of-target-image.ext[optional attribute,optional attribute] image. <.>
+----
+<.> An inline image is entered into the flow of the content.
+It's designated by a single colon (`:`) after the macro name.
+
+At a minimum, an inline image macro consists of the macro's prefix (`+image:+`), the resource ID of the target image, and a set of square brackets (`[]`).
+include::image-resource-id-examples.adoc[tag=target-current-def]
+
+Each part of the inline image macro shown in <<ex-inline-base>> is described in more detail below.
+
+image{colon}::
+An inline image macro begins with the macro's name, `image`, followed by a single colon (`:`).
+
+resource ID of target image::
+The image macro accepts the resource ID of an image source file as its value.
+The value is entered directly after the colon that follows the macro's name (`+image:+`).
+How many of the target image's xref:resource-id-coordinates.adoc[resource ID coordinates] you need to specify depends on the component version and module of the target image in relation to the current page.
+When referencing an image from an image macro, you don't need to include the `image$` family coordinate in the target image's resource ID.
+It's applied automatically at runtime.
+
+[#attribute]
+[optional attribute,optional attribute]::
+The inline image macro is completed with a set of square brackets (`[]`) at the end of the target image's resource ID.
+You can leave the brackets empty, or assign one or more optional attributes as a comma-separated list inside the square brackets.
+
+The next section, <<insert-image>>, explains how to set up an inline image macro step-by-step.
+
+[#insert-image]
+== Embed an inline image
+
+Let's break down the inline image macro and resource ID coordinates you need to insert an image (the <<target,target image>>) into a page (the <<current,current page>>) using the inline image macro.
+
+. In your IDE or text editor, open the page where you want to insert an image.
+For this exercise, we've opened the file [.path]_satellites.adoc_.
+[.path]_satellites.adoc_ is the current page.
+. In [.path]_satellites.adoc_, let's embed the inline image [.path]_blue-dot.svg_.
+Select the place in the content flow of the current page where you want the target image to be displayed.
+Enter the macro's name followed by one colon (`+image:+`).
++
+.satellites.adoc (current page)
+[listing,subs=+quotes]
+----
+Look for the *image:*
+----
+
+. Enter the resource ID of the target image file directly after the colon.
+In this example, both [.path]_blue-dot.svg_ and [.path]_satellites.adoc_ belong to the same component version and module and the target image is stored at the root of the [.path]_images_ family directory.
+Therefore, only the filename and extension of [.path]_blue-dot.svg_ needs to be assigned as the value of the inline image macro.
++
+--
+.satellites.adoc (current page)
+[listing,subs=+quotes]
+----
+Look for the image:**blue-dot.svg**
+----
+
+Notice that the resource ID for [.path]_blue-dot.svg_ doesn't include its family coordinate.
+Antora automatically applies the `image$` family coordinate to a resource ID assigned to an image macro.
+--
+
+. Directly after the resource ID of the target image, enter an opening square bracket (`[`) and then a closing square bracket (`]`).
++
+--
+.satellites.adoc (current page)
+[listing,subs=+quotes]
+----
+Look for the image:blue-dot.svg**[]**
+----
+
+We didn't apply any optional attributes to the inline image macro in this example; however, you can specify one or more attributes as a comma-separated list inside the square brackets.
+--
+
+. Press the kbd:[SPACE] bar once after the last square bracket (`]`) to insert a space after the macro, then continue entering your content.
++
+.satellites.adoc (current page)
+[listing]
+----
+Look for the image:blue-dot.svg[] on the console.
+----
+
+That's it!
+You've finished inserting the target image ([.path]_blue-dot.svg_) into the current page ([.path]_satellites.adoc_) using the AsciiDoc inline image macro.
+
+== Learn more
+
+To learn how to embed images that belong to other modules, docs components, and versions, see xref:image-resource-id-examples.adoc[Image resource ID examples].

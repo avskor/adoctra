@@ -1,0 +1,115 @@
+= Identify a Prerelease Version
+:description: A component version becomes a prerelease when the prerelease key is set in antora.yml and assigned an identifier or the value true.
+
+The `prerelease` key identifies a component version as a prerelease.
+The prerelease key does not create a unique version.
+Rather, it provides a hint that the version is not a candidate to be the latest version.
+
+[#prerelease-key]
+== prerelease key
+
+The `prerelease` key is optional.
+//It's set in a component version's [.path]_antora.yml_ file and accepts a user-defined identifier or a boolean value.
+A component version is identified as a prerelease when the `prerelease` key is assigned a user-defined identifier, such as `-beta.2`, or the boolean value `true`.
+Note that setting the `prerelease` key does not make the version unique.
+In fact, that's the whole point.
+The identify of the component version remains exactly the same when the `prerelease` key is removed.
+
+Antora doesn't apply the default routing rules to a component version designated as a prerelease, even if it's the <<sort-and-route,latest version in that docs component>> (unless all versions of that docs component are prereleases).
+When a component version is ready to graduate from a prerelease to a stable release, change the value of the `prerelease` key to `false` or delete the key and its value from the [.path]_antora.yml_ file.
+
+TIP: To learn more about the capabilities the `prerelease` key provides and compare it to the other version facets--actual version, display version, and symbolic version--see xref:version-facets.adoc#prerelease[Version Facets].
+
+[#identifier]
+=== Assign an identifier to prerelease
+
+A component version becomes a prerelease when the `prerelease` key is set in [.path]_antora.yml_ and assigned an identifier.
+An [.term]*identifier* is a user-defined, non-empty string such as `.alpha.2`, `-M1`, `SNAPSHOT`, and `-rc.5`.
+It can contain uppercase letters and a broad range of characters.
+The component version defined in <<ex-append-identifier>> is a prerelease.
+
+.antora.yml with prerelease assigned the identifier -rc.3
+[#ex-append-identifier,yaml]
+----
+name: colorado
+title: Colorado ∆
+version: '6.0.0'
+prerelease: -rc.3 # <.>
+----
+<.> Assign an identifier to `prerelease` to designate the component version as a prerelease.
+
+When `prerelease` is assigned an identifier, Antora computes an internal prerelease version value for UI sorting and, if `display_version` isn't set, for display purposes.
+This computed prerelease version depends on the first character in the prerelease identifier.
+
+Identifiers that begin with a hyphen (`-`) or dot (`.`)::
+The computed prerelease version takes the form of _version-identifier_ or _version.identifier_.
+Antora directly appends the prerelease identifier to the `version` key's value to compute the prerelease version.
+For instance, using <<ex-append-identifier>>, the computed prerelease version would be _6.0.0-rc.3_.
+
+Identifiers that begin with any other valid character::
+The computed prerelease version takes the form of _version identifier_.
+Antora separates the identifier from the `version` key's value with one blank space to compute the prerelease version.
++
+--
+.antora.yml with prerelease assigned the identifier Beta
+[#ex-compute,yaml]
+----
+name: colorado
+title: Colorado ∆
+version: '4.0'
+prerelease: Beta
+----
+
+Using <<ex-compute>>, the computed prerelease version would be _4.0 Beta_.
+--
+
+Unless the `display_version` key is set in [.path]_antora.yml_, Antora assigns the computed prerelease version to `display_version` at runtime.
+If `display_version` is defined in [.path]_antora.yml_, then that value is displayed in the UI.
+However, the component version is still <<sort-and-route,sorted according to the internally computed prerelease version value>>.
+
+[#true]
+=== Assign true to prerelease
+
+A component version becomes a prerelease when the `prerelease` key is set in [.path]_antora.yml_ and assigned the value `true`.
+
+.antora.yml with prerelease defined as true
+[#ex-true,yaml]
+----
+name: colorado
+title: Colorado ∆
+version: '6.5.0-snapshot'
+prerelease: true
+----
+
+When `prerelease` is `true`, the component version is sorted by the value of `version` but the <<sort-and-route,default routing rules>> aren't applied to it even if it's the latest version in that docs component.
+////
+Also, there's no visual cue displayed in the UI that indicates to a visitor that the component version is a prerelease version.
+To visually indicate in a site that a component version is a prerelease, you need to either:
+
+* define `prerelease` as `true` and xref:component-display-version.adoc[assign a value to display_version] that provides a prerelease version name or number, or
+* <<identifier,assign an identifier>> to `prerelease`.
+////
+
+[#sort-and-route]
+== Prerelease sorting and routing
+
+Prerelease versions are skipped when Antora selects the xref:how-component-versions-are-sorted.adoc#latest-version[latest version of a docs component] unless all component versions are prereleases, in which case the default rules apply.
+They're sorted according to the xref:how-component-versions-are-sorted.adoc#version-schemes[versioning scheme criteria] the computed prerelease version meets.
+
+[#promote-to-stable]
+== Promote a prerelease to stable
+
+When a component version is ready to graduate from a prerelease to a stable release, change the value of the `prerelease` key to `false`.
+
+.antora.yml with prerelease defined as false
+[#ex-promote,yaml]
+----
+name: colorado
+title: Colorado ∆
+version: '6.0.0'
+prerelease: false # <.>
+----
+<.> Remove the previous value and replace it with `false` to promote the component version to a stable release.
+
+The <<sort-and-route,default routing and sorting rules>> are applied to a component version when `prerelease` is set to `false`.
+Alternatively, you can delete the key and its value from [.path]_antora.yml_ once it's stable.

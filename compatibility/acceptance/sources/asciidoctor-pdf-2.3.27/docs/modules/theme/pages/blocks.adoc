@@ -1,0 +1,157 @@
+= Block Styles
+:description: The theming language provides numerous keys for arranging blocks and styling their borders.
+
+The block styles can be applied to most blocks, including section headings, delimited blocks, admonitions, tables, captions, and block images.
+
+[#align]
+== Block alignment
+
+The `align` key is used to align a block horizontally within its parent container.
+This key is used for non-text elements, such as an image, table, or caption with a narrower width than the content area.
+It's roughly akin to the function of the `align-self` property of a flexbox element in CSS (when the flex direction is row).
+
+The block can be aligned using the following keywords:
+
+center:: The block is centered horizontally within the parent container.
+left:: The block is aligned to the left side of the parent container.
+right:: The block is aligned to the right side of the parent container.
+inherit:: *Only applies to the captions of block images (`image-caption`) and tables (`table-caption`).*
+The value `inherit` resolves to the alignment of the block image or table.
+Further information about using `inherit` on image captions and table captions, can be found on xref xref:block-images.adoc#caption-align[Block Image Styles] and xref:tables.adoc#caption-align[Table Styles], respectively.
+
+The `align` key is distinct from the similarly-named `text-align` key.
+The xref:text.adoc#text-align[text-align key] aligns text within the text box using text alignment rules.
+
+[#border-width]
+== Border width
+
+The `border-width` key specifies the width of the border applied to a block.
+The key accepts a single measurement value or an array of measurements.
+When a single value is assigned to `border-width`, that value is applied to all four edges of the border.
+
+.Single value assigned to border-width
+[,yaml]
+----
+sidebar:
+  border-width: 4 <1>
+----
+<1> You don't need to enclose a single value in a set of square brackets.
+If you do enclose the value in square brackets, it will be treated as an array, and any value assigned to the `border-radius` key will be ignored.
+
+When a 2-value array is assigned to `border-width`, the first value is applied to the top and bottom borders, and the second value is applied to the left and right side borders.
+
+.Two-value array assigned to border-width
+[,yaml]
+----
+example:
+  border-width: [0.5, 2]
+----
+
+When a 4-value array is assigned to `border-width`, the first value is applied to the top border, the second to the right side border, the third to the bottom border, and the fourth to the left side border.
+
+.Four-value array assigned to border-width
+[,yaml]
+----
+heading:
+  h2-border-width: [0.75, 0, 2, 0]
+----
+
+If you don't want a border applied to a block category, assign a tilde (`~`) to the `border-width` key.
+
+.Unset border-width
+[,yaml]
+----
+sidebar:
+  border-width: ~
+----
+
+[#border-color]
+== Border color
+
+The `border-color` key specifies the color of a border.
+It accepts the following types of values:
+
+Hex, RGB, or CMYK color:: A single color specified using the hex, RGB, or CMYK format.
+See xref:color.adoc[] to learn how to assign these formats in the theming language.
+transparent:: A special keyword that indicates a color should not be used when drawing the border.
+Array of colors:: *Only applies to the `table` category*.
+An array that specifies xref:tables.adoc#border-color[a color per edge on tables].
+
+The `border-color` key value is ignored if `border-width` isn't set or is set to `0` on the category.
+
+[#radius]
+== Border radius
+
+The `border-radius` key rounds the corners of a block's outer border.
+It accepts a single measurement value.
+
+[,yaml]
+----
+sidebar:
+  border-width: 4
+  border-radius: 2
+----
+
+The `border-radius` key value is ignored if `border-width` is assigned an array of values.
+The `border-radius` key can't be set on the `table` category.
+
+[#border-style]
+== Border style
+
+The `border-style` key specifies the line style used when drawing a border.
+In most cases, it accepts the following values:
+
+dashed:: The border is drawn as a series of short line segments.
+dotted:: The border is drawn as a series of rounded dots.
+double:: The border is drawn as two parallel, straight, solid lines.
+The `double` value can't be applied to table borders.
+solid:: The border is drawn as a straight, single line.
+Array of styles:: *Only applies to the `table` category*.
+An array that specifies xref:tables.adoc#border-style[a style per edge on tables].
+
+The `border-style` key value is ignored on a block category if `border-width` isn't set or `border-width` is set to `0` on the category.
+
+[#padding]
+== Padding
+
+Several of the block categories, such as `admonition`, `sidebar`, `verse`, etc., allow their padding to be customized.
+The `padding` key specifies the amount of space between a block's content and its border.
+The key accepts a single measurement value or an array of measurements.
+When a single value is assigned to `padding`, the same amount of padding is applied to all four sides.
+
+.Single value assigned to padding
+[,yaml]
+----
+quote:
+  padding: 1.2mm <1>
+----
+<1> You don't need to enclose a single value in a set of square brackets.
+
+When a 2-value array is assigned to `padding`, the first value is applied to the top and bottom padding, and the second value is applied to the left and right side padding.
+
+.Two-value array assigned to padding
+[,yaml]
+----
+sidebar:
+  padding: [0.5, 2]
+----
+
+When a 4-value array is assigned to `padding`, the first value is applied to the top, the second to the right side, the third to the bottom, and the fourth to the left side padding.
+
+.Four-value array assigned to padding
+[,yaml]
+----
+code:
+  padding: [0.75in, 0, 2in, 0.5in]
+----
+
+The `padding` key also accepts a 3-value array, where the first value is applied to the top, the second to the right and left side, and the third to the bottom.
+
+////
+[#margin]
+== Margins
+
+The `margin` key specifies the amount of space around the outermost edges of a block.
+The key accepts a single measurement value or an array of measurements.
+When a single value is assigned to `margin`, the same amount of margin is applied to all four sides.
+////

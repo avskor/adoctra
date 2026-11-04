@@ -1,0 +1,82 @@
+= Log Severity Level
+
+The log `level` key specifies a severity threshold, such as `debug` or `error`, that must be met for a message to be logged.
+
+[#default]
+== Default log level
+
+Explicitly assigning a value to the `level` key is optional.
+If it isn't set in your playbook or specified using the <<level-option,--log-level option>> or xref:playbook:environment-variables.adoc#log-level[ANTORA_LOG_LEVEL variable], Antora assigns the value `warn` to the key at runtime.
+When the default value is applied, all messages that meet or exceed the `warn` threshold are logged.
+
+[#level-key]
+== level key
+
+The `level` key is configured under the xref:configure-runtime.adoc[runtime and log] keys in a playbook.
+
+.antora-playbook.yml
+[,yaml]
+----
+runtime:
+  log:
+    level: error
+----
+
+[#severity-levels]
+The `level` key accepts the following built-in values:
+
+fatal:: Catastrophic errors that force Antora to shut down abruptly.
+Your site was not generated.
++
+NOTE: If a fatal error is thrown before Antora configures the playbook, Antora only prints the message to standard error (STERR).
+The error message isn't routed through the logger as configured by the user.
+
+error:: Serious issues that indicate an important operation failed to occur or wasn't completed successfully.
+An error may not cause Antora to shut down, but your site probably wasn't generated or published as expected.
+warn:: _Default value._
+Incorrect AsciiDoc syntax such as missing AsciiDoc attributes, playbook or component configurations, and other problematic or unusual situations that are likely to affect the usability, performance, or appearance of the generated site.
+info:: Informational messages that highlight Antora's normal operations and milestones.
+debug:: Diagnostic messages that provide detailed context about Antora's activities, events, warnings, and errors as they occurred.
+This level is useful when you need additional information about a warning or error.
+trace:: Verbose diagnostic messages that provide even more detailed context about Antora's operation.
+This level is useful when you need to trace low-level operations for debugging purposes.
+all:: All of the information and details about Antora's operations and the results of those operations are logged.
+silent:: The logger is turned off and no messages are logged.
+
+Messages that meet or exceed the severity threshold are logged.
+Messages that don't meet the severity threshold are not reported.
+
+NOTE: As a general philosphy, Antora does not log messages below the info level (i.e., debug or trace).
+Logging low-level information confuses the casual user, clutters the log, and makes the platform harder to test.
+Antora only logs the most essential information.
+However, extension may and often do utilize these levels for diagnostic information.
+
+== Specify a log level
+
+Let's assign the value `info` to the `level` key in the playbook shown in <<ex-level>>.
+
+.Assign info severity threshold to level key
+[#ex-level,yaml]
+----
+runtime: # <.>
+  log: # <.>
+    level: info # <.>
+----
+<.> In your playbook file, type the parent key `runtime`, followed by a colon (`:`), and press kbd:[Enter].
+<.> The `log` key is a child of `runtime`.
+Type the key's name, `log`, followed by a colon (`:`), and press kbd:[Enter].
+<.> The `level` key is a child of `log`.
+Type `level`, followed by a colon and a blank space (`:{sp}`), then type the value `info`.
+
+When Antora runs and `level` is assigned `info`, messages that meet or exceed the `info` threshold are logged.
+Messages that don't meet the `info` severity level aren't reported.
+
+[#level-option]
+== Log level option
+
+You don't have to modify the playbook file directly to set the `level` key.
+You can use the `--log-level` option from the xref:cli:options.adoc#log-level[CLI].
+
+ $ antora --log-level debug antora-playbook.yml
+
+The `--log-level` option overrides the value assigned to the `level` key or to the xref:playbook:environment-variables.adoc#log-level[ANTORA_LOG_LEVEL environment variable].

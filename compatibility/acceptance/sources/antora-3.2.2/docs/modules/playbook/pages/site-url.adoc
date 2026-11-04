@@ -1,0 +1,220 @@
+= Site URL
+
+[#url-key]
+== url key
+
+The `url` key for the site, defined under the xref:configure-site.adoc[site key] in the playbook, is optional, but recommended.
+If this key isn't set, certain features of the site that require a site URL are automatically deactivated.
+See <<when-should-the-site-url-be-set>> for details.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Site Title
+  url: https://docs.example.com
+----
+
+The `url` key defines the location where the site can be accessed once it's published.
+The value of the `url` key can either be an absolute URL (_\https://docs.example.com_, _\https://example.com/docs_) or a root-relative URL (_/products_).
+*Do not include a trailing forward slash* in the `url` value unless the value is a single forward slash (_/_).
+
+The site URL appears in the generated site wherever an absolute URL or a root-relative URL is required.
+See xref:ROOT:how-antora-builds-urls.adoc[] to learn more.
+
+Alternatively, the `url` key can be assigned from the CLI using a xref:cli:options.adoc#site-url[--url option] or using the  xref:environment-variables.adoc#site-url[URL environment variable].
+
+[#absolute-site-url]
+== Configure an absolute site URL
+
+An absolute URL value starts with a URL scheme directly followed by a colon and two forward slashes (`https://`) and a domain (`docs.example.org`).
+*Do not put a trailing forward slash at the end of the URL.*
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Docs for Example Site
+  url: https://docs.example.com
+----
+
+Absolute site URLs can include a subpath (e.g., _\https://example.com/docs_, _\https://example.com/path/to/subfolder_).
+The [.term]*subpath*, also known as a *path segment* or *pathname*, represents the location from the root of the domain where the site managed by Antora is published.
+If your site is published to a subfolder of your domain, then the absolute site URL must include this path.
+The subpath has the same syntax as a root-relative URL.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Docs for Example Site
+  url: https://example.com/docs
+----
+
+When an absolute site URL has a subpath, Antora extracts the subpath and assigns it to the xref:ROOT:how-antora-builds-urls.adoc#pathname[site pathname] (_/docs_, _/path/to/subfolder_) for use wherever a xref:ROOT:how-antora-builds-urls.adoc#domain-relative[domain-relative URL] is required.
+
+See <<subpath>> for more information about publishing your site to a domain subfolder.
+
+[#root-relative-site-url]
+== Configure a root-relative site URL
+
+The root-relative URL is a URL that's relative to the domain, but without having to specify the domain itself.
+A root-relative URL must start with a forward slash (_/products_).
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Docs Hosted Somewhere
+  url: /products
+----
+
+You might use a root-relative URL instead of an absolute URL if identical sites must be published to or accessible via multiple domains.
+By using a root-relative URL, you can take advantage of many of the benefits of assigning a site URL.
+However, Antora deactivates any feature that depends on an absolute site URL when the value assigned to `url` isn't absolute.
+
+Antora assigns the root-relative URL directly to the xref:ROOT:how-antora-builds-urls.adoc#pathname[site pathname] for computing xref:ROOT:how-antora-builds-urls.adoc#domain-relative[domain-relative URLs].
+If you want to set `url` to a root-relative URL, but want the site pathname to be empty, set the value to a single forward slash.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: The Docs
+  url: /
+----
+
+[#when-should-the-site-url-be-set]
+== When should the site URL be set?
+
+An Antora site is designed to be viewable offline and from a local filesystem.
+For this reason, the site URL is not required to build the site.
+
+However, there are certain features related to publishing that require a site URL, some even an absolute URL.
+When the site URL is not set, these features are automatically deactivated without notice.
+This section identifies these features and which kind of site URL they require.
+
+[#site-url-features]
+=== Features that depend on the site URL
+
+When the site URL is set to any allowable value, the following features are enabled:
+
+* The `site-url` attribute is set on every AsciiDoc document.
+* The `site.url` property is set in the UI model (using the value of the `site.url` key in the playbook).
+* The xref:ROOT:how-antora-builds-urls.adoc#pathname[site pathname] property, `site.path`, is set in the UI model (derived from the `site.url` key in the playbook).
+* The 404 page is generated.
+* The [.path]_robots.txt_ file is generated if `site.robots` is also defined in the playbook.
+* xref:urls-redirect-facility.adoc[Redirects] include the site pathname (`site.path`), if non-empty.
+This does not affect the static redirect facility, which uses relative URLs.
+* The link in the top-left corner of the navbar points to the site URL instead of a relative path (behavior specific to the default UI).
+
+When the site URL is set to an absolute URL, the following additional features are enabled:
+
+* The sitemap files are generated.
+* The `page.canonicalUrl` is set in the UI model, which gets used by the reference UI to create the canonical link tag in the head.
+
+If the site URL is not set, all the aforementioned features are deactivated.
+
+[#subpath]
+=== When should the site URL include a subpath?
+
+The subpath of a site URL represents the location from the root of the domain where the site managed by Antora is located.
+In other words, the site URL takes the visitor to the URL where the redirect for the site start page is located.
+If your site is published to a subfolder of your domain, then the site URL should include this path (e.g., _/path/to/subfolder_).
+
+When required, Antora uses the site URL to construct absolute and domain-relative URLs to pages in your site, which will always include the subpath, if specified.
+This includes URLs in the sitemap (absolute URLs) as well as rewrite rules (domain-relative URLs).
+
+Let's consider an example of how the subpath is used when creating a server redirect rule.
+Assume the following conditions are true:
+
+* The site is published to the [.path]_docs_ subfolder of the example.com domain.
+* The page [.path]_new-page.adoc_ in the ROOT module of the versionless _component-a_ component defines the xref:page:page-aliases.adoc[page alias] [.path]_old-page.adoc_ (meaning [.path]_old-page.adoc_ was renamed to [.path]_new-page.adoc_).
+* The xref:urls-redirect-facility.adoc[redirect facility] is set as `nginx`.
+* You set the site `url` key to `\https://example.com` (the incorrect value) in your playbook.
+
+When you run Antora, it generates the following redirect rule:
+
+.A redirect entry that does not includes a subpath
+[listing]
+----
+/component-a/old-page.html /component-a/new-page.html 301!
+----
+
+Notice that the domain-relative URLs in the redirect rule don't include the leading `/docs` segment.
+That means if you visit _\https://example.com/docs/component-a/old-page.html_, you are *not* redirected to the new page, because the rule won't match.
+Let's fix that.
+
+Edit your playbook and set the `url` key to `\https://example.com/docs`.
+Now when you run Antora, it generates the correct redirect rule:
+
+.A redirect entry that includes a subpath
+[listing]
+----
+/docs/component-a/old-page.html /docs/component-a/new-page.html 301!
+----
+
+Notice the leading `/docs` segment is present in the domain-relative URLs.
+Now, when you visit _\https://example.com/docs/component-a/old-page.html_, you're redirected to the new page.
+
+It's important to include the path in the <<absolute-site-url,absolute site URL>> if your site is published to a subfolder of your domain.
+If you don't want to couple your site to a specific domain, assign a <<root-relative-site-url,root-relative site URL>> instead.
+Either way, if you're publishing your site to a subfolder of your domain, you should include the subpath in the value you assign to the `url` key of the site.
+
+== Canonical URL
+
+Antora provides built-in support for canonical URLs.
+A [.term]*canonical URL* is the absolute URL of the preferred version of a page; the page you want a search engine to index.
+
+If you assign an absolute URL to the site URL, Antora computes and assigns the canonical URL to the `page.canonicalUrl` property in the UI model for any applicable page.
+An applicable page is any publishable page in a component that has at least one non-prerelease version.
+If the site URL is not set to an absolute URL, or the page is not in a component with at least one non-prerelease version, Antora does not populate the canonical URL.
+
+The canonical URL is the absolute URL of the newest, non-prerelease version of a page.
+The canonical URL is computed by prepending the site URL (including the subpath) to the (root-relative) URL of that page.
+
+The canonical URL points to the current page only if the current page is the newest non-prerelease version.
+Otherwise, the canonical URL points to the newest, non-prerelease version of the current page.
+
+CAUTION: If the page has been deleted, the newest version of a page may not be in the latest version of the component.
+
+=== Canonical URL link tag
+
+In order for the canonical URL to be picked up by the search crawler, the UI template must include it in the page.
+The canonical URL should be declared as the value of the `href` attribute on a `<link rel="canonical">` tag inside the `<head>` tag of the page.
+Antora's default UI does this for you.
+Here's the template logic from Antora's default UI that generates this `<link>` tag:
+
+[,hbs]
+----
+{{#with page.canonicalUrl}}
+<link rel="canonical" href="{{{this}}}">
+{{/with}}
+----
+
+Here's how the canonical URL appears in the generated page:
+
+[,html]
+----
+<link ref="canonical" href="https://docs.example.org/component-name/2.0/page-name.html">
+----
+
+Assuming the page to which the canonical URL refers is present in all versions of the component, all versions of the page will contain the same `<link>` tag.
+If the page is in a prerelease version, it will refer back to the page in the latest (non-prerelease) version.
+
+TIP: It's up the creator of a custom UI to decide whether to include the canonical URL in the page template.
+Antora merely makes the information available via the UI page model.
+Antora's default UI includes the required tag in the page template.
+
+=== How the canonical URL works
+
+The purpose of the canonical URL is to help search engines correlate versions of the same page and to suggest which version of the page is preferred (i.e., the version to index).
+When the search engine comes across a page which has a canonical URL that's different from the current URL, the search engine should not index that page, but rather index the page to which the canonical URL points.
+By defining the canonical URL, it should ensure that old versions of a page do not show up in search results.
+
+One caveat is that if a page is present in old versions of a component, but not the latest version, the canonical URL will point to a page in an older version, and thus be indexed.
+If you do not want this to happen, make sure that another page in the latest version of the component claims that page using a page alias.
+That way, Antora will configure the canonical URL to point to the page that claims that page, thus avoiding the old page from being indexed.
+
+Use the https://support.google.com/webmasters/answer/9012289?hl=en[URL inspection tool] to see what canonical URL Google has detected for a page, and whether a page is indexed.
+See https://developers.google.com/search/docs/advanced/crawling/consolidate-duplicate-urls[Consolidating duplicate URLs] and https://support.google.com/webmasters/answer/10347851?hl=en[Canonical URL] to learn more about canonical URLs and how search engines like Google interpret them.

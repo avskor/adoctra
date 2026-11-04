@@ -1,0 +1,104 @@
+= Enable an Extension
+
+By default, if you register an extension in the playbook file, Antora will enable it automatically.
+One way to enable an extension only upon request is to specify it using the CLI option (`--extension`).
+However, that alone doesn't allow you to provide configuration keys or influence the require order.
+That's where extension enablement comes into play.
+
+You can register an extension in the playbook file, along with optional configuration, then tell Antora not to enable it.
+You can then use the CLI option (`--extension`) to enable it, and it will be registered relative to other extensions enabled through this mechanism.
+(See <<Load order>> to understand how extensions are ordered when the CLI is used).
+
+To prevent Antora from enabling an extension specified in the playbook file, set the predefined configuration key `enabled` to the value `false`.
+When Antora sees that the `enabled` key has a value of `false`, it will not register the extension.
+
+.An extension that is not enabled
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./my-extension.js
+    enabled: false
+    custom: value
+----
+
+You can use the `enabled` key to quickly turn off an extension without having to remove it from the playbook.
+More likely, though, you configure it this way so it can be enabled using the CLI option.
+In order to do so, you need a way to reference it, which is the purpose of the `id` key.
+
+The `id` key specifies an ID you can reference using the `--extension` CLI option to enable an extension that's marked as not enabled in the playbook file.
+When the value of the `--extension` CLI option matches the value of this key, that extension is enabled (rather than appending the extension to the list of extensions).
+If you don't specify an `id`, the value of the `require` key serves as the extension's ID.
+
+First, let's give our extension an ID:
+
+.An extension with an ID that is not enabled
+[,yaml]
+----
+antora:
+  extensions:
+  - id: my-extension
+    require: ./my-extension.js
+    enabled: false
+    custom: value
+----
+
+Now we can now enable this extension from the CLI as follows:
+
+ $ antora --extension my-extension antora-playbook.yml
+
+Whereas normally the value of the `--extension` CLI option is a require request, in the case when you are enabling an extension, the value is the ID of the extension entry in the playbook file.
+
+If you don't assign an ID to the extension entry, you can reference the value of the `require` key instead.
+
+ $ antora --extension ./my-extension.js antora-playbook.yml
+
+In this case, Antora looks for the first entry in the list of extensions whose `require` key matches the value of the CLI option.
+
+If Antora can't locate an entry that matches the value of the `--extension` CLI option, it falls back to treating the value as a require request.
+
+== Load order
+
+By default, declaring and enabling an extension in the playbook also determines its load order.
+Any enabled extensions declared in the playbook are loaded first in playbook order, followed by any extensions enabled through the CLI.
+
+However, the CLI still has an opportunity to influence this load order.
+By default, if the value of the `--extension` option matches an extension declared in the playbook (id or require value), the load order of the extension is updated.
+That extension acts as though it's not declared in the playbook and enabled by the CLI instead.
+Yet, the configuration from the playbook is still used.
+
+Let's consider an example:
+
+.An extension declared in the playbook
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./from-playbook.js
+    custom: value
+----
+
+Now, if we want to load an extension before this extension, we can do so using the CLI:
+
+ $ antora --extension ./from-cli.js --extension ./from-playbook.js antora-playbook.yml
+
+The from-cli.js extension will be loaded first, followed by the from-playbook.js extension.
+Had we not referenced the from-playbook.js extension using the `--extension` option, it would have been loaded first.
+
+This technique also works for an extension declared in the playbook as not enabled (i.e., `enabled: false`).
+
+To turn off this reordering and retain the order of the extension as listed in the playbook, you can set the `order` key to the value `fixed`.
+(The default value is `auto`).
+
+.An extension declared in the playbook with a fixed order
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./from-playbook.js
+    order: fixed
+    enabled: false
+    custom: value
+----
+
+Now, the load order is not updated when the extension is enabled using the `--extension` CLI option.

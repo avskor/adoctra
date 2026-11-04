@@ -1,0 +1,75 @@
+= Define a Component Version
+//Define a Component Name and Version
+:note-caption: ASSUMPTIONS
+
+On this page, you'll learn:
+
+* [x] The requirements an [.path]_antora.yml_ file must meet.
+* [x] How to assign a valid value to the `name` key.
+* [x] How to assign a valid value to the `version` key.
+* [x] How to define additional keys and values in an [.path]_antora.yml_ file.
+
+NOTE: You understand what a xref:component-version.adoc[component version] is and the purpose of xref:component-version-descriptor.adoc[_antora.yml_].
+
+[#antora-yml-requirements]
+== antora.yml requirements
+
+A component version descriptor file must:
+
+* be named [.path]_antora.yml_
+* be written in valid YAML
+* contain the `name` key with a valid value
+* contain the `version` key (unless inherited from the content source in the playbook) with a valid value
+* be stored xref:module-directories.adoc[at the same directory level as the _modules_ directory]
+
+The following section provides instructions for creating an [.path]_antora.yml_ file and assigning values to the `name` and `version` keys to define a component version.
+For detailed information about the purpose of `name` and `version`, how Antora uses them, their specific requirements, and more usage examples, see xref:component-name-key.adoc[] and xref:component-version-key.adoc[].
+
+[#assign-name-and-version]
+== Assign a name and version to a component version
+
+Let's create an [.path]_antora.yml_ file that defines the name and version of a component version.
+In this exercise, we'll create a component version for the project _Silver Leaf_.
+Its component name will be _silver-leaf_, and its version will be _7.1_.
+
+. Open a new file in your text editor or IDE.
+. On the first line, type `name`, directly followed by a colon (`:`).
+. Press the kbd:[Spacebar] to insert a space after the colon, and then type the value you want to assign to `name`.
+The `name` key doesn't accept certain characters or spaces in its value, see xref:component-name-key.adoc#requirements[name requirements] for details.
++
+[,yaml]
+----
+name: silver-leaf
+----
+
+. At the end of the value, press kbd:[Enter] to go to the next line.
+. Type `version`, directly followed by a colon (`:`), and then press the kbd:[Spacebar] to insert a space.
+. Type the value you want to assign to `version`.
+In this example, the value is enclosed in a set of single quote marks (`'`) so it's not interpreted as a number.
++
+[,yaml]
+----
+name: silver-leaf
+version: '7.1'
+----
++
+The `version` key doesn't accept certain characters or spaces in its value, see xref:component-version-key.adoc#requirements[version requirements] for details.
+. Save the file as [.path]_antora.yml_ in the xref:content-source-repositories.adoc#content-source-root[content source root].
+The [.path]_antora.yml_ file should be located adjacent to the [.path]_modules_ directory, which contains the content files for the component version.
+
+You've now associated a set of source files with a component version!
+When Antora runs, all of the xref:standard-directories.adoc[source files stored in the standard set of directories] will be assigned the component name `silver-leaf` and the version `7.1`.
+These values will be used as xref:page:resource-id-coordinates.adoc#id-version[resource ID coordinates] and in the URLs of the publishable resources generated from the component version's source files.
+
+TIP: Be sure to always use the same case when declaring the component name if you're defining multiple versions of a component.
+If the case differs (e.g., Silver-Leaf versus silver-leaf), Antora will treat these as different components.
+See xref:component-name-key.adoc[] and xref:component-version-key.adoc[] for more examples and value requirements.
+
+[#optional-keys]
+== Optional antora.yml keys
+
+You can assign additional metadata, designate a component version as a prerelease, apply AsciiDoc attributes, and register a component version's navigation list and start page using the component version descriptor.
+
+include::partial$optional-component-version-keys.adoc[]
+
+To learn more about the capabilities of the `version` key and compare it to the other version facets Antora provides--prerelease version, display version, and symbolic version--see xref:version-facets.adoc[].

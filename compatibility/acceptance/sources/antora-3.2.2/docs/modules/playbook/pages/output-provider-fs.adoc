@@ -1,0 +1,136 @@
+= Filesystem Provider
+
+In order to publish a site to multiple  destinations, including one or more filesystem destinations, your playbook must set the `output`, `destinations` and `provider` keys.
+
+[#fs-provider]
+== fs provider
+
+The `provider` value `fs` publishes the site to a directory on a filesystem.
+It's a more formal equivalent to specifying the output directory using the `dir` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  dir: ./public # <.>
+  destinations: # <.>
+  - provider: fs # <.>
+----
+<.> The value used as the `path` key for the primary fs destination; defaults to [.path]_./build/site_.
+<.> The `provider` key must be configured under the `destinations` key.
+<.> Under `destinations`, type a hyphen (`-`) and a blank space, then the key name `provider`, followed by a colon (`:`).
+After the colon, enter a blank space, and then the built-in value name `fs`.
+
+[#path-key]
+== path key
+
+The optional `path` key designates the target location where the output files are to be written.
+The `fs` provider treats this value as a target directory.
+
+The `path` key accepts a relative or absolute filesystem path.
+The provider will create any interim directories as needed.
+include::partial$relative-path-rules.adoc[]
+
+If the `path` key is not specified on the fs destination, the default value will be used.
+The first occurrence inherits the value from the ancestor xref:output-dir.adoc[dir key].
+Otherwise, the default path for the `fs` provider is used, which is [.path]_./build/site_.
+When the output directory is specified from the CLI using the xref:cli:options.adoc#to-dir[--to-dir option], it works the same way.
+
+[#relative-path]
+=== Specify a relative path
+
+In <<ex-rel>>, the site will be published to a folder named [.path]_launch_ relative to the playbook file.
+
+.Assign a relative path
+[#ex-rel,yaml]
+----
+output:
+  destinations:
+  - provider: fs
+    path: ./launch
+----
+
+[#absolute-path]
+=== Specify an absolute path
+
+In <<ex-abs>>, the site will be published to [.path]_home/dev/site/beta_, regardless of where the playbook is located.
+
+.Assign an absolute path
+[#ex-abs,yaml]
+----
+output:
+  destinations:
+  - provider: fs
+    path: /home/dev/site/beta
+----
+
+[#clean-key]
+=== clean key
+
+The `clean` key is optional and is deactivated (assigned the value `false`) by default.
+It can be applied as part of an `fs` provider configuration instead of xref:output-dir.adoc#clean-key[directly under the output key].
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  destinations:
+  - provider: fs
+    path: /home/dev/site/beta
+    clean: true # <.>
+----
+<.> `clean` is activated with the value `true` and deactivated with `false`.
+
+When `clean` is assigned the value `true`, it removes the destination `path` recursively before generating the site.
+This key only applies to the `fs` provider.
+
+[#clean-warning]
+WARNING: Use this key with great care.
+For example, if you set `path` to your [.path]_home_ directory and `clean` to `true`, you'll delete ALL of the folders and files in [.path]_home_.
+
+== Relationship to output dir
+
+The `dir` key under the `output` category key provides a convenient way to specify an `fs` destination.
+However, it's relationship to the destinations array can be tricky to understand.
+
+For the first destination whose provider is set to `fs` and whose `path` key is not specified, the `dir` key controls the value of that destination's `path` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  dir: ./public
+  destinations:
+  - provider: fs
+----
+
+This allows the path for this destination to be controlled from the CLI using the `--to-dir` option.
+
+If destinations is empty, or if all fs destinations specify a `path` key, then the `dir` key is effectively ignored.
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  dir: ./ignored
+  destinations:
+  - provider: fs
+    path: ./build/site-copy
+----
+
+The way to think of it is that the output dir fills in the missing `path` key for the first occurrence of an fs destination that does not specify a `path`.
+
+If you want to output to both [.path]_./build/site_ and [.path]_./build/site-copy_, you need a slot for the output dir.
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  dir: ./build/site
+  destinations:
+  - provider: fs
+  - provider: fs
+    path: ./build/site-copy
+----
+
+include::page$output-provider-archive.adoc[tag=multiple]

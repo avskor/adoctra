@@ -1,0 +1,110 @@
+= Output Keys
+
+The playbook keys configured under `output` define where the site files are written (i.e., published) and how that target is prepared.
+
+[#output-key]
+== output key
+
+The `output` key contains common output settings and a list of destination specifications.
+
+.antora-playbook.yml
+[,yaml]
+----
+output: # <.>
+  clean: true # <.>
+  dir: ./public # <.>
+  destinations: # <.>
+  - provider: fs # <.>
+  - provider: archive # <.>
+    path: ./public/blue.zip # <.>
+----
+<.> Optional `output` key
+<.> Optional `clean` key
+<.> Optional `dir` key
+<.> Optional `destinations` key
+<.> Primary `provider` entry to support `dir` key when using `destinations` key
+<.> Optional `provider` entry to produce an archive
+
+The `output` key and the key-value pairs it can accept are optional.
+When `output` isn't set in a playbook, Antora uses the `fs` provider and publishes the site to the default output directory, [.path]_./build/site_.
+In other words, the default behavior assumes the following configuration:
+
+.antora-playbook.yml
+[,yaml]
+----
+output:
+  dir: ./build/site
+  destinations:
+  - provider: fs
+----
+
+[#destinations-key]
+== destinations and provider keys
+
+The `output` key accepts the `destinations` key, which hosts the destination specifications.
+The `destinations` key is required if you want to xref:output-provider-archive.adoc[publish the site files as an archive], publish a site to xref:output-provider-fs.adoc#publish-to-multiple-destinations[multiple destinations], or publish the site using a xref:output-provider-custom.adoc[custom provider].
+
+The `destinations` key accepts a list of specifications that tell Antora which provider(s) to use to publish the site and where the generated files should be saved.
+When `destinations` is set, each entry must at least specify the `provider` key.
+
+TIP: If you want to support the primary fs destination, you must include an entry for it without defining the `path` key.
+
+A [.term]*provider* determines which transport protocol (local, SSH, HTTP, etc.) Antora should use when publishing the site and manages the low-level details of publication.
+Antora has two built-in providers, `fs` (filesystem) and `archive` (ZIP archive).
+`provider` is also an extension point that can be used to delegate to a custom provider, such as SSH, S3, etc.
+
+[#disable-publishing]
+=== Disable site publishing
+
+To disable publishing the site files entirely, including to the primary fs destination, set the `destinations` key to an empty array (`[]`).
+In this case, the value of the `dir` key, if any, is ignored.
+
+[,yaml]
+----
+output:
+  destinations: []
+----
+
+Alternately, you can set the `dir` key to a null or empty value without setting the `destinations` key.
+
+[,yaml]
+----
+output:
+  dir: ~
+----
+
+If you set the `dir` key to a non-empty value, it will be used as the path for the primary fs destination.
+
+[#output-reference]
+== Available output keys
+
+[cols="3,6,1"]
+|===
+|Output Keys |Description |Required
+
+|xref:output-dir.adoc#clean-key[clean]
+.2+|When set to `true`, the `clean` key removes the output directory or filesystem provider path recursively before generating the site.
+The value of this key is the default value for any destination entry that doesn't specify the `clean` key.
+.2+|No
+
+|xref:output-provider-fs.adoc#clean-key[destinations++[n]++.clean]
+//|"
+//|"
+
+|destinations[n].path
+|Designates the target location where the output file(s) are written.
+See xref:output-provider-fs.adoc[Filesystem provider and path] and xref:output-provider-archive.adoc[Archive provider and path].
+|No
+
+|destinations[n].provider
+|Specifies the transport protocol Antora uses to publish the site.
+Accepts the built-in xref:output-provider-fs.adoc[fs] or xref:output-provider-archive.adoc[archive] values.
+xref:output-provider-custom.adoc[Custom providers] can also be specified.
+Multiple providers can be specified under `destinations`.
+|No
+
+|xref:output-dir.adoc[dir]
+|Specifies an output directory when the site is published using the primary fs destination (either when no destinations are specified or the first entry specified under `destinations` whose provider is `fs` and whose `path` key is not set).
+This key is effectively the value for the primary fs destination.
+|No
+|===

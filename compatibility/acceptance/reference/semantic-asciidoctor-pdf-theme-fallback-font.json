@@ -1,0 +1,703 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page describes how to configure fallback fonts, why they are necessary, and when they get used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a TrueType font (not an AFM font) is missing a character needed to render the document, such as a special symbol or emoji, you can have Asciidoctor PDF look for the character in a fallback font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The fallback font only gets used when the primary font is a TrueType or OpenType font (i.e., TTF, DFont, TTC, OTF). This functionality is not supported when using an AFM font. Any glyph missing from an AFM font is simply replaced with the “not” glyph ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "¬"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "While multiple fallback fonts are supported, you only need to specify a single fallback font, typically one that provides a full set of symbols. If the character isn’t found in a fallback font, it will (mostly likely) be replaced by a box (i.e., the notdef glyph). This behavior is guaranteed if you’re using the bundled fallback font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using the fallback font slows down PDF generation slightly because it has to analyze every single character. Its use is not recommended for large documents. Instead, it’s best to select primary fonts that have all the characters you need."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "caution"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the PDF generator (Prawn) makes use of the fallback font to render a character, that will introduce a break opportunity, regardless of what role is set on the span of text or what characters are adjacent (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{nbsp}"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). When Prawn makes use of a fallback font, it disrupts assumptions about line wrapping. In order to assign the fallback font to the character, Prawn must create a dedicated fragment for that character. In other words, using the fallback font to resolve the glyph for a character introduces a new fragment. A fragment boundary always creates an artificial break opportunity in the text."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The best way to ensure that the no-break boundaries are honored is to ensure that the primary font contains glyphs for all the characters in the manuscript, as well as any required characters for using a custom font with Asciidoctor PDF."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "section",
+        "id": "purpose",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Purpose"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When defining the fallback font, you "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "must specify all four variants"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "normal"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bold"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "italic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bold_italic"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), even if you use the same font file for each. You can use a shorthand syntax to do so, which is shown below."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You cannot use a color emoji font as a fallback font in Asciidoctor PDF. The font library used by Asciidoctor PDF does not support color fonts and will cause Asciidoctor to crash."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "requirements",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Requirements"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor PDF provides two fallback fonts. One is for general writing in non-Latin languages (M+ 1p) and the other is for emoji (Noto Emoji)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme does not register any fallback fonts. In order to use the built-in fallback fonts, you must use or extend the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "default-with-font-fallbacks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to build a theme that uses the built-in fallback fonts, you can do so by extending the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "default-with-font-fallbacks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " theme, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default-with-font-fallbacks\nbase:\n  font_color: #000000"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If, instead, you want to use the built-in fallback fonts in your own theme which does not extend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "default-with-font-fallbacks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you can do so as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nfont:\n  catalog:\n    merge: true\n    M+ 1p Fallback: GEM_FONTS_DIR/mplus1p-regular-fallback.ttf\n    Noto Emoji: GEM_FONTS_DIR/notoemoji-subset.ttf\n  fallbacks: [M+ 1p Fallback, Noto Emoji]\nbase:\n  font_color: #000000"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "using-the-built-in-fallback-fonts",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using the built-in fallback fonts"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Like with other custom fonts, you first need to declare the fallback font. Let’s choose "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Droid Sans Fallback"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/android/platform_frameworks_base/blob/master/data/fonts/DroidSansFallback.ttf"
+              },
+              {
+                "kind": "text",
+                "value": ". You can map all the styles to a single font file (since bold and italic don’t usually make sense for symbols)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nfont:\n  catalog:\n    Roboto:\n      normal: roboto-normal.ttf\n      italic: roboto-italic.ttf\n      bold: roboto-bold.ttf\n      bold_italic: roboto-bold_italic.ttf\n    DroidSansFallback: droid-sans-fallback.ttf"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that we only declare the fallback font file once using a literal value. This ensures the font is defined for all four variants so it will be used regardless of which font style is active when it’s called on. This assignment is equivalent to the following:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "DroidSansFallback:\n  '*': droid-sans-fallback.ttf"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The benefit of the expanded syntax is that it allows you to override the font file for just one of the variants (e.g., bold)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, add the key name to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fallbacks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key under the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "font-catalog"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key. The "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fallbacks key"
+                  }
+                ],
+                "kind": "xref",
+                "target": "font.html"
+              },
+              {
+                "kind": "text",
+                "value": " accepts an array of values, meaning you can specify more than one fallback font. However, we recommend using a single fallback font, if possible, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default\nfont:\n  catalog:\n    Roboto:\n      normal: roboto-normal.ttf\n      italic: roboto-italic.ttf\n      bold: roboto-bold.ttf\n      bold_italic: roboto-bold_italic.ttf\n    DroidSansFallback: droid-sans-fallback.ttf\n  fallbacks:\n  - DroidSansFallback"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re using more than one fallback font, add additional lines to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fallbacks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, make sure you’ve configured your theme to use your custom font:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "base:\n  font-family: Roboto"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "That’s it! Now you’re covered. If your custom font is missing a glyph, Asciidoctor PDF will look in your fallback font to find it. You don’t need to reference the fallback font anywhere else in your theme file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Keep in mind that the fallback font will be used regardless of what the original font is. Thus, it’s possible the fallback font will be used in place of a monospace character."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s another example that shows how to use an alternative emoji font (Symbola) instead of the the built-in one:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extends: default-with-font-fallbacks\nfont:\n  catalog:\n    merge: true\n    Symbola: /path/to/symbola.ttf\n  fallbacks: [ M+ 1p, Symbola ]"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now Asciidoctor PDF will look for the emoji in the Symbola font instead of the Noto Emoji font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-fallback-font",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom fallback font"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Fallback Fonts"
+      }
+    ]
+  }
+}

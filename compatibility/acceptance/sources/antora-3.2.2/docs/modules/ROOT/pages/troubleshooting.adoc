@@ -1,0 +1,46 @@
+= Troubleshooting Common Errors
+:navtitle: Troubleshooting
+
+This page provides information for how to troubleshoot common problems and errors.
+
+== Duplicate nav
+
+If you get an error that reports that you have a "Duplicate nav", this is typically only the tip of the iceburg.
+The real problem is that you have two content sources that have the same component version and the same files.
+In other words, you have a conflict.
+It just so happens that Antora checks nav files before any other files.
+
+When this error occurs, Antora will list the two content sources that are in conflict in the details of the message.
+Check [.path]_antora.yml_ in both content sources and you'll see that `name` and `version` keys have the same values in both files.
+
+To solve this problem, you either need to update the value of the version key in one of the two [.path]_antora.yml_ files or remove one of the content sources.
+
+== ECONNRESET
+
+When using content repositories hosted on GitHub, it's possible that Antora will fail with an ECONNRESET error when cloning or fetching those repositories.
+This situation arises as a result of an GitHub networking policy.
+GitHub aggressively resets paused connections.
+
+So what causes the paused connections?
+The answer is Node.js`' round-robin style concurrency model.
+Antora can be configured to use multiple connections to clone or fetch repositories concurrently.
+This strategy ensures optimal throughput in light of the fact that connections inevitably stall.
+The intended result is for these operations complete sooner.
+
+However, Node.js only services a single connection at a time (single-threaded model).
+So while one connection is being serviced, the other connections are in a paused state, even if the server is ready to respond.
+If the connection remains paused for too long, GitHub resets the connection.
+
+To circumvent this problem, and ensure that git network operations always succeed, you can avoid setting the git fetch concurrency in your playbook (default: 1), or use a conservative value.
+
+[,yaml]
+----
+git:
+  fetch_concurrency: 1
+----
+
+For more information about this key, see xref:playbook:git-fetch-concurrency.adoc[].
+
+This problem is much less likely to happen in Antora 3.2.0 and greater since Antora now separates the fetch and scan operations.
+In other words, if it does pause a connection, it shouldn't be for very long.
+Prior to Antora 3.2.0, Antora would scan the repository in the same tick as the connection, which lead to longer connection pauses.

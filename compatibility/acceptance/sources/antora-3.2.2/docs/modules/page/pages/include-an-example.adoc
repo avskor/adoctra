@@ -1,0 +1,441 @@
+= Include an Example
+:page-aliases: asciidoc:include-example.adoc
+// URLs
+:url-include: {url-asciidoc}/directives/include/
+:url-tags: {url-asciidoc}/directives/include-tagged-regions/
+:url-indent: {url-asciidoc}/directives/include-with-indent/
+
+An example can be inserted into any page or partial in your site using the AsciiDoc include directive and the example's resource ID.
+
+[NOTE]
+====
+If you aren't familiar with the Antora resource ID and its coordinates, see:
+
+* xref:resource-id.adoc[]
+* xref:resource-id-coordinates.adoc[]
+====
+
+== AsciiDoc include directive for examples
+
+An AsciiDoc include directive inserts content from an example's source file into a partial or a page.
+The include directive accepts the xref:resource-id.adoc[Antora resource ID] of examples, partials, and pages as a value.
+
+<<ex-base>> shows the structure of an include directive with the fully qualified resource ID of an example.
+Because the include directive is used to reference other resources, the `example$` family coordinate must be specified in the example's resource ID when it's assigned to an include directive.
+
+.Include directive assigned the fully qualified resource ID of an example
+[#ex-base]
+----
+\include::version@component:module:example$file-coordinate-of-target-example.ext[optional attribute]
+----
+
+An include directive consists of the directive's prefix (`include::`), the resource ID of the target example, and a set of square brackets (`[]`).
+You can specify optional attributes within the square brackets as key-value pairs separated by commas.
+[[target]]The [.term]*target example* is the source file of an example that's being referenced by the current page.
+The target example is referenced by assigning its resource ID to an include directive in the content of the current page.
+[[current]]The [.term]*current page* is the page source file containing the include directive that references the target example.
+
+When Antora runs, content from the target example is inserted into the current page at the location where the include directive is entered.
+The target example's content is converted after it's inserted into the current page.
+This means the current page's component version, module, attributes, and other elements are applied to or may impact the content included from the target example.
+
+[#examples-root]
+== Insert an example into a page
+
+Let's break down the AsciiDoc include directive and resource ID coordinates you need to insert a <<target,target example>> into the <<current,current page>>.
+
+. In your IDE or plain text editor, open the page where you want to insert the example.
+For this step and the subsequent steps, let's assume you've opened the file [.path]_phases.adoc_.
++
+--
+Example files are often inserted into xref:asciidoc:source.adoc[source blocks].
+<<ex-code>> shows a source block with a title and an assigned language set up in the current page.
+
+.phases.adoc (current page)
+[source#ex-code]
+....
+.First test phase
+[,js]
+----
+
+----
+....
+
+The current page, [.path]_phases.adoc_, belongs to the component version _mapper 8.0_ and module _testing_, shown in <<ex-map>>.
+
+.Directories and files assigned to mapper 8.0
+[listing#ex-map]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 testing <.>
+    📂 examples <.>
+      📄 timer.js
+    📂 pages <.>
+      📄 index.adoc
+      📄 phases.adoc
+----
+<.> Defines the component version as _mapper 8.0_
+<.> Defines the _testing_ module
+<.> Defines subsequent files as examples
+<.> Defines subsequent files as pages
+--
+
+. In the current page, select the line where you want the example's content to be inserted.
+At the beginning of the line, enter the name of the directive followed by two colons, `include::`.
++
+.phases.adoc (current page)
+[source,subs=+quotes]
+....
+.First test phase
+[,js]
+----
+**include::**
+----
+....
+
+. Let's reference the target example, [.path]_timer.js_, from the current page.
+Assign the resource ID of the target example to the include directive.
+Both [.path]_timer.js_ and [.path]_phases.adoc_ belong to the same component version and module (see <<ex-map>>).
+Therefore, only the `example$` family coordinate and file coordinate of the target example need to be specified.
++
+--
+.phases.adoc (current page)
+[source,subs=+quotes]
+....
+.First test phase
+[,js]
+----
+include::**example$timer.js**
+----
+....
+
+The file coordinate for the [.path]_timer.js_ example is `timer.js`.
+The target example's file coordinate consists solely of its filename and file extension because [.path]_timer.js_ is stored at the root of the [.path]_examples_ directory.
+
+NOTE: By default, the include directive assumes the family coordinate is `page$` when the coordinate isn't specified.
+If you forget to use the `example$` coordinate, Antora will report an error because it won't be able to find the example.
+--
+
+. Directly after the resource ID of the target example, complete the directive with a set of square brackets (`+[]+`).
++
+--
+.phases.adoc (current page)
+[source,subs=+quotes]
+....
+.First test phase
+[,js]
+----
+include::example$timer.js**[]**
+----
+....
+
+The brackets of the include directive can contain an optional list of attributes, such as `lines`, `tag`, or `tags`.
+The attributes are entered as key-value pairs separated by commas.
+See the {url-include}[AsciiDoc include directive documentation^] for full details about the `lines`, `tag`, and `tags` syntax.
+--
+
+That's it!
+You've created an include directive that will insert the target example into the current page.
+
+The preceding instructions showed you how to insert an example into a page under the most common scenario--the target example and current page belong to the same component version and module and the target example is stored at the root of a [.path]_examples_ folder.
+However, if the target example is stored in a subdirectory of the [.path]_examples_ directory, its file coordinate must specify the <<relative-path,examples-relative directory path in addition to its filename and file extension>>.
+
+.current-page.adoc
+[#ex-file]
+----
+include::example$target-example-filename.ext[] <.>
+
+include::example$path/to/target-example-filename.ext[] <.>
+
+include::example$./target-example-filename.ext[] <.>
+----
+<.> File coordinate of the target example when it's stored at the root of the [.path]_examples_ directory.
+<.> File coordinate of the target example when it's stored in a subdirectory of the [.path]_examples_ directory.
+<.> File coordinate of the target example when the target example and current page are stored in subdirectories with parallel family-relative directory paths.
+_This is an advanced use case._
+
+Also, you'll need to specify additional resource ID coordinates when the target example and current page don't belong to the <<modules,same module>> or <<component-versions,component version>>.
+The following sections provide examples showing the various resource ID scenarios.
+
+[#relative-path]
+=== File coordinate with examples-relative directory path
+
+The __examples__-relative directory path of the <<target,target example>> is required in its file coordinate when it's stored in a subdirectory of the [.path]_examples_ directory.
+
+.File coordinate when the target example is stored in a subdirectory of an examples directory
+[#ex-subdir-base]
+----
+\include::example$path/to/target-example-filename.ext[optional attribute]
+----
+
+Let's use the files that belong to the component version in <<ex-grid-subdir>> as the basis for the example in this section.
+
+.Directories and files assigned to grid-twist 2.5
+[listing#ex-grid-subdir]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📂 providers <.>
+        📄 job.yml
+    📂 pages <.>
+      📄 interface-loader.adoc
+----
+<.> Defines the component version as _grid-twist 2.5_
+<.> Defines a module named _ROOT_
+<.> Defines subsequent files as examples
+<.> A subdirectory in _examples_ containing the source files of examples
+<.> Defines subsequent files as pages
+
+Let's reference [.path]_job.yml_ from [.path]_interface-loader.adoc_.
+As you can see in <<ex-grid-subdir>> above, the example and page belong to the _ROOT_ module.
+In <<ex-subdir>>, an include directive in the [.path]_interface-loader.adoc_ page (current page) references the [.path]_job.yml_ file (target example).
+
+.interface-loader.adoc (current page)
+[source#ex-subdir]
+....
+[,yaml]
+----
+\include::example$providers/job.yml[]
+----
+....
+
+As shown in <<ex-subdir>>, the family coordinate is `example$` and the file coordinate for [.path]_job.yml_ is `providers/job.yml`.
+The file coordinate for [.path]_job.yml_ consists of its [.path]__examples__-relative directory path, filename, and file extension because it's stored in the subdirectory [.path]_providers_.
+
+TIP: In special circumstances where the __examples__-relative directory path of the target example and the __pages__-relative directory path of the current page are parallel, the __examples__-relative directory path can be replaced with the relative path token, `./`.
+
+[#modules]
+== Include an example from another module
+
+When the <<target,target example>> and the <<current,current page>> don't belong to the same module, you must specify the target example's xref:resource-id-coordinates.adoc#id-module[module], xref:resource-id-coordinates.adoc#id-family[family], and xref:resource-id-coordinates.adoc#id-resource[file coordinates] in the include directive.
+
+.Module, family, and file coordinates assigned to an include directive
+[#ex-module-base]
+----
+include::module:example$target-example-filename.ext[optional attribute] <.>
+
+include::module:example$path/to/target-example-filename.ext[optional attribute] <.>
+----
+<.> Assign the module, `example$`, and file coordinates of the target example to the include directive when the target example and current page belong to the same component version but not the same module.
+The target example's file coordinate is its filename and file extension when it's <<examples-root,stored at the root of a _examples_ family directory>>.
+<.> If <<relative-path,the target example is stored in a subdirectory of a _examples_ directory>>, the target example's file coordinate must specify its __examples__-relative directory path, filename, and file extension.
+
+Let's use the files that belong to the component version shown in <<ex-map-mod>> as the basis for the example in this section.
+
+.Directories and files assigned to mapper 8.0
+[listing#ex-map-mod]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📄 warm-up.js
+  📂 testing <.>
+    📂 examples <.>
+      📄 timer.js
+    📂 pages <.>
+      📄 index.adoc
+      📄 phases.adoc
+----
+<.> Defines the component version as _mapper 8.0_
+<.> Defines the _ROOT_ module
+<.> Defines subsequent files as examples
+<.> Defines the _testing_ module
+<.> Defines subsequent files as examples
+<.> Defines subsequent files as pages
+
+Let's insert the [.path]_warm-up.js_ example into the [.path]_index.adoc_ page.
+That means the source file [.path]_warm-up.js_ is the target example and [.path]_index.adoc_ is the current page.
+As shown in <<ex-map-mod>> above, the [.path]_index.adoc_ page belongs to the _testing_ module, and the [.path]_warm-up.js_ example belongs to the _ROOT_ module.
+
+<<ex-module>> shows an include directive in [.path]_index.adoc_ that references the example [.path]_warm-up.js_.
+The module, `example$`, and file coordinates of the target example are assigned to the include directive.
+
+.index.adoc (current page)
+[source#ex-module]
+....
+[,js]
+----
+\include::ROOT:example$warm-up.js[]
+----
+....
+
+As shown in <<ex-module>>, the target example's module coordinate is `ROOT`, its family coordinate is `example$`, and its file coordinate is `warm-up.js`.
+
+[#component-versions]
+== Include an example from another component
+
+When the <<target,target example>> and <<current,current page>> don't belong to the same documentation component, specify the example's xref:resource-id-coordinates.adoc#id-version[version, component, module, family, and file coordinates] in the resource ID assigned to the include directive.
+
+.Version, component, module, family, and file coordinates assigned to an include directive
+[#ex-component-version-base]
+----
+include::version@component:module:example$target-example-filename.ext[] <.>
+
+include::version@component:module:example$path/to/target-example-filename.ext[] <.>
+
+include::component:module:example$file-coordinate-of-target-example.ext[] <.>
+----
+<.> Assign the version, component, module, family, and file coordinates of the target example to the include directive when the target example and current page don't belong to the same component version.
+The target example's file coordinate is its filename and file extension when the target example is <<examples-root,stored at the root of a _examples_ family directory>>.
+<.> If <<relative-path,the target example is stored in a subdirectory of a _examples_ directory>>, the target example's file coordinate must specify its __examples__-relative directory path, filename, and file extension.
+<.> If the version coordinate isn't specified, Antora uses the <<latest-version,latest version of the target example's component>> to complete the resource ID at runtime.
+This behavior only applies when the target example and current page belong to different docs components.
+
+Let's use the files that belong to the component versions _mapper 8.0_ (<<ex-map-v>>) and _grid-twist 2.5_ (<<ex-grid-v>>) as the basis for the example in this section.
+
+.Directories and files assigned to mapper 8.0
+[listing#ex-map-v]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📄 warm-up.js
+  📂 testing <.>
+    📂 examples <.>
+      📄 timer.js
+    📂 pages <.>
+      📄 index.adoc
+      📄 phases.adoc
+----
+<.> Defines the component version as _mapper 8.0_
+<.> Defines the _ROOT_ module
+<.> Defines subsequent files as examples
+<.> Defines the _testing_ module
+<.> Defines subsequent files as examples
+<.> Defines subsequent files as pages
+
+.Directories and files assigned to grid-twist 2.5
+[listing#ex-grid-v]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📂 providers <.>
+        📄 job.yml
+    📂 pages <.>
+      📄 interface-loader.adoc
+----
+<.> Defines the component version as _grid-twist 2.5_
+<.> Defines a module named _ROOT_
+<.> Defines subsequent files as examples
+<.> A subdirectory in _examples_ containing the source files of examples
+<.> Defines subsequent files as pages
+
+Using files from <<ex-map-v>> and <<ex-grid-v>>, let's reference [.path]_warm-up.js_ (target example) from [.path]_interface-loader.adoc_ (current page).
+The [.path]_warm-up.js_ example belongs to the component version _mapper 8.0_.
+The [.path]_interface-loader.adoc_ page belongs to the component version _grid-twist 2.5_.
+
+The include directive in <<ex-across-components>> will embed the content of the [.path]_warm-up.js_ example into the [.path]_interface-loader.adoc_ page.
+
+.interface-loader.adoc (current page)
+[source#ex-across-components]
+....
+[,js]
+----
+\include::8.0@mapper:ROOT:example$warm-up.js[]
+----
+....
+
+As shown in <<ex-across-components>>, the target example's version coordinate is `8.0`, its component coordinate is `mapper`, its module coordinate is `ROOT`, its family coordinate is `example$`, and its file coordinate is `warm-up.js`.
+You could also specify the resource ID for [.path]_warm-up.js_ as `8.0@mapper::example$warm-up.js` (notice the module coordinate `ROOT` seems to be missing).
+When  the target example's component coordinate is specified, and the target example belongs to the _ROOT_ module, the module coordinate `ROOT` doesn't have to be explicitly specified.
+However, you must still enter the colon (`:`) that would follow the module coordinate.
+This shorthand only works when a component coordinate is specified and the module coordinate of the target example is `ROOT`.
+
+[#latest-version]
+=== Use the latest version of an example
+
+TIP: This behavior only applies when the target example and current page belong to different docs components!
+
+If a version isn't specified in the resource ID assigned to an include directive, *and the target example and current page don't belong to the same component*, Antora uses the version coordinate of the xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version] of the target example's component to complete the resource ID at runtime.
+
+Let's use the files that belong to the component versions _mapper 8.0_ (<<ex-map8>>), _mapper 8.1_ (<<ex-map-latest>>), and _grid-twist 2.5_ (<<ex-grid-latest>>) as the basis for the example in this section.
+
+.Directories and files assigned to mapper 8.0
+[listing#ex-map8]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📄 warm-up.js
+  📂 testing <.>
+    📂 examples <.>
+      📄 timer.js
+    📂 pages <.>
+      📄 index.adoc
+      📄 phases.adoc
+----
+<.> Defines the component version as _mapper 8.0_
+
+.Directories and files assigned to mapper 8.1
+[listing#ex-map-latest]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📄 warm-up.js
+  📂 testing <.>
+    📂 examples <.>
+      📄 timer.js
+    📂 pages <.>
+      📄 index.adoc
+      📄 phases.adoc
+----
+<.> Defines the component version as _mapper 8.1_
+
+.Directories and files assigned to grid-twist 2.5
+[listing#ex-grid-latest]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📂 providers <.>
+        📄 job.yml
+    📂 pages <.>
+      📄 interface-loader.adoc
+----
+<.> Defines the component version as _grid-twist 2.5_
+
+Let's reference the [.path]_timer.js_ example (target example) from the [.path]_interface-loader.adoc_ page (current page).
+[.path]_interface-loader.adoc_ belongs to component version _grid-twist 2.5_.
+There are two files named [.path]_timer.js_ that belong to the _mapper_ component, _testing_ module, and _examples_ family.
+One [.path]_timer.js_ belongs to version _8.0_, the other [.path]_timer.js_ to version _8.1_.
+
+<<ex-across-components-latest>> shows an include directive referencing [.path]_timer.js_ (target example) from [.path]_interface-loader.adoc_ (current page).
+Notice that the target example's version coordinate isn't specified.
+
+.interface-loader.adoc (current page)
+[source#ex-across-components-latest]
+....
+[,js]
+----
+\include::mapper:testing:example$timer.js[]
+----
+....
+
+When Antora runs, it will identify _mapper 8.1_ as the latest version of the _mapper_ component according to its xref:ROOT:how-component-versions-are-sorted.adoc#version-sorting-rules[version sorting rules] and xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version criteria].
+Because a version coordinate isn't specified in <<ex-across-components-latest>>, Antora will complete the resource ID assigned to the include directive using the version coordinate -- `8.1` -- from the latest _mapper_ component.
+
+WARNING: This behavior of linking to the latest version only applies when the version coordinate is unspecified and the target example and current page belong to different components.
+If the version and component coordinates aren't specified in the resource ID, Antora assumes the target example belongs to the same component version as the current page and uses the current page's version and component coordinates to complete the target example's resource ID.
+
+== Learn more
+
+* xref:include-a-partial.adoc[]
+* xref:include-a-page.adoc[]
+* xref:resource-id.adoc[]
+* xref:asciidoc:source.adoc[]
+
+.*AsciiDoc and Asciidoctor resources*
+* {url-tags}[Select regions of content with tags^]
+* {url-indent}[Normalize block indentation with indent^]
+* {url-include}[AsciiDoc include directive^]

@@ -1,0 +1,89 @@
+= Print and Prepress Modes
+
+[#print]
+== Print mode
+
+Asciidoctor PDF provides the following behaviors to assist with printing:
+
+* Shows the URLs for links unless the link text matches the URL
+* Consolidates page ranges in the index
+* Deactivates the links from page numbers in the index to the locations of terms in the document
+
+To enable these printing features, set the `media` document attribute to `print` in the header of your AsciiDoc document or from the API or CLI (e.g., `-a media=print`).
+In this case, you may also want to consider using the print-optimized theme, which uses darker, grayscale colors for text and borders (e.g., `--theme default-for-print`).
+
+If you don't want the URL to be shown next to the link text, unset the `show-link-uri` attribute in the document header:
+
+----
+:!show-link-uri:
+----
+
+or from the API or CLI:
+
+----
+-a show-link-uri!
+----
+
+Only the link text will be shown, as in the case when `media` is `screen` (the default).
+
+You can force the processor to show the URL next to links, regardless of the value of the `media` attribute, by setting the `show-link-uri` attribute.
+
+[#prepress]
+== Prepress mode
+
+In addition to the <<print,print mode>>, Asciidoctor PDF provides the following behaviors to assist with publishing:
+
+* Double-sided (mirror) page margins
+* Automatic facing pages
+
+Set the `media` attribute to `prepress` in the header of your AsciiDoc document or from the API or CLI (e.g., `-a media=prepress`) to activate the publishing features.
+The following sections describe the behaviors that this setting activates.
+You may also want to consider using the print-optimized theme, which uses darker, grayscale colors for text and borders (e.g., `--theme default-for-print`).
+
+=== Double-sided page margins
+
+The page margins for the recto (right-hand, odd-numbered) and verso (left-hand, even-numbered) pages are automatically calculated by replacing the side page margins with the values of the `page-margin-inner` and `page-margin-outer` keys.
+
+For example, let's assume you've defined the following settings in your theme:
+
+[,yaml]
+----
+page:
+  margin: [0.5in, 0.67in, 0.67in, 0.67in]
+  margin-inner: 0.75in
+  margin-outer: 0.59in
+----
+
+The page margins for the recto and verso pages will be resolved as follows:
+
+recto page margin:: [0.5in, *0.59in*, 0.67in, *0.75in*]
+verso page margin:: [0.5in, *0.75in*, 0.67in, *0.59in*]
+
+The page margins alternate between recto and verso.
+The first page in the document (after the front cover) is a recto page.
+
+The recto margin is applied to the title page if a front cover is specified.
+To apply the recto margin to the title page without specifying a front cover, assign the value `~` to the `front-cover-image`.
+
+=== Automatic facing pages
+
+When converting the book doctype using the `prepress` media setting, a blank page will be inserted when necessary to ensure the following elements start on a recto page:
+
+* Title page
+* Table of contents
+* First page of body
+* Parts and chapters
+
+Other "`facing`" pages may be added in the future.
+
+It's possible to disable the automatic facing feature for a given part or chapter.
+This can be done by applying the `nonfacing` option to a section.
+When the `nonfacing` option is present, the part or chapter title will be placed on the next adjacent page rather than the next facing page.
+
+[,asciidoc]
+----
+[%nonfacing]
+= Minor Chapter
+
+content
+----

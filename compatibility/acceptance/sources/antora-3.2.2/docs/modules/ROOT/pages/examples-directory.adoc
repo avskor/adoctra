@@ -1,0 +1,59 @@
+= Examples Directory and Files
+
+[#examples-dir]
+== Examples family directory
+
+A module directory can contain a xref:family-directories.adoc[family directory] named [.path]_examples_.
+
+[listing]
+----
+📂 modules
+  📂 ROOT <.>
+    📂 examples <.>
+      📄 example-source-file.ext <.>
+    📁 pages
+    📄 nav.adoc
+  📂 named-module <.>
+    📂 examples <.>
+      📄 example-source-file <.>
+      📂 subdirectory-of-examples <.>
+        📄 example-source-file.ext
+    📁 images
+----
+<.> A ROOT module directory.
+<.> An [.path]_examples_ family directory.
+Antora classifies source files stored in an [.path]_examples_ directory as examples.
+<.> An example source file.
+<.> A named module directory.
+<.> An [.path]_examples_ family directory.
+<.> An example source file without a file extension.
+Antora will load example source files without extensions into the content catalog.
+<.> A subdirectory in [.path]_examples_.
+Source files stored in subdirectories of an [.path]_examples_ directory are classified as examples.
+
+The [.path]_examples_ directory is optional.
+Antora applies preset behavior to the source files stored in an [.path]_examples_ directory when it generates a site.
+
+[#examples]
+== Example files
+
+Antora classifies the source files stored in an [.path]_examples_ directory as examples.
+Example files usually contain content such as source code samples, terminal output, data sets, etc.
+
+include::page:page$examples.adoc[tag=filename]
+
+An example file isn't required to have a file extension.
+Unlike a publishable resource that's treated as a xref:standard-directories.adoc#hidden-files[hidden file] if it's missing a file extension, Antora will load an example that doesn't have a file extension into its content catalog and assign the example a resource ID for referencing.
+
+Antora doesn't publish example files as individual site pages.
+An xref:page:include-an-example.adoc[example must be referenced by an include directive] from a page, or resource that's eventually included in a page, for the example's content to be published.
+
+IMPORTANT: Except when it's typical for a file type to not have a file extension, such as [.path]_Dockerfile_, it's a good practice to save your example source files with their valid file extensions.
+Otherwise, you may not be able to use some Antora or Asciidoctor extensions that apply additional behavior to example files.
+
+TIP: Examples shouldn't be confused with the AsciiDoc example block, though an example file can be inserted into an example block using an include directive.
+
+== Learn more
+
+* xref:page:examples.adoc[]
+* xref:page:include-an-example.adoc[]

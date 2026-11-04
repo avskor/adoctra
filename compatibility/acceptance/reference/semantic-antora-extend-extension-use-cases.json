@@ -1,0 +1,2866 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page provides a catalog of simple examples to showcase how you can enhance the capabilities of Antora through the use of extensions. Each section introduces a different use case and presents the extension code you can build on as a starting point."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also reference official extension projects provided by the Antora project to study more complex examples."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to define global (i.e., site-wide) AsciiDoc attributes that aren’t defined in the configuration, or which have dynamic values, you can do using an extension. The playbook holds the site-wide AsciiDoc config object, which itself contains the global AsciiDoc attributes. An extension can listen for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbookBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event and add attributes to this map."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('beforeProcess', ({ siteAsciiDocConfig }) => {\n    const buildDate = new Date().toISOString()\n    siteAsciiDocConfig.attributes['build-date'] = buildDate\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "set-global-asciidoc-attributes-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension could read these values from a file or environment variables as well."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "set-global-asciidoc-attributes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Set global AsciiDoc attributes"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If, instead, you want to define AsciiDoc attributes per component version, you can use an extension that listens for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentClassified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "componentsRegistered"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") event and updates the attributes assigned to the component version."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the event listener, you can access the AsciiDoc attributes from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property on the component version object. You can look up a component version by name and version from the content catalog using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getComponentVersion"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. Alternately, you can access component versions from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "versions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property on each component returned by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getComponents"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You must be aware that if no AsciiDoc attributes are defined in the component descriptor for a component version, the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is a reference to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "siteAsciiDocConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object. Therefore, you have to check for this and instantiate a new configuration object to avoid unintentionally assigning a side-wide AsciiDoc attribute."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s assume that we want to define the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-component-version-is-prerelease"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute if the component version is a prerelease (to complement the built-in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-component-version-is-latest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ contentCatalog, siteAsciiDocConfig }) => {\n    for (const component of contentCatalog.getComponents()) {\n      for (const componentVersion of component.versions) {\n        if (!componentVersion.prerelease) continue\n        if (!componentVersion.asciidoc || componentVersion.asciidoc === siteAsciiDocConfig) {\n          componentVersion.asciidoc = Object.assign({}, siteAsciiDocConfig)\n          componentVersion.asciidoc.attributes = Object.assign({}, siteAsciiDocConfig.attributes)\n        }\n        componentVersion.asciidoc.attributes['page-component-version-is-prerelease'] = ''\n      }\n    }\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "set-component-version-asciidoc-attributes-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can now use this attribute in a page as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ifdef::page-component-version-is-prerelease[]\nThis version is still in development.\nendif::[]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whether you use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentClassified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "componentsRegistered"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event doesn’t really matter, unless the attribute needs to be set before another extension runs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "set-asciidoc-attributes-per-component-version",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Set AsciiDoc attributes per component version"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re troubleshooting your site, you can use an extension to generate a report of AsciiDoc attributes at the site level and those per component version. When making this report, you have a choice of whether you want to show the AsciiDoc attributes as they would be available to a page (aka compiled) or as defined (aka uncompiled)"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the following extension to print all the AsciiDoc attributes compiled for each component version. The extension also prints all the attributes compiled from the playbook, though keep in mind these are integrated into the attributes for each component version."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ siteAsciiDocConfig, contentCatalog }) => {\n    console.log('site-wide attributes (compiled)')\n    console.log(siteAsciiDocConfig.attributes)\n    contentCatalog.getComponents().forEach((component) => {\n      component.versions.forEach((componentVersion) => {\n        console.log(`${componentVersion.version}@${componentVersion.name} attributes (compiled)`)\n        if (componentVersion.asciidoc === siteAsciiDocConfig) {\n          console.log('same as site-wide attributes')\n        } else {\n          console.log(componentVersion.asciidoc.attributes)\n        }\n      })\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "print-compiled-asciidoc-attributes-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the following extension to print all the AsciiDoc attributes as defined in the playbook and in the antora.yml file for each component version (by origin)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ playbook, contentCatalog }) => {\n    console.log('site-wide attributes (as defined in playbook)')\n    console.log(playbook.asciidoc.attributes)\n    contentCatalog.getComponents().forEach((component) => {\n      component.versions.forEach((componentVersion) => {\n        getUniqueOrigins(contentCatalog, componentVersion).forEach((origin) => {\n          console.log(`${componentVersion.version}@${componentVersion.name} attributes (as defined in antora.yml)`)\n          console.log(origin.descriptor.asciidoc?.attributes || {})\n        })\n      })\n    })\n  })\n}\n\nfunction getUniqueOrigins (contentCatalog, componentVersion) {\n  return contentCatalog\n    .findBy({ component: componentVersion.name, version: componentVersion.version })\n    .reduce((origins, file) => {\n      const origin = file.src.origin\n      if (origin && !origins.includes(origin)) origins.push(origin)\n      return origins\n    }, [])\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "print-defined-asciidoc-attributes-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may find it useful to make use of these collections of AsciiDoc attributes when writing other extensions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "print-asciidoc-attributes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Print AsciiDoc attributes"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If some contributors or CI jobs don’t have permission to the private content sources in the playbook, you can use an extension to filter them out instead of having to modify the playbook file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbookBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. It retrieves the playbook, iterates over the content sources, and removes any content source that it detects as private and thus require authentication."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "So what determines whether a content source is private?"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " We’ll rely on a convention to communicate to the extension that a content source is private. That convention is to use an SSH URL beginning with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git@"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git@gitlab.com:antora/antora.git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). Antora automatically converts SSH URLs to HTTP URLs (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git@gitlab.com:antora/antora.git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " becomes "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https://gitlab.com/antora/antora.git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), so the use of the SSH syntax here merely serves as a hint for our extension that the URL is private and is going to require authentication."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('playbookBuilt', function ({ playbook }) {\n    playbook.content.sources = playbook.content.sources.filter(({ url }) => !url.startsWith('git@'))\n    this.updateVariables({ playbook })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "exclude-private-content-sources-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension works because the playbook is mutable until the end of this event, at which point Antora freezes it. The call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.updateVariables"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to replace the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbook"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " variable in the generator context is not required, but is used here to express intent and to future proof the extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "exclude-private-content-sources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Exclude private content sources"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to match branches using a generic pattern, but don’t want Antora to pick up prereleases, you can use an extension to filter them out instead of having to use a more specific pattern. This way, the new version becomes available as soon as the prerelease marker is dropped."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentAggregated"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. It retrieves the content aggregate, iterates over the component version buckets, and filters out any bucket marked as a prerelease. (Recall that a component version bucket is the precursor of a component version, which gets created during the ensuing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "classifyContent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " pipeline step)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentAggregated', ({ contentAggregate }) => {\n    this.updateVariables({\n      contentAggregate: contentAggregate.filter((componentVersionBucket) => !componentVersionBucket.prerelease),\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "exclude-prereleases-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension works because the content aggregate can be replaced. While you could mutate the content aggregate, the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.updateVariables"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to replace it in the generator context is used here to express intent and to future proof the extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "exclude-prereleases-from-content-sources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Exclude prereleases from content sources"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora can only work with the worktree of a local repository if the repository has git lfs enabled. In other words, the git lfs objects have to already be inflated by the time Antora uses the worktree. Otherwise, Antora will publish the pointer file instead of the object referenced by that pointer."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can use an extension to workaround this limitation. The following extension looks for all content sources in the playbook marked with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "lfs"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "content:\n  sources:\n  - url: https://githost/example/repo-with-lfs.git\n    lfs: true"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension then uses the native git command to clone the marked repositories. It then replaces the reference to the remote repository in the playbook with the local one."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Code: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/git-lfs-extension/lib/index.js"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/git-lfs-extension/lib/index.js"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that this extension assumes that each lfs content source is configured with a single branch."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "support-remote-repositories-with-git-lfs-enabled",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Support remote repositories with git lfs enabled"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you don’t want a page to ever be published, you can prefix the filename with an underscore (e.g., _hidden.adoc). However, if you only want the page to be unpublished conditionally, then you need to reach for an extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using this extension, any page that sets the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-unpublish"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " page attribute will not be published (meaning it will be unpublished). For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Secret Page\n:page-unpublish:\n\nThis page will not be published."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-unpublish"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " page attribute based on the presence (or absence) of another AsciiDoc attribute, perhaps one set in the playbook or as a CLI option. For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Secret Page\nifndef::include-secret[:page-unpublish:]\n\nThis page will not be published."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "documentsConverted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. This is the earliest event that provides access to the AsciiDoc metadata on the virtual file. The extension iterates over all publishable pages in the content catalog and unpublishes any page that sets the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page-unpublish"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. To unpublish the page, the extension removes the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property on the virtual file. If the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is absent, the page will not be published."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('documentsConverted', ({ contentCatalog }) => {\n    contentCatalog.getPages((page) => {\n      if (page.out && page.asciidoc?.attributes['page-unpublish'] != null) delete page.out\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "page-unpublish-tag-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Keep in mind that there may be references to the unpublished page. While they will be resolved by Antora, the target of the reference will not be available, which will result in a 404 response from the web server."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more fine-grained control over when a page is unpublished, you could write an extension that replaces the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convertDocument"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convertDocuments"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " functions. Doing so would allow you to unpublish the page before references to it from other pages are resolved so that they appear as warnings."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "unpublish-flagged-pages",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Unpublish flagged pages"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, Antora will publish all publishable assets discovered, such as images, even if they are never referenced in a page. If you only want to publish publishable assets that have been somehow referenced, you can use an extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One way to know if an asset has been referenced is to check if its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pub.url"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is ever accessed. We can proxy the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pub"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property and record when its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "url"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is accessed. Then we can go back later and unpublish any files that don’t have this marker by removing its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ contentCatalog }) => {\n    for (const file of getAssetFiles(contentCatalog)) {\n      file.pub = new Proxy(file.pub, {\n        get (target, property) {\n          if (property === 'url') target.referenced = true\n          return target[property]\n        },\n      })\n    }\n  })\n\n  this.once('beforePublish', ({ contentCatalog }) => {\n    for (const file of getAssetFiles(contentCatalog)) {\n      if (!file.pub.referenced) delete file.out\n    }\n  })\n}\n\nfunction getAssetFiles (contentCatalog) {\n  return contentCatalog.getFiles(\n    (candidate) =>\n      contentCatalog.publishableFamilies.has(candidate.src.family) && candidate.pub && candidate.src.family !== 'page'\n  )\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We choose to proxy the files during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentClassified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event since this is the earliest event at which the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pub.url"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is set. We choose to unpublish the files during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "beforePublish"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event to ensure that any usage of that file is captured."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to require that a page must be referenced to be published, remove the check for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "page"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " family in the extension. If you do so, it replicates the functionality of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unpublish unlisted pages"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#unpublish-unlisted-pages"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "unpublished-unreferenced-assets",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Unpublished unreferenced assets"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use an extension to track which AsciiDoc files get used. For publishable pages, we want to know if the page is referenced in the navigation. For non-pubilshable pages, we want to know if the file is ever included."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To accomplish the first, we consult the navigation tree to look for a match. To accomplish the second, we need to proxy the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contents"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property on the file to determine if it ever read. If it is read, then we mark the file as read and restore the original property."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ contentCatalog }) => {\n    contentCatalog.getFiles().forEach((it) => {\n      if (!it.out && it.src.mediaType === 'text/asciidoc' && it.src.family !== 'nav') {\n        Object.defineProperty(it, 'contents', {\n          configurable: true,\n          enumerable: true,\n          get: markReadAndGetContents.bind(it, it.contents),\n        })\n      }\n    })\n  })\n\n  this.once('sitePublished', ({ contentCatalog }) => {\n    const internalNavUrls = new Set()\n    contentCatalog.getComponents().forEach(({ versions }) => {\n      versions.forEach(({ navigation, url: defaultUrl }) => {\n        internalNavUrls.add(defaultUrl)\n        getInternalUrls(navigation).forEach((url) => internalNavUrls.add(url))\n      })\n    })\n    const asciidocFiles = { used: [], unused: [] }\n    contentCatalog.getFiles().forEach((it) => {\n      if (it.src.mediaType !== 'text/asciidoc' || ['alias', 'nav'].includes(it.src.family)) return\n      it.out\n        ? asciidocFiles[internalNavUrls.has(it.pub.url) ? 'used' : 'unused'].push(it)\n        : asciidocFiles[it.read ? 'used' : 'unused'].push(it)\n    })\n    for (const status of ['used', 'unused']) {\n      console.log(status.charAt().toUpperCase() + status.slice(1) + ' AsciiDoc files:')\n      for (const file of asciidocFiles[status]) console.log(generateQualifiedResourceRef(file.src))\n    }\n  })\n}\n\nfunction markReadAndGetContents (value) {\n  this.read = true\n  Object.defineProperty(this, 'contents', { value, writable: true })\n  return value\n}\n\nfunction getInternalUrls (items = [], accum = []) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum.push(item.url)\n    getInternalUrls(item.items, accum)\n  })\n  return accum\n}\n\nfunction generateQualifiedResourceRef ({ component, version, module: module_, family, relative }) {\n  return `${version}${version ? '@' : ''}${component}:${module_}:${family}$${relative}`\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As it stands, the extension just prints the qualified resource reference of each file to the console. You could choose instead to create a new page to present the report. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Generate report of all pages"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#generate-report-of-all-pages"
+              },
+              {
+                "kind": "text",
+                "value": " to learn how to create a new report page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You also may decide to print the repository path of the file instead of the qualified resource reference."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "analyze-asciidoc-usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Analyze AsciiDoc usage"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After you create a new page, it’s easy to forget to add it to the navigation so that the reader can access it. We can use an extension to identify pages which are not in the navigation and report them using the logger."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "navigationBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. It iterates over each component version, retrieves a flattened list of its internal navigation entries, then checks to see if there are any pages that are not in that list, comparing pages by URL. If it finds any such pages, it creates a report of them, optionally adding them to the navigation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function ({ config }) {\n  const { addToNavigation, unlistedPagesHeading = 'Unlisted Pages' } = config\n  const logger = this.getLogger('unlisted-pages-extension')\n  this\n    .on('navigationBuilt', ({ contentCatalog }) => {\n      contentCatalog.getComponents().forEach(({ versions }) => {\n        versions.forEach(({ name: component, version, navigation: nav, url: defaultUrl }) => {\n          const navEntriesByUrl = getNavEntriesByUrl(nav)\n          const unlistedPages = contentCatalog\n            .findBy({ component, version, family: 'page' })\n            .filter((page) => page.out)\n            .reduce((collector, page) => {\n              if ((page.pub.url in navEntriesByUrl) || page.pub.url === defaultUrl) return collector\n              logger.warn({ file: page.src, source: page.src.origin }, 'detected unlisted page')\n              return collector.concat(page)\n            }, [])\n          if (unlistedPages.length && addToNavigation) {\n            nav.push({\n              content: unlistedPagesHeading,\n              items: unlistedPages.map((page) => {\n                const title = 'navtitle' in page.asciidoc\n                  ? page.asciidoc.navtitle\n                  : (page.src.module === 'ROOT' ? '' : page.src.module + ':') + page.src.relative\n                return { content: title, url: page.pub.url, urlType: 'internal' }\n              }),\n              root: true,\n            })\n          }\n        })\n      })\n    })\n}\n\nfunction getNavEntriesByUrl (items = [], accum = {}) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum[item.url.split('#')[0]] = item\n    getNavEntriesByUrl(item.items, accum)\n  })\n  return accum\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "unlisted-pages-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can read more about this extension and how to configure it in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "extension-tutorial.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "extension-tutorial.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "report-unlisted-pages",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Report unlisted pages"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of reporting unlisted pages, you could instead remove those pages from publishing. This is one way you can use the navigation to drive which pages are published."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "navigationBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. It iterates over each component version, retrieves a flattened list of its internal navigation entries, then checks to see if there are any pages that are not in that list, comparing pages by URL. If it finds any such pages, it unpublishes them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('navigationBuilt', ({ contentCatalog }) => {\n    contentCatalog.getComponents().forEach(({ versions }) => {\n      versions.forEach(({ name: component, version, navigation: nav, url: defaultUrl }) => {\n        const navEntriesByUrl = getNavEntriesByUrl(nav)\n        const unlistedPages = contentCatalog\n          .findBy({ component, version, family: 'page' })\n          .filter((page) => page.out)\n          .reduce((collector, page) => {\n            if (page.pub.url in navEntriesByUrl || page.pub.url === defaultUrl) return collector\n            return collector.concat(page)\n          }, [])\n        if (unlistedPages.length) unlistedPages.forEach((page) => delete page.out)\n      })\n    })\n  })\n}\n\nfunction getNavEntriesByUrl (items = [], accum = {}) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum[item.url.split('#')[0]] = item\n    getNavEntriesByUrl(item.items, accum)\n  })\n  return accum\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "unpublish-unlisted-pages-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By removing the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property from the page, it prevents the page from being published, but is still referenceable using an include directive. Alternately, you could choose to remove the page entirely from the content catalog."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "unpublish-unlisted-pages",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Unpublish unlisted pages"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, Antora assumes that you provide navigation files that specify how pages in the site are referenced in the navigation. However, Antora provides all the necessary metadata and hooks to auto-generate the navigation. The simplest way to go about it is to build a dynamic navigation file and allow Antora to parse it and build the navigation object from it. You also have the option of building the navigation object directly yourself."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the following example, the pages in each component version are organized under each module and sorted by navtitle."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  // NOTE you could replace buildNavigation step with a noop so it doesn't try to compute the navigation\n  this.once('navigationBuilt', ({ contentCatalog }) => {\n    const { buildAlternateNavigation } = this.getFunctions()\n    contentCatalog.getComponents().forEach((component) => {\n      component.versions.forEach((componentVersion) => {\n        const navContents = []\n        const pagesByModule = componentVersion.files.reduce((accum, file) => {\n          if (!(file.src.family === 'page' && file.out)) return accum\n          const moduleName = file.src.module\n          if (!(moduleName in accum)) accum[moduleName] = []\n          accum[moduleName].push(file)\n          return accum\n        }, {})\n        for (const moduleName in pagesByModule) {\n          pagesByModule[moduleName].sort((a, b) => a.asciidoc.navtitle.localeCompare(b.asciidoc.navtitle))\n        }\n        if ('ROOT' in pagesByModule) {\n          const indexPage = contentCatalog.getById({\n            component: component.name,\n            version: componentVersion.version,\n            module: 'ROOT',\n            family: 'page',\n            relative: 'index.adoc',\n          })\n          pagesByModule.ROOT.forEach((page) => {\n            if (!(indexPage && page === indexPage)) navContents.push(`* xref:${page.src.relative}[]`)\n          })\n          delete pagesByModule.ROOT\n        }\n        Object.keys(pagesByModule)\n          .sort()\n          .forEach((moduleName) => {\n            const indexPage = contentCatalog.getById({\n              component: component.name,\n              version: componentVersion.version,\n              module: moduleName,\n              family: 'page',\n              relative: 'index.adoc',\n            })\n            indexPage\n              ? navContents.push(`* xref:${moduleName}:index.adoc[]`)\n              : navContents.push(`* ${moduleName.charAt().toUpperCase()}${moduleName.substring(1)}`)\n            pagesByModule[moduleName].forEach((page) => {\n              if (!(indexPage && page === indexPage)) navContents.push(` ** xref:${moduleName}:${page.src.relative}[]`)\n            })\n          })\n        const navFile = contentCatalog.addFile({\n          contents: Buffer.from(navContents.join('\\n') + '\\n'),\n          path: 'modules/ROOT/auto-nav.adoc',\n          src: {\n            component: component.name,\n            version: componentVersion.version,\n            family: 'nav',\n            module: 'ROOT',\n            relative: 'auto-nav.adoc',\n          },\n        })\n        contentCatalog.removeFile(navFile)\n        componentVersion.navigation = buildAlternateNavigation(contentCatalog, componentVersion, [navFile])\n      })\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "auto-generate-nav-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can build on this extension to reorganize the pages or exclude pages you don’t want to be referenced in the navigation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to prevent Antora from building the navigation itself, you can assign a noop operation to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "buildNavigation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " generator function."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "auto-generate-navigation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Auto generate navigation"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you’re setting up your playbook, you may find that Antora is not discovering some of your component versions. Using an extension, it’s possible to list the component versions Antora discovers during content aggregation along with the content sources it took them from."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentAggregated', ({ contentAggregate }) => {\n    console.log('Discovered the following component versions')\n    contentAggregate.forEach((bucket) => {\n      const sources = bucket.origins.map(({ url, refname }) => ({ url, refname }))\n      console.log({ name: bucket.name, version: bucket.version, files: bucket.files.length, sources })\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "discovered-component-versions-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If an entry is missing, then you know you may need to tune the content source definitions in your playbook."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more information, you can print the whole bucket entry."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "list-discovered-component-versions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "List discovered component versions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can generate additional pages using an Antora extension. This offers a way to generate report pages that summarize information about the site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this example, we’ll generate a page that lists all the other pages in the same component version. This extension listens for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "documentsConverted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event, which is emitted once all the AsciiDoc-based pages have been converted to (embedded) HTML, but before the HTML layout has been applied. The reason for using this event is twofold. First, it provides access to the page title of each page. Second, the page layout will be applied to the newly generated page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  const relativize = this.require('@antora/asciidoc-loader/util/compute-relative-url-path')\n  this.once('documentsConverted', ({ contentCatalog }) => {\n    contentCatalog.getComponents().forEach(({ versions }) => {\n      versions.forEach(({ name: component, version, url }) => {\n        const pageList = ['<ul>']\n        const pages = contentCatalog\n          .findBy({ component, version, family: 'page' })\n          .sort((a, b) => a.title.localeCompare(b.title))\n        for (const page of pages) {\n          pageList.push(`<li><a href=\"${relativize(url, page.pub.url)}\">${page.title}</a></li>`)\n        }\n        pageList.push('</ul>')\n        const pageListFile = contentCatalog.addFile({\n          contents: Buffer.from(pageList.join('\\n') + '\\n'),\n          src: { component, version, module: 'ROOT', family: 'page', relative: 'all-pages.html' },\n        })\n        pageListFile.asciidoc = { doctitle: 'All Pages' }\n        // use the following assignment instead to use a separate layout (e.g., report.hbs)\n        //pageListFile.asciidoc = { doctitle: 'All Pages', attributes: { 'page-layout': 'report' } }\n      })\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "all-pages-report-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The key step of this extension is the call to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentCatalog.addFile"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". This call adds a new file to the content catalog, in this case a page. When generating the list of links, we use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "relativize"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " function from the AsciiDoc Loader to compute the relative URL from the start page of the component version and the target page, emulating the behavior of the xref macro in AsciiDoc. The resulting report is written to the file "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "all-page.html"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " at the root of the component version (adjacent to the start page)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "generate-report-of-all-pages",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Generate report of all pages"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a component only has non-empty versions (e.g., 1.0, 2.0, etc), Antora will not create a redirect from the component URL (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/component-name/"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") to the latest version of that component (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/component-name/2.0/"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/component-name/latest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The reasoning is that doing so would be an overreach that assumes too much about what URLs the site should respond to."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One possible solution is to use a page alias so the index page (or start page) for the latest version claims the index page for the empty version."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":page-aliases: _@component-name::index.adoc"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "However, this page alias would have to be moved each time the latest version changes to avoid a conflict. Fortunately, this need can be addressed using an Antora extension instead. The extension can find all components that don’t have a component version with an empty value (i.e., versionless component version) and add a page alias that routes from the index page of that component (specifically the versionless component version) to the start page of the latest version."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentClassified', ({ contentCatalog }) => {\n    contentCatalog.getComponents().forEach((component) => {\n      if (component.versions.find((it) => !it.version)) return\n      const rel = contentCatalog.resolvePage('index.adoc', { component: component.name })\n      if (!rel) return\n      contentCatalog.addFile({\n        src: { component: component.name, version: '', module: 'ROOT', family: 'alias', relative: 'index.adoc' },\n        rel,\n      })\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "alias-component-to-latest-version-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the component only has non-empty versions, and the start page can be resolved for the component, an alias is created from the component to that start page. The redirect Antora creates is based on which redirect facility is used. This extension is effectively the same as the explicit page alias shown above."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "redirect-from-component-to-latest-version",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Redirect from component to latest version"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora provides a simple template mechanism for defining a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom edit URL"
+                  }
+                ],
+                "kind": "xref",
+                "target": "playbook:content-edit-url.html"
+              },
+              {
+                "kind": "text",
+                "value": " for files collected from a content source. If you’re edit URL requirements exceed what can be expressed using that template, you’ll need to use an extension to assign a custom edit URL."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentAggregated"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event to modify the edit URL computed for each file before those files are added to the content catalog (or referenced in any page template for that matter). We have free reign over what we want this URL to be."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this extension we filter files by their origin looking for the edit URL we want to modify. Instead of using the edit URL assigned by Antora, we update it to point to GitLab’s web IDE."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contentAggregated', ({ contentAggregate }) => {\n    const targetWebUrl = 'https://gitlab.com/antora/antora'\n    for (const bucket of contentAggregate) {\n      if (!bucket.origins.some((it) => it.webUrl === targetWebUrl)) continue\n      for (const { src } of bucket.files) {\n        if (!(src.editUrl && src.origin.webUrl === targetWebUrl)) continue\n        let editUrlPattern = src.origin.editUrlPattern\n        const pathIdx = editUrlPattern.indexOf('/', 8)\n        editUrlPattern = `${editUrlPattern.substring(0, pathIdx)}/-/ide/project${editUrlPattern.substring(pathIdx)}`\n        src.editUrl = editUrlPattern.replace('%s', src.path)\n      }\n    }\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here we are leveraging the original edit URL pattern. You of course are free to consult any of the properties on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "src"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to construct your own URL."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "modify-edit-url",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Modify edit URL"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to audit include requests in an AsciiDoc document, you must intercept the built-in include processor that Antora provides. Technically, this is not an Antora extension, but rather an Asciidoctor extension. However, since it use facilities from Antora, it’s acting like a specialized Antora extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When registering an Asciidoctor extension, make sure you’re using the nested key "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoc.extensions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and not "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora.extensions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "What we’ll do is intercept each include request and log an info message with information about the include and the stack leading up to the include. To set up the include processor to intercept calls, it must be configured as the preferred processor by calling "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this.prefer()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". At the end of the process method, it must delegate back to the include processor provided by Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You must be careful when intercepting the include processor not to disrupt the built-in function of the include processor itself. The include processor should not try to process the include itself as it won’t be able to easily replicate the logic that Antora uses. Rather, the include processor must delegate to Antora’s include processor."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = (registry, context) => {\n  registry.$groups().$store('audit-includes', toProc(createExtensionGroup(context)))\n  return registry\n}\n\nfunction createExtensionGroup ({ contentCatalog, file }) {\n  return function () {\n    this.includeProcessor(function () {\n      this.prefer()\n      this.process((doc, reader, target, attrs) => {\n        const cursor = reader.$cursor_at_prev_line()\n        const from = cursor.file?.src || file.src\n        this.logger ??= require('@antora/logger')('asciidoctor')\n        const resource = contentCatalog.resolveResource(target, from)\n        this.logger.info({ file: resource.src, stack: [{ file: from, line: cursor.lineno }] }, `include: ${target}`)\n        const delegate = doc\n          .getExtensions()\n          .getIncludeProcessors()\n          .find((it) => it.instance !== this)\n        return delegate.process_method['$[]'](doc, reader, target, global.Opal.hash(attrs))\n      })\n    })\n  }\n}\n\nfunction toProc (fn) {\n  return Object.defineProperty(fn, '$$arity', { value: fn.length })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "audit-includes-asciidoctor-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to resolve the file being included, the processor must determine the file that contains the include directive from the cursor where the include directive is found or the file on which the extension is being run. It then must use the content catalog to resolve the file from that context."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "audit-includes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Audit includes"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Files in the attachment family are passed directly through to the output site. Antora does not resolve AsciiDoc attribute references in attachment files. (Asciidoctor, on the other hand, will resolve AsciiDoc attribute references in the attachment’s contents only if the attachment is included in an AsciiDoc page where the attribute substitution is enabled.) You can use an Antora extension to have Antora resolve attribute references in the attachment file before that file is published."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentClassified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event, which is when attachment files are first identified and classified. It iterates over all attachments and resolves any references to attributes scoped to that attachment’s component version. If any changes were made to the contents of the file, it replaces the contents on the virtual file with the updated value."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.on('contentClassified', ({ contentCatalog }) => {\n    const componentVersionTable = contentCatalog.getComponents().reduce((componentMap, component) => {\n      componentMap[component.name] = component.versions.reduce((versionMap, componentVersion) => {\n        versionMap[componentVersion.version] = componentVersion\n        return versionMap\n      }, {})\n      return componentMap\n    }, {})\n    contentCatalog.findBy({ family: 'attachment' }).forEach((attachment) => {\n      const componentVersion = componentVersionTable[attachment.src.component][attachment.src.version]\n      let attributes = componentVersion.asciidoc?.attributes\n      if (!attributes) return\n      attributes = Object.entries(attributes).reduce((accum, [name, val]) => {\n        accum[name] = val?.endsWith('@') ? val.slice(0, val.length - 1) : val\n        return accum\n      }, {})\n      let modified\n      const result = attachment.contents.toString().replace(/\\{([\\p{Alpha}\\d_][\\p{Alpha}\\d_-]*)\\}/gu, (match, name) => {\n        if (!(name in attributes)) return match\n        modified = true\n        let value = attributes[name]\n        if (value.endsWith('@')) value = value.slice(0, value.length - 1)\n        return value\n      })\n      if (modified) attachment.contents = Buffer.from(result)\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "resolve-attributes-references-in-attachments-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension is only know to work with text-based attachments. You may need to modify this extension for it to work with binary files."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "resolve-attribute-references-in-attachments",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Resolve attribute references in attachments"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Much like AsciiDoc files (.adoc) are converted to HTML (.html) by Antora, you can do the same with attachments. This extension runs during the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentClassified"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event, which is when attachment files are first identified and classified. It iterates over all attachments in an office format (i.e., .docx, .odt, .fodt) and uses the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "libreoffice"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command (LibreOffice in server mode) on Linux or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docto.exe"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command (Microsoft Office via docto) on Windows to convert each file to PDF."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Code: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/office-to-pdf-extension/lib/index.js"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/office-to-pdf-extension/lib/index.js"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By converting the files and updating the metadata, it’s possible to reference the source document using the xref macro. That reference will automatically translate to a link to the PDF in the generated site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "convert-office-attachments-to-pdf",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Convert office attachments to PDF"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If your site has a lot of large attachment files, this can place strain on the build and publishing process for the site. To alleviate this problem, you can siphon off attachments to a warehouse and reroute incoming requests to those files. By doing so, the amount of memory required for building and publishing the site is dramatically reduced since what remains is mostly just HTML pages and images."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following extension reuses the playbook repository as the attachment warehouse. All attachment files are stored as git lfs objects in the files branch. The secondary benefit of using this approach is that only files that have been modified need to be pushed (git automatically tracks and manages changes)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension does assume you are running Antora on GitLab CI and GitLab Pages. Changes will be needed if you are using a different CI environment. You will also need to set up an orphan files branch on the playbook repository before using the extension the first time."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Code: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/object-storage-extension/lib/index.js"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/object-storage-extension/lib/index.js"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The URL of each attachment remains unchanged. The extension relies on GitLab Pages’ redirect engine to reroute the request to the raw attachment file in the git repository."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension can be used in concert with the office-to-pdf-extension above."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "warehouse-large-files",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Warehouse large files"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you are integrating with a search or AI engine, you may want to extract the plain text of the pages to a file along with the page url, title, and navigation path. You can use the following extension to do that as part of the site build."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const { parse: parseHTML } = require('node-html-parser')\n\n/**\n * An Antora extension that exports the content of publishable pages in plain text to a JSON\n * file along with the page URL and title.\n */\nmodule.exports.register = function () {\n  this.once('navigationBuilt', ({ playbook, contentCatalog, siteCatalog }) => {\n    const siteUrl = playbook.site.url\n    const component = 'dfcs'\n    const version = ''\n    const componentVersion = contentCatalog.getComponentVersion(component, version)\n    const dfcsNavEntriesByUrl = getNavEntriesByUrl(componentVersion.navigation)\n    const pages = contentCatalog\n      .getPages((it) => it.src.component === component && it.src.version === version && it.pub)\n      .map((page) => {\n        const siteRelativeUrl = page.pub.url\n        const articleDom = parseHTML(`<article>${page.contents}</article>`)\n        // TODO might want to apply the sentence newline replacement per paragraph\n        const text = articleDom.textContent\n          .trim()\n          .replace(/\\n(\\s*\\n)+/g, '\\n\\n')\n          .replace(/\\.\\n(?!\\n)/g, '. ')\n        const path = [componentVersion.title]\n        path.push(...(dfcsNavEntriesByUrl[siteRelativeUrl]?.path?.map((it) => it.content) || []))\n        return { url: siteUrl + siteRelativeUrl, title: page.title, text, path }\n      })\n    siteCatalog.addFile({\n      contents: Buffer.from(JSON.stringify({ pages }, null, '  ')),\n      out: { path: 'site-content.json' },\n    })\n  })\n}\n\nfunction getNavEntriesByUrl (items = [], accum = {}, path = []) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum[item.url.split('#')[0]] = { item, path: path.concat(item) }\n    getNavEntriesByUrl(item.items, accum, item.content ? path.concat(item) : path)\n  })\n  return accum\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "export-content-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Note that this extension relies on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "node-html-parser"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package. You will need to include that in your site "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package.json"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file in order to use this extension. In the future, Antora may provide a built-in HTML parser for extensions to use."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "export-content-to-file",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Export content to file"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora gives you the flexibility to ingest data from the web and convert it to a page (as AsciiDoc). This is a perfect scenario for generating a page to list release notes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the following extension to download release notes data from a GitHub project and convert it to a release notes page in the ROOT component (or whatever component version you specify)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function ({ config: { dataUrl, component = 'ROOT', version = '' } }) {\n  this.once('contentClassified', async ({ contentCatalog }) => {\n    const notes = await fetchReleaseNotes(dataUrl)\n    const adoc = ['= Release Notes', '']\n    notes.forEach((note) => {\n      const projectPath = note.html_url.match(/https:\\/\\/github.com\\/([^/]+\\/[^/]+)/)[1]\n      adoc.push(`* *${projectPath}* (${note.name}) [${new Date(Date.parse(note.published_at)).toLocaleString()}]`)\n    })\n    contentCatalog.addFile({\n      path: 'release-notes.adoc',\n      contents: Buffer.from(adoc.join('\\n') + '\\n'),\n      src: { component, version, module: 'ROOT', family: 'page', relative: 'release-notes.adoc' },\n    })\n  })\n}\n\nasync function fetchReleaseNotes (url) {\n  return fetch(url).then((response) => response.json())\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "release-notes-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You configure the data URL when registering the extension in your playbook as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "antora:\n  extensions:\n  - require: ./lib/release-notes-extension.js\n    data_url: https://api.github.com/repos/asciidoctor/asciidoctor-pdf/releases"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This example only scratches the surface of the content you can generate from external data."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "generate-page-with-release-notes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Generate page with release notes"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Extension Use Cases"
+      }
+    ]
+  }
+}

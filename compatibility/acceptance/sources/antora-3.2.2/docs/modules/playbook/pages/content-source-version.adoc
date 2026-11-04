@@ -1,0 +1,112 @@
+= Fallback Version
+
+The `version` key provides a way to control the component version that corresponds to a content source directly from the playbook.
+The `version` key on the content source is a fallback value.
+If a component version descriptor (an [.path]_antora.yml_ file) defines the `version` key for a component version, the value of that key takes precedence.
+
+== version key
+
+The `version` key is optional.
+The `version` key accepts a named identifier, such as `jesse`, a semantic identifier, such as `'1.5'`, the reserved value `~` (for versionless), the reserved value `true`, or a map of refname projections, such as `+v/(?<version>*): $<version>+`.
+
+A content source can match multiple git references.
+Thus, a fixed value should only be used if the content source is configured to match a single reference, or if all the references it matches contribute files to the same component version.
+Otherwise, the value of this key should be `true` or a map of refname projections.
+
+If you want the playbook to be able to control the value of the `version` key, don't set the `version` key in xref:ROOT:component-version-descriptor.adoc[the component version descriptor (_antora.yml_ file)].
+
+=== Fixed value as version
+
+The following example shows how to assign a fixed fallback value to the `version` key.
+A fixed value can be a named identifier, a semantic identifier, or the value `~` for versionless.
+
+.Content source with a fixed value assigned to version
+[#ex-name,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo-a.git
+    branches: v2.0.x # <.>
+    version: '2.0' # <.>
+----
+<.> Only match a single reference when using a fixed value.
+<.> Assign a fixed value, such as a named identifier, semantic identifier, or the value `~`.
+
+When Antora looks for the component version descriptor in the specified branch (i.e., `v2.0`), it will not expect to find the `version` key defined in that file.
+Instead, it will use the fixed value of the `version` key specified on the content source (i.e., `2.0`).
+
+=== refname as version
+
+Since content in Antora is retrieved from a git repository, you may want to use the git refname (branch or tag name) for the content source (where the xref:ROOT:component-version-descriptor.adoc[component version descriptor is stored]) as the version.
+To do so, assign the reserved value `true` to the `version` key.
+Antora will substitute the value `true` with the refname automatically.
+
+The following example shows how to use the refname as the fallback value of the `version` key.
+
+.Content source that uses the refname as the version
+[#ex-refname,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo-b.git
+    branches: v* # <.>
+    version: true # <.>
+----
+<.> Match any number of references.
+<.> The value `true` tells Antora to use the matched refname as the value.
+
+When Antora looks for the component version descriptor in the specified branch (i.e., `v2.0`), it will not expect to find the `version` key defined in that file.
+Instead, it will use the refname instead.
+The value Antora uses is always the short refname (e.g., v1.0), not the full refname (e.g., refs/heads/v1.0).
+If the short refname contains any forward slashes, Antora will replace each one with a hyphen.
+
+=== refname projection as version
+
+The refname may not be granular enough to use as the fallback version.
+Furthermore, the same git tree could be passed through git references that have different naming schemes, such as feature branches.
+In these cases, you want the version to be extracted or derived from the refname rather than using the value as is.
+That's when you'd define the fallback version using a refname projection.
+
+A refname projection is expressed as a map of patterns (the keys) and replacements (the values).
+The refname projection allows you to match the refname using a pattern, then build the version based on that match.
+The pattern tells Antora which entry to use and what parts to extract from it.
+The replacement tells Antora how to derive a version from the matched refname.
+The replacement is coerced to an empty string if null, otherwise directly to a string (e.g., `1` becomes `'1'`).
+
+The following example shows how to use a projection to compute the value of the `version` key from the refname.
+
+.Content source that derives version from refname
+[#ex-projection,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo-c.git
+    branches: [v*, feature/*] # <.>
+    version:
+      v(?<version>+({0..9}).+({0..9})).x: $<version> # <.>
+      feature/(*)/*: $1 # <.>
+----
+<.> Match any number of references with different naming patterns.
+<.> Matches the semantic identifier in a refname like `v2.0.x` and extracts it.
+<.> Extracts the value between the first and second slash for a refname that begins with `feature/`
+
+The key in the projection is a glob pattern (a combination of extglobs, ranges, and some regex constructs).
+The pattern has the same matching capabilities as the pattern used to match branches or tags for a content source in the playbook.
+
+The characters between parentheses (i.e., round brackets) in the pattern defines a match group.
+If the opening brace begins with `?<name>`, that group is assigned to the name specified between the angle brackets.
+Otherwise, the group is assigned to a 1-based index according to the group's position in the pattern.
+
+The match groups can be referenced in the replacement.
+A match group reference is preceded by a dollar sign (`$`).
+A named group can be referenced using `$<name>`, where the name is once again specified between the angle brackets.
+An indexed group can be referenced by its number, such as `$1`.
+You can reference the entire refname using `$&`.
+
+If the match group contains any forward slashes, Antora will replace each one with a hyphen.
+
+Antora will use the value of the first pattern it matches.
+If none of the patterns match the refname, Antora will fallback to using the refname as the version.
+
+TIP: Antora supports matching refnames using wildcards, exclusions, braces, alternation, ranges, and repetition patterns.
+See xref:content-refname-matching.adoc[].

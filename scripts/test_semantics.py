@@ -698,10 +698,11 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        # 59 selected pages plus the rest of the full Asciidoctor and AsciiDoc
-        # language documentation (test_documentation_corpus.py pins those).
-        self.assertEqual(len(cases), 321)
-        full = {'asciidoctor-docs-2.0.23', 'asciidoc-lang-0.3.0'}
+        # 59 selected pages plus the rest of the full Asciidoctor, AsciiDoc
+        # language, Asciidoctor PDF and Antora documentation
+        # (test_documentation_corpus.py pins those).
+        self.assertEqual(len(cases), 611)
+        full = {'asciidoctor-docs-2.0.23', 'asciidoc-lang-0.3.0', 'asciidoctor-pdf-2.3.27', 'antora-3.2.2'}
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():

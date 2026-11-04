@@ -1,0 +1,479 @@
+= Extension Use Cases
+
+This page provides a catalog of simple examples to showcase how you can enhance the capabilities of Antora through the use of extensions.
+Each section introduces a different use case and presents the extension code you can build on as a starting point.
+
+You can also reference official extension projects provided by the Antora project to study more complex examples.
+
+== Set global AsciiDoc attributes
+
+If you want to define global (i.e., site-wide) AsciiDoc attributes that aren't defined in the configuration, or which have dynamic values, you can do using an extension.
+The playbook holds the site-wide AsciiDoc config object, which itself contains the global AsciiDoc attributes.
+An extension can listen for the `playbookBuilt` event and add attributes to this map.
+
+.set-global-asciidoc-attributes-extension.js
+[,js]
+----
+include::example$set-global-asciidoc-attributes-extension.js[lines=3..]
+----
+
+The extension could read these values from a file or environment variables as well.
+
+== Set AsciiDoc attributes per component version
+
+If, instead, you want to define AsciiDoc attributes per component version, you can use an extension that listens for the `contentClassified` (or `componentsRegistered`) event and updates the attributes assigned to the component version.
+
+In the event listener, you can access the AsciiDoc attributes from the `asciidoc` property on the component version object.
+You can look up a component version by name and version from the content catalog using the `getComponentVersion` method.
+Alternately, you can access component versions from the `versions` property on each component returned by the `getComponents` method.
+
+IMPORTANT: You must be aware that if no AsciiDoc attributes are defined in the component descriptor for a component version, the value of the `asciidoc` property is a reference to the `siteAsciiDocConfig` object.
+Therefore, you have to check for this and instantiate a new configuration object to avoid unintentionally assigning a side-wide AsciiDoc attribute.
+
+Let's assume that we want to define the `page-component-version-is-prerelease` attribute if the component version is a prerelease (to complement the built-in `page-component-version-is-latest` attribute).
+
+.set-component-version-asciidoc-attributes-extension.js
+[,js]
+----
+include::example$set-component-version-asciidoc-attributes-extension.js[lines=3..]
+----
+
+You can now use this attribute in a page as follows:
+
+[,asciidoc]
+----
+\ifdef::page-component-version-is-prerelease[]
+This version is still in development.
+\endif::[]
+----
+
+Whether you use the `contentClassified` or `componentsRegistered` event doesn't really matter, unless the attribute needs to be set before another extension runs.
+
+== Print AsciiDoc attributes
+
+If you're troubleshooting your site, you can use an extension to generate a report of AsciiDoc attributes at the site level and those per component version.
+When making this report, you have a choice of whether you want to show the AsciiDoc attributes as they would be available to a page (aka compiled) or as defined (aka uncompiled)
+
+You can use the following extension to print all the AsciiDoc attributes compiled for each component version.
+The extension also prints all the attributes compiled from the playbook, though keep in mind these are integrated into the attributes for each component version.
+
+.print-compiled-asciidoc-attributes-extension.js
+[,js]
+----
+include::example$print-compiled-asciidoc-attributes-extension.js[lines=3..]
+----
+
+You can use the following extension to print all the AsciiDoc attributes as defined in the playbook and in the antora.yml file for each component version (by origin).
+
+.print-defined-asciidoc-attributes-extension.js
+[,js]
+----
+include::example$print-defined-asciidoc-attributes-extension.js[lines=3..]
+----
+
+You may find it useful to make use of these collections of AsciiDoc attributes when writing other extensions.
+
+== Exclude private content sources
+
+If some contributors or CI jobs don't have permission to the private content sources in the playbook, you can use an extension to filter them out instead of having to modify the playbook file.
+
+This extension runs during the `playbookBuilt` event.
+It retrieves the playbook, iterates over the content sources, and removes any content source that it detects as private and thus require authentication.
+
+*So what determines whether a content source is private?*
+We'll rely on a convention to communicate to the extension that a content source is private.
+That convention is to use an SSH URL beginning with `git@` (e.g., `git@gitlab.com:antora/antora.git`).
+Antora automatically converts SSH URLs to HTTP URLs (e.g., `git@gitlab.com:antora/antora.git` becomes `\https://gitlab.com/antora/antora.git`), so the use of the SSH syntax here merely serves as a hint for our extension that the URL is private and is going to require authentication.
+
+.exclude-private-content-sources-extension.js
+[,js]
+----
+include::example$exclude-private-content-sources-extension.js[lines=3..]
+----
+
+This extension works because the playbook is mutable until the end of this event, at which point Antora freezes it.
+The call to `this.updateVariables` to replace the `playbook` variable in the generator context is not required, but is used here to express intent and to future proof the extension.
+
+== Exclude prereleases from content sources
+
+If you want to match branches using a generic pattern, but don't want Antora to pick up prereleases, you can use an extension to filter them out instead of having to use a more specific pattern.
+This way, the new version becomes available as soon as the prerelease marker is dropped.
+
+This extension runs during the `contentAggregated` event.
+It retrieves the content aggregate, iterates over the component version buckets, and filters out any bucket marked as a prerelease.
+(Recall that a component version bucket is the precursor of a component version, which gets created during the ensuing `classifyContent` pipeline step).
+
+.exclude-prereleases-extension.js
+[,js]
+----
+include::example$exclude-prereleases-extension.js[lines=3..]
+----
+
+This extension works because the content aggregate can be replaced.
+While you could mutate the content aggregate, the call to `this.updateVariables` to replace it in the generator context is used here to express intent and to future proof the extension.
+
+== Support remote repositories with git lfs enabled
+
+Antora can only work with the worktree of a local repository if the repository has git lfs enabled.
+In other words, the git lfs objects have to already be inflated by the time Antora uses the worktree.
+Otherwise, Antora will publish the pointer file instead of the object referenced by that pointer.
+
+We can use an extension to workaround this limitation.
+The following extension looks for all content sources in the playbook marked with the `lfs` key set to `true`.
+For example:
+
+[,yaml]
+----
+content:
+  sources:
+  - url: https://githost/example/repo-with-lfs.git
+    lfs: true
+----
+
+The extension then uses the native git command to clone the marked repositories.
+It then replaces the reference to the remote repository in the playbook with the local one.
+
+Code: https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/git-lfs-extension/lib/index.js
+
+Note that this extension assumes that each lfs content source is configured with a single branch.
+
+== Unpublish flagged pages
+
+If you don't want a page to ever be published, you can prefix the filename with an underscore (e.g., _hidden.adoc).
+However, if you only want the page to be unpublished conditionally, then you need to reach for an extension.
+
+When using this extension, any page that sets the `page-unpublish` page attribute will not be published (meaning it will be unpublished).
+For example:
+
+[,asciidoc]
+----
+= Secret Page
+:page-unpublish:
+
+This page will not be published.
+----
+
+You can set the `page-unpublish` page attribute based on the presence (or absence) of another AsciiDoc attribute, perhaps one set in the playbook or as a CLI option.
+For example:
+
+[,asciidoc]
+----
+= Secret Page
+\ifndef::include-secret[:page-unpublish:]
+
+This page will not be published.
+----
+
+This extension runs during the `documentsConverted` event.
+This is the earliest event that provides access to the AsciiDoc metadata on the virtual file.
+The extension iterates over all publishable pages in the content catalog and unpublishes any page that sets the `page-unpublish` attribute.
+To unpublish the page, the extension removes the `out` property on the virtual file.
+If the `out` property is absent, the page will not be published.
+
+.page-unpublish-tag-extension.js
+[,js]
+----
+include::example$page-unpublish-flag-extension.js[lines=3..]
+----
+
+Keep in mind that there may be references to the unpublished page.
+While they will be resolved by Antora, the target of the reference will not be available, which will result in a 404 response from the web server.
+
+For more fine-grained control over when a page is unpublished, you could write an extension that replaces the `convertDocument` or `convertDocuments` functions.
+Doing so would allow you to unpublish the page before references to it from other pages are resolved so that they appear as warnings.
+
+== Unpublished unreferenced assets
+
+By default, Antora will publish all publishable assets discovered, such as images, even if they are never referenced in a page.
+If you only want to publish publishable assets that have been somehow referenced, you can use an extension.
+
+One way to know if an asset has been referenced is to check if its `pub.url` property is ever accessed.
+We can proxy the `pub` property and record when its `url` property is accessed.
+Then we can go back later and unpublish any files that don't have this marker by removing its `out` property.
+
+[,js]
+----
+include::example$unpublish-assets-not-referenced-extension.js[lines=3..]
+----
+
+We choose to proxy the files during the `contentClassified` event since this is the earliest event at which the `pub.url` property is set.
+We choose to unpublish the files during the `beforePublish` event to ensure that any usage of that file is captured.
+
+If you want to require that a page must be referenced to be published, remove the check for the `page` family in the extension.
+If you do so, it replicates the functionality of <<unpublish-unlisted-pages>>.
+
+== Analyze AsciiDoc usage
+
+You can use an extension to track which AsciiDoc files get used.
+For publishable pages, we want to know if the page is referenced in the navigation.
+For non-pubilshable pages, we want to know if the file is ever included.
+
+To accomplish the first, we consult the navigation tree to look for a match.
+To accomplish the second, we need to proxy the `contents` property on the file to determine if it ever read.
+If it is read, then we mark the file as read and restore the original property.
+
+[,js]
+----
+include::example$analyze-asciidoc-usage-extension.js[lines=3..]
+----
+
+As it stands, the extension just prints the qualified resource reference of each file to the console.
+You could choose instead to create a new page to present the report.
+See <<Generate report of all pages>> to learn how to create a new report page.
+
+You also may decide to print the repository path of the file instead of the qualified resource reference.
+
+== Report unlisted pages
+
+After you create a new page, it's easy to forget to add it to the navigation so that the reader can access it.
+We can use an extension to identify pages which are not in the navigation and report them using the logger.
+
+This extension runs during the `navigationBuilt` event.
+It iterates over each component version, retrieves a flattened list of its internal navigation entries, then checks to see if there are any pages that are not in that list, comparing pages by URL.
+If it finds any such pages, it creates a report of them, optionally adding them to the navigation.
+
+.unlisted-pages-extension.js
+[,js]
+----
+include::example$unlisted-pages-extension.js[tags=**;!use-strict]
+----
+
+You can read more about this extension and how to configure it in the xref:extension-tutorial.adoc[].
+
+[#unpublish-unlisted-pages]
+== Unpublish unlisted pages
+
+Instead of reporting unlisted pages, you could instead remove those pages from publishing.
+This is one way you can use the navigation to drive which pages are published.
+
+This extension runs during the `navigationBuilt` event.
+It iterates over each component version, retrieves a flattened list of its internal navigation entries, then checks to see if there are any pages that are not in that list, comparing pages by URL.
+If it finds any such pages, it unpublishes them.
+
+.unpublish-unlisted-pages-extension.js
+[,js]
+----
+include::example$unpublish-unlisted-pages-extension.js[lines=3..]
+----
+
+By removing the `out` property from the page, it prevents the page from being published, but is still referenceable using an include directive.
+Alternately, you could choose to remove the page entirely from the content catalog.
+
+== Auto generate navigation
+
+By default, Antora assumes that you provide navigation files that specify how pages in the site are referenced in the navigation.
+However, Antora provides all the necessary metadata and hooks to auto-generate the navigation.
+The simplest way to go about it is to build a dynamic navigation file and allow Antora to parse it and build the navigation object from it.
+You also have the option of building the navigation object directly yourself.
+
+In the following example, the pages in each component version are organized under each module and sorted by navtitle.
+
+.auto-generate-nav-extension.js
+[,js]
+----
+include::example$auto-generate-nav-extension.js[lines=3..]
+----
+
+You can build on this extension to reorganize the pages or exclude pages you don't want to be referenced in the navigation.
+
+If you want to prevent Antora from building the navigation itself, you can assign a noop operation to the `buildNavigation` generator function.
+
+== List discovered component versions
+
+When you're setting up your playbook, you may find that Antora is not discovering some of your component versions.
+Using an extension, it's possible to list the component versions Antora discovers during content aggregation along with the content sources it took them from.
+
+.discovered-component-versions-extension.js
+[,js]
+----
+include::example$discovered-component-versions-extension.js[lines=3..]
+----
+
+If an entry is missing, then you know you may need to tune the content source definitions in your playbook.
+
+For more information, you can print the whole bucket entry.
+
+== Generate report of all pages
+
+You can generate additional pages using an Antora extension.
+This offers a way to generate report pages that summarize information about the site.
+
+In this example, we'll generate a page that lists all the other pages in the same component version.
+This extension listens for the `documentsConverted` event, which is emitted once all the AsciiDoc-based pages have been converted to (embedded) HTML, but before the HTML layout has been applied.
+The reason for using this event is twofold.
+First, it provides access to the page title of each page.
+Second, the page layout will be applied to the newly generated page.
+
+.all-pages-report-extension.js
+[,js]
+----
+include::example$all-pages-report-extension.js[lines=3..]
+----
+
+The key step of this extension is the call to `contentCatalog.addFile`.
+This call adds a new file to the content catalog, in this case a page.
+When generating the list of links, we use the `relativize` function from the AsciiDoc Loader to compute the relative URL from the start page of the component version and the target page, emulating the behavior of the xref macro in AsciiDoc.
+The resulting report is written to the file [.path]_all-page.html_ at the root of the component version (adjacent to the start page).
+
+== Redirect from component to latest version
+
+If a component only has non-empty versions (e.g., 1.0, 2.0, etc), Antora will not create a redirect from the component URL (e.g., `/component-name/`) to the latest version of that component (e.g., `/component-name/2.0/` or `/component-name/latest`).
+The reasoning is that doing so would be an overreach that assumes too much about what URLs the site should respond to.
+
+One possible solution is to use a page alias so the index page (or start page) for the latest version claims the index page for the empty version.
+
+[,asciidoc]
+----
+:page-aliases: _@component-name::index.adoc
+----
+
+However, this page alias would have to be moved each time the latest version changes to avoid a conflict.
+Fortunately, this need can be addressed using an Antora extension instead.
+The extension can find all components that don't have a component version with an empty value (i.e., versionless component version) and add a page alias that routes from the index page of that component (specifically the versionless component version) to the start page of the latest version.
+
+.alias-component-to-latest-version-extension.js
+[,js]
+----
+include::example$alias-component-to-latest-version-extension.js[lines=3..]
+----
+
+If the component only has non-empty versions, and the start page can be resolved for the component, an alias is created from the component to that start page.
+The redirect Antora creates is based on which redirect facility is used.
+This extension is effectively the same as the explicit page alias shown above.
+
+== Modify edit URL
+
+Antora provides a simple template mechanism for defining a xref:playbook:content-edit-url.adoc[custom edit URL] for files collected from a content source.
+If you're edit URL requirements exceed what can be expressed using that template, you'll need to use an extension to assign a custom edit URL.
+
+We can use the `contentAggregated` event to modify the edit URL computed for each file before those files are added to the content catalog (or referenced in any page template for that matter).
+We have free reign over what we want this URL to be.
+
+In this extension we filter files by their origin looking for the edit URL we want to modify.
+Instead of using the edit URL assigned by Antora, we update it to point to GitLab's web IDE.
+
+[,js]
+----
+include::example$modify-edit-url-extension.js[lines=3..]
+----
+
+Here we are leveraging the original edit URL pattern.
+You of course are free to consult any of the properties on `src` to construct your own URL.
+
+== Audit includes
+
+In order to audit include requests in an AsciiDoc document, you must intercept the built-in include processor that Antora provides.
+Technically, this is not an Antora extension, but rather an Asciidoctor extension.
+However, since it use facilities from Antora, it's acting like a specialized Antora extension.
+
+IMPORTANT: When registering an Asciidoctor extension, make sure you're using the nested key `asciidoc.extensions` and not `antora.extensions`
+
+What we'll do is intercept each include request and log an info message with information about the include and the stack leading up to the include.
+To set up the include processor to intercept calls, it must be configured as the preferred processor by calling `this.prefer()`.
+At the end of the process method, it must delegate back to the include processor provided by Antora.
+
+WARNING: You must be careful when intercepting the include processor not to disrupt the built-in function of the include processor itself.
+The include processor should not try to process the include itself as it won't be able to easily replicate the logic that Antora uses.
+Rather, the include processor must delegate to Antora's include processor.
+
+.audit-includes-asciidoctor-extension.js
+[,js]
+----
+include::example$audit-includes-asciidoctor-extension.js[lines=3..]
+----
+
+In order to resolve the file being included, the processor must determine the file that contains the include directive from the cursor where the include directive is found or the file on which the extension is being run.
+It then must use the content catalog to resolve the file from that context.
+
+== Resolve attribute references in attachments
+
+Files in the attachment family are passed directly through to the output site.
+Antora does not resolve AsciiDoc attribute references in attachment files.
+(Asciidoctor, on the other hand, will resolve AsciiDoc attribute references in the attachment's contents only if the attachment is included in an AsciiDoc page where the attribute substitution is enabled.)
+You can use an Antora extension to have Antora resolve attribute references in the attachment file before that file is published.
+
+This extension runs during the `contentClassified` event, which is when attachment files are first identified and classified.
+It iterates over all attachments and resolves any references to attributes scoped to that attachment's component version.
+If any changes were made to the contents of the file, it replaces the contents on the virtual file with the updated value.
+
+.resolve-attributes-references-in-attachments-extension.js
+[,js]
+----
+include::example$resolve-attribute-references-in-attachments-extension.js[lines=3..]
+----
+
+This extension is only know to work with text-based attachments.
+You may need to modify this extension for it to work with binary files.
+
+== Convert office attachments to PDF
+
+Much like AsciiDoc files (.adoc) are converted to HTML (.html) by Antora, you can do the same with attachments.
+This extension runs during the `contentClassified` event, which is when attachment files are first identified and classified.
+It iterates over all attachments in an office format (i.e., .docx, .odt, .fodt) and uses the *libreoffice* command (LibreOffice in server mode) on Linux or *docto.exe* command (Microsoft Office via docto) on Windows to convert each file to PDF.
+
+Code: https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/office-to-pdf-extension/lib/index.js
+
+By converting the files and updating the metadata, it's possible to reference the source document using the xref macro.
+That reference will automatically translate to a link to the PDF in the generated site.
+
+== Warehouse large files
+
+If your site has a lot of large attachment files, this can place strain on the build and publishing process for the site.
+To alleviate this problem, you can siphon off attachments to a warehouse and reroute incoming requests to those files.
+By doing so, the amount of memory required for building and publishing the site is dramatically reduced since what remains is mostly just HTML pages and images.
+
+The following extension reuses the playbook repository as the attachment warehouse.
+All attachment files are stored as git lfs objects in the files branch.
+The secondary benefit of using this approach is that only files that have been modified need to be pushed (git automatically tracks and manages changes).
+
+The extension does assume you are running Antora on GitLab CI and GitLab Pages.
+Changes will be needed if you are using a different CI environment.
+You will also need to set up an orphan files branch on the playbook repository before using the extension the first time.
+
+Code: https://gitlab.com/opendevise/oss/antora-binary-files-extension-suite/-/blob/main/packages/object-storage-extension/lib/index.js
+
+The URL of each attachment remains unchanged.
+The extension relies on GitLab Pages`' redirect engine to reroute the request to the raw attachment file in the git repository.
+
+This extension can be used in concert with the office-to-pdf-extension above.
+
+== Export content to file
+
+If you are integrating with a search or AI engine, you may want to extract the plain text of the pages to a file along with the page url, title, and navigation path.
+You can use the following extension to do that as part of the site build.
+
+.export-content-extension.js
+[,js]
+----
+include::example$export-content-extension.js[lines=3..]
+----
+
+Note that this extension relies on the *node-html-parser* package.
+You will need to include that in your site [.path]_package.json_ file in order to use this extension.
+In the future, Antora may provide a built-in HTML parser for extensions to use.
+
+== Generate page with release notes
+
+Antora gives you the flexibility to ingest data from the web and convert it to a page (as AsciiDoc).
+This is a perfect scenario for generating a page to list release notes.
+
+You can use the following extension to download release notes data from a GitHub project and convert it to a release notes page in the ROOT component (or whatever component version you specify).
+
+.release-notes-extension.js
+[,js]
+----
+include::example$release-notes-extension.js[lines=3..]
+----
+
+You configure the data URL when registering the extension in your playbook as follows:
+
+.antora-playbook.yml
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./lib/release-notes-extension.js
+    data_url: https://api.github.com/repos/asciidoctor/asciidoctor-pdf/releases
+----
+
+This example only scratches the surface of the content you can generate from external data.

@@ -1,0 +1,248 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As Antora processes each page, it converts the contents of the file from AsciiDoc to HTML. (Within a component version, pages are typically processed in order by module and relative filename). The conversion of the contents from AsciiDoc to HTML would normally impact the behavior of the include directive. Specifically, a page that uses the include directive to include a page that has already been processed would see HTML instead of AsciiDoc."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To rectify this ordering problem, Antora can retain the AsciiDoc source until all pages have been converted. This behavior is activated by setting the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute in the document header of the page. As of Antora 2.2, the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute is (soft) set globally by default. (Soft set means that it can still be overridden by the page). So, really, you don’t even have to think of it. It will just work."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The downside of retaining the AsciiDoc source is that it "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "may"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " increase the peak heap usage of Antora for very large sites by ~ 10%. If that’s a concern, you can revert to the previous “a la carte” behavior. To revert to the previous behavior (prior to Antora 2.2), set the following property in the playbook file:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "asciidoc:\n  attributes:\n    page-partial: false"
+          }
+        ],
+        "language": "yaml",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute will no longer be set globally. Now you "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "must"
+              }
+            ],
+            "kind": "strong",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " set the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute on any page you want to use in an include directive. For example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "= Shared Page\n:page-partial:\n\nPage contents."
+          }
+        ],
+        "language": "asciidoc",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "With the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute set, you can safely refer to that page using the include directive:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "include::shared-page.adoc[]"
+          }
+        ],
+        "language": "asciidoc",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Recall that the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "page-partial"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute in the included page instructs Antora to retain the AsciiDoc source until all pages have been converted."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Unset page-partial Globally"
+      }
+    ]
+  }
+}

@@ -1,0 +1,152 @@
+= Fallback Fonts
+
+This page describes how to configure fallback fonts, why they are necessary, and when they get used.
+
+== Purpose
+
+If a TrueType font (not an AFM font) is missing a character needed to render the document, such as a special symbol or emoji, you can have Asciidoctor PDF look for the character in a fallback font.
+
+IMPORTANT: The fallback font only gets used when the primary font is a TrueType or OpenType font (i.e., TTF, DFont, TTC, OTF).
+This functionality is not supported when using an AFM font.
+Any glyph missing from an AFM font is simply replaced with the "`not`" glyph (`&#172;`).
+
+While multiple fallback fonts are supported, you only need to specify a single fallback font, typically one that provides a full set of symbols.
+If the character isn't found in a fallback font, it will (mostly likely) be replaced by a box (i.e., the notdef glyph).
+This behavior is guaranteed if you're using the bundled fallback font.
+
+CAUTION: Using the fallback font slows down PDF generation slightly because it has to analyze every single character.
+Its use is not recommended for large documents.
+Instead, it's best to select primary fonts that have all the characters you need.
+
+[WARNING]
+====
+If the PDF generator (Prawn) makes use of the fallback font to render a character, that will introduce a break opportunity, regardless of what role is set on the span of text or what characters are adjacent (e.g., `\{nbsp}`).
+When Prawn makes use of a fallback font, it disrupts assumptions about line wrapping.
+In order to assign the fallback font to the character, Prawn must create a dedicated fragment for that character.
+In other words, using the fallback font to resolve the glyph for a character introduces a new fragment.
+A fragment boundary always creates an artificial break opportunity in the text.
+
+The best way to ensure that the no-break boundaries are honored is to ensure that the primary font contains glyphs for all the characters in the manuscript, as well as any required characters for using a custom font with Asciidoctor PDF.
+====
+
+== Requirements
+
+When defining the fallback font, you *must specify all four variants* (`normal`, `bold`, `italic`, `bold_italic`), even if you use the same font file for each.
+You can use a shorthand syntax to do so, which is shown below.
+
+You cannot use a color emoji font as a fallback font in Asciidoctor PDF.
+The font library used by Asciidoctor PDF does not support color fonts and will cause Asciidoctor to crash.
+
+== Using the built-in fallback fonts
+
+Asciidoctor PDF provides two fallback fonts.
+One is for general writing in non-Latin languages (M+ 1p) and the other is for emoji (Noto Emoji).
+
+The `default` theme does not register any fallback fonts.
+In order to use the built-in fallback fonts, you must use or extend the `default-with-font-fallbacks` theme instead.
+
+If you want to build a theme that uses the built-in fallback fonts, you can do so by extending the `default-with-font-fallbacks` theme, as shown here:
+
+[,yaml]
+----
+extends: default-with-font-fallbacks
+base:
+  font_color: #000000
+----
+
+If, instead, you want to use the built-in fallback fonts in your own theme which does not extend `default-with-font-fallbacks`, you can do so as follows:
+
+[,yaml]
+----
+extends: default
+font:
+  catalog:
+    merge: true
+    M+ 1p Fallback: GEM_FONTS_DIR/mplus1p-regular-fallback.ttf
+    Noto Emoji: GEM_FONTS_DIR/notoemoji-subset.ttf
+  fallbacks: [M+ 1p Fallback, Noto Emoji]
+base:
+  font_color: #000000
+----
+
+== Custom fallback font
+
+Like with other custom fonts, you first need to declare the fallback font.
+Let's choose https://github.com/android/platform_frameworks_base/blob/master/data/fonts/DroidSansFallback.ttf[Droid Sans Fallback^].
+You can map all the styles to a single font file (since bold and italic don't usually make sense for symbols).
+
+[,yaml]
+----
+extends: default
+font:
+  catalog:
+    Roboto:
+      normal: roboto-normal.ttf
+      italic: roboto-italic.ttf
+      bold: roboto-bold.ttf
+      bold_italic: roboto-bold_italic.ttf
+    DroidSansFallback: droid-sans-fallback.ttf
+----
+
+Notice that we only declare the fallback font file once using a literal value.
+This ensures the font is defined for all four variants so it will be used regardless of which font style is active when it's called on.
+This assignment is equivalent to the following:
+
+[,yaml]
+----
+DroidSansFallback:
+  '*': droid-sans-fallback.ttf
+----
+
+The benefit of the expanded syntax is that it allows you to override the font file for just one of the variants (e.g., bold).
+
+Next, add the key name to the `fallbacks` key under the `font-catalog` key.
+The xref:font.adoc[fallbacks key] accepts an array of values, meaning you can specify more than one fallback font.
+However, we recommend using a single fallback font, if possible, as shown here:
+
+[,yaml]
+----
+extends: default
+font:
+  catalog:
+    Roboto:
+      normal: roboto-normal.ttf
+      italic: roboto-italic.ttf
+      bold: roboto-bold.ttf
+      bold_italic: roboto-bold_italic.ttf
+    DroidSansFallback: droid-sans-fallback.ttf
+  fallbacks:
+  - DroidSansFallback
+----
+
+If you're using more than one fallback font, add additional lines to the `fallbacks` key.
+
+Finally, make sure you've configured your theme to use your custom font:
+
+[,yaml]
+----
+base:
+  font-family: Roboto
+----
+
+That's it!
+Now you're covered.
+If your custom font is missing a glyph, Asciidoctor PDF will look in your fallback font to find it.
+You don't need to reference the fallback font anywhere else in your theme file.
+
+WARNING: Keep in mind that the fallback font will be used regardless of what the original font is.
+Thus, it's possible the fallback font will be used in place of a monospace character.
+
+Here's another example that shows how to use an alternative emoji font (Symbola) instead of the the built-in one:
+
+[,yaml]
+----
+extends: default-with-font-fallbacks
+font:
+  catalog:
+    merge: true
+    Symbola: /path/to/symbola.ttf
+  fallbacks: [ M+ 1p, Symbola ]
+----
+
+Now Asciidoctor PDF will look for the emoji in the Symbola font instead of the Noto Emoji font.

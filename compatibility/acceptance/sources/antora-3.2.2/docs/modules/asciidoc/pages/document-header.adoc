@@ -1,0 +1,56 @@
+= Document Header
+
+On this page, you'll learn:
+
+* How to create a document header
+* How to specify a page title
+* How to set header attributes
+
+== Document title
+
+In AsciiDoc, attribute entries at the top of the page optionally preceded by a level-0 section title implicitly creates a document header.
+The level-0 section title in the document header is referred to as document title, or doctitle for short.
+The attribute entries in the document header set (or unset) attributes that are available throughout the document.
+
+The document title in the AsciiDoc document is used as the page title in Antora.
+
+IMPORTANT: Antora only supports AsciiDoc's Atx-style heading syntax, which means the page title must be preceded by an Atx marker, an equals sign marker (`=`) followed by a space.
+Antora does not recognize the legacy Setext-style (i.e., underlined) heading syntax once supported in AsciiDoc, nor does it recognize Asciidoctor's Markdown-style heading syntax.
+If you don't use the Atx-style syntax, xrefs in the page will not be resolved and other features of AsciiDoc will not be available.
+
+Here's an example of a document header:
+
+[,asciidoc]
+----
+= Page Title
+:description: A description of this page.
+----
+
+In Antora, all pages must have a page title.
+That means the doctitle, and thus the document header, is required.
+See xref:page:title-and-metadata.adoc[] for more information about specifying a page title.
+
+If you need to apply a unique set of CSS to a page, you can add a role to the doctitle, as shown here.
+
+[,asciidoc]
+----
+= Home Page
+:docrole: home
+----
+
+Assuming the UI you're using supports it, you can now use the `body.home` selector to configure CSS to target this specific page.
+
+== Header attributes
+
+Header attributes are document-wide AsciiDoc attributes that are associated with the document header, and thus the document metadata.
+Some header attributes can be used to control the processing of the page, such as `page-toclevels`.
+More commonly, header attributes are used to store reusable inline content for the document.
+
+IMPORTANT: The document header implicitly ends at the first empty line.
+Therefore, any attribute entries below this line will not be treated as header attributes.
+
+There are several built-in header attributes you can use to control the metadata in the published page.
+See xref:page:title-and-metadata.adoc[] to learn about these attributes.
+
+Header attributes can be promoted to page attributes by prefixing the name with `page-`.
+xref:page:page-attributes.adoc[] are accessible from the UI model in the page layout template and can thus control how the page is formed.

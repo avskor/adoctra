@@ -1,0 +1,178 @@
+= Assign Attributes to a Component Version
+
+You can apply attributes to all of the pages in a component version by declaring them in the [.path]_antora.yml_ file for that component version.
+
+== Component version attributes
+
+Attributes that are defined in a component version descriptor are referred to as [.term]*component version attributes*.
+Component version attributes can be xref:page:attributes.adoc[built-in, custom, and page attributes].
+These attributes are applied and available (or made unavailable if unset) to all of a component version's pages according to the <<precedence-rules,attribute precedence rules>>.
+If an attribute was previously xref:playbook:asciidoc-attributes.adoc[hard set or hard unset in the site's playbook], *its declaration in a component version descriptor will have no impact*.
+
+include::playbook:partial$playbook-vs-descriptor.adoc[]
+
+[#hard-set]
+== Set attributes in antora.yml
+
+Component version attributes are set in a component version's [.path]_antora.yml_ file.
+First, the `asciidoc` and `attributes` keys must be set.
+Then, each component version attribute is entered on its own line as a key-value pair under `attributes`.
+
+.Declare attributes in antora.yml
+[#ex-hard-set,yaml]
+----
+name: light
+title: Data Light
+version: '2.3'
+asciidoc: # <.>
+  attributes: # <.>
+    table-caption: Data Set # <.>
+    hide-uri-scheme: '' # <.>
+    page-level: Advanced # <.>
+    page-category: Statistics; Cloud Infrastructure # <.>
+nav:
+- modules/ROOT/nav.adoc
+----
+<.> On a new line, type `asciidoc`, followed by a colon (`:`), and press kbd:[Enter].
+<.> Nest the `attributes` key on the line directly underneath the `asciidoc` key.
+Type `attributes`, followed by a colon (`:`), and press kbd:[Enter].
+<.> Each component version attribute is nested under the `attributes` key and defined on its own line.
+Type the name of the attribute, followed by a colon (`:`).
+Press the kbd:[spacebar] once after the colon, then type the value of the attribute.
+<.> To set an attribute without specifying an explicit value, assign an _empty string_ by entering two consecutive single quotation marks (`''`) in the value part.
+For certain built-in attributes, an empty value is equivalent to the default value, though it depends on the attribute.
+Although using the boolean value `true` often works in this case, attribute values in AsciiDoc are strings, so it will likely be coerced to the string value `'true'`.
+<.> To declare a custom page attribute, type `page-` and the name of your attribute, followed by a colon (`:`).
+Press kbd:[spacebar] once after the colon, then enter the value of the attribute.
+<.> When an attribute has multiple, independent values, separate each value with a semicolon (`;`).
+
+A set component version attribute is applied and available to every page that belongs to the component version.
+The values of custom attributes, such as `page-level`, can be displayed in a page using the attribute reference syntax (e.g., `+{page-level}+`).
+
+The attributes in <<ex-hard-set>> are all hard set.
+[.term]*Hard set* component version attributes cannot be overridden from a page.
+By default, an attribute is hard set when it's assigned a value that isn't reserved for unsetting the attribute (i.e., `false` or `~`) and doesn't end with a modifier (i.e., `@`).
+To allow a page to modify or unset a component version attribute, you need to <<soft-set,soft set the component version attribute>>.
+
+[#soft-set]
+=== Soft set attributes
+
+Soft set component version attributes can be overridden from a page.
+An attribute is soft set by attaching the `@` modifier to the end of its value.
+
+.Assign soft set precedence to attributes
+[#ex-soft-set,yaml]
+----
+asciidoc:
+  attributes:
+    table-caption: Data Set@ # <.>
+    hide-uri-scheme: '@' # <.>
+----
+<.> To soft set an attribute that's assigned an explicit value, attach the `@` modifier to the end of its value.
+<.> To soft set and assign a built-in attribute's default value, or in the case of a boolean attribute, the _empty string_ value, type an opening single quotation mark, followed by the `@` modifier, and then a closing single quotation mark (`'`).
+
+Since the component version attributes in <<ex-soft-set>> are soft set, a page could modify their values or unset them.
+
+[#references-in-values]
+=== Insert the value of another attribute
+
+The value of any component version attribute set earlier in the same [.path]_antora.yml_ file or the value of any xref:playbook:asciidoc-attributes.adoc[site attribute] can be inserted into the value of a component version attribute using an AsciiDoc attribute reference (e.g., `+{site-title}+`, `+{page-level}+`).
+
+.A component version attribute that references the value of another component version attribute
+[#ex-attribute-value-references,yaml]
+----
+name: light
+title: Data Light
+version: '2.3'
+asciidoc:
+  attributes:
+    table-caption: Data Set
+    url-plugins: https://example.com/plugins
+    url-data-plugin: '{url-plugins}/data-light'
+nav:
+- modules/ROOT/nav.adoc
+----
+
+If the value starts with an attribute reference (meaning it starts with `{`), the value must be enclosed in quotes per YAML rules.
+That's because `{` is the start of the inline map syntax in YAML.
+
+A component version attribute can also be referenced in the value of a xref:page:attributes.adoc[page attribute].
+
+To prevent an attribute reference substitution in an attribute value, insert a backslash in front of the reference (e.g., `+\{not-substituted}+`).
+In this case, the attribute reference will not be substituted and the backslash will be omitted.
+
+[#hard-unset]
+== Unset attributes in antora.yml
+
+Attributes can also be unset.
+Component version attributes are hard unset when they're assigned the reserved tilde symbol (`~`) value.
+Each attribute is entered on its own line as a key-value pair under the `attributes` key.
+
+.Hard unset attributes
+[#ex-hard-unset,yaml]
+----
+asciidoc:
+  attributes:
+    table-caption: ~ # <.>
+    hide-uri-scheme: ~ # <.>
+----
+<.> To hard unset an attribute, assign it the tilde symbol (`~`).
+`~` is shorthand in YAML for `nil`, which is a reserved value that hard unsets a site attribute.
+<.> Boolean attributes are also hard unset when assigned the tilde symbol (`~`).
+
+[.term]*Hard unset* component version attributes cannot be overridden from a page.
+When a component version attribute is hard unset, its behavior is turned off and it isn't available to the component version's pages.
+
+[#soft-unset]
+=== Soft unset attributes
+
+Soft unset component version attributes can be overridden from a page.
+An attribute is soft unset by assigning it the reserved value `false`.
+
+.Assign soft unset precedence to attributes
+[#ex-soft-unset,yaml]
+----
+asciidoc:
+  attributes:
+    table-caption: false # <.>
+    hide-uri-scheme: false # <.>
+----
+<.> To soft unset an attribute, assign it the value `false`.
+<.> Boolean attributes are also soft unset when assigned `false`.
+
+Since the attributes in <<ex-soft-unset>> are soft unset, a page could reset them.
+
+[#precedence-rules]
+== Precedence rules
+
+Antora takes the precedence assigned to xref:playbook:asciidoc-attributes.adoc[site attributes] into account first.
+An attribute declared in an [.path]_antora.yml_ file cannot override the same attribute if it's hard set or hard unset in a playbook.
+A component version attribute can override a site attribute *only if the site attribute is soft set or unset*.
+
+When component version attributes are declared, you can control whether a page can reset or unset each attribute on a case by case basis.
+Assuming that the attribute was soft set or unset, or wasn't previously defined in a playbook, then component version attributes that are hard set or hard unset can't be changed by a page.
+However, soft set and unset component version attributes can be overridden from a page.
+
+. <<hard-set,Hard setting>> a component version attribute using a string value with no trailing `@` modifier (e.g., `value` or `''`) prevents a page from changing or unsetting the attribute.
+. <<soft-set,Soft setting>> a component version attribute using a string value with a trailing `@` modifier (e.g., `value@` or `'@'`) allows a page to change or unset the attribute.
+. <<hard-unset,Hard unsetting>> a component version attribute using the tilde symbol (`~`) prevents a page from setting the attribute.
+. <<soft-unset,Soft unsetting>> a component version attribute using a `false` value allows a page to set the attribute.
+
+To learn more about how component version attributes interact with site attributes and page attributes, see xref:playbook:asciidoc-attributes.adoc[] and xref:page:attributes.adoc[].
+
+[#intrinsic]
+== Intrinsic component version attributes
+
+Antora defines intrinsic attributes that can be referenced by other attributes defined in the component version descriptor file (i.e., [.path]_antora.yml_).
+These attributes are as follows: `antora-component-name` and `antora-component-version`.
+The value of these attributes map back to the `name` and `version` keys in [.path]_antora.yml_, respectively.
+
+Antora defines intrinsic page attributes from most of the keys in a component version descriptor file.
+For instance, Antora sets the built-in attribute `page-component-title` and assigns it the value specified by the `title` key.
+These attributes _cannot_ be referenced by other attributes defined in [.path]_antora.yml_, but can be referenced in any page within the same component version.
+See xref:page:intrinsic-attributes.adoc#page-attributes[Intrinsic page attributes] for a complete list of the page attributes Antora automatically declares.
+
+Antora also sets some built-in AsciiDoc attributes, such as `sectanchors`, by default.
+See xref:page:intrinsic-attributes.adoc#site-and-configuration-attributes[Site and configuration attributes] for more information.
+
+include::partial$dont-use-these-attributes.adoc[]

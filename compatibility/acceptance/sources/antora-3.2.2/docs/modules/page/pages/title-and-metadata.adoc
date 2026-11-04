@@ -1,0 +1,88 @@
+= Add a Title and Metadata
+:page-aliases: asciidoc:page-header.adoc
+// URLs
+:url-author: {url-asciidoc}/document/author-information/
+
+On this page, you'll learn:
+
+* [x] How to add a page title.
+* [x] How to add metadata to a page.
+//* [x] How to structure a valid page header.
+
+[#page-title]
+== Page title
+
+A page title is specified by one equals sign (`=`), followed by one blank space, and then the text of the title.
+
+----
+= Title of This Page
+----
+
+Every page should have a page title.
+Without a page title, the page lacks a critical part of its identity and certain features in Antora will not work.
+If you don't want to display the page title on a certain page, you can add conditional logic in the UI template to hide it.
+
+The page title may contain basic text formatting.
+For example:
+
+----
+= A _Formatted_ Page Title
+----
+
+TIP: If you want the text formatting to be present in the page title, but not in the navigation or other cross references to the page, you can set the xref:reftext-and-navtitle.adoc[navtitle and reftext attributes] on the document, respectively.
+
+The page title **must not** contain resource references, such as an xref or an image.
+Unlike other content in the page, the page title is parsed and converted outside the context of a page, so those references do not get rewritten when the page title is rendered.
+Furthermore, the page title is used in other contexts (such as the navigation) where the resource references are either not appropriate or not resolvable.
+Therefore, these references **are not** permitted.
+
+== Page description and keywords
+
+If set, `description` is output to an HTML `<meta>` tag with the same name.
+You can break long values across several lines by ending each line with a backslash `\` that is preceded by a space.
+
+.Description attribute syntax
+----
+= Page Title
+:description: A description of the page stored in an HTML meta tag. This page is \
+about all kinds of interesting things.
+----
+
+The keywords attribute contains a list of comma-separated values that are assigned to an HTML `<meta>` tag with the same name.
+
+.Keywords attribute syntax
+----
+= Page Title
+:keywords: comma-separated values, stored, in an HTML, meta, tag
+----
+
+== Page author
+
+Specifying the author or authors of a page is optional.
+The author is listed on the line directly beneath the page’s title.
+An optional email address or contact URL can follow an author’s name inside a set of angle brackets (`< >`).
+When a page has multiple authors, each author is separated by a semicolon (`;`).
+
+.Multiple authors and author information syntax
+----
+= Page Title
+First Middle Last <author@email.com>; First Last <author@email.com>
+----
+
+Author names are output to the HTML `<meta>` tag.
+Whether any author information is also displayed on a published page depends on the site's UI templates.
+
+Refer to the AsciiDoc documentation for {url-author}[additional author attributes^] and methods for specifying author information.
+
+////
+----
+= The Title of My New Page
+:attribute-a: value-a
+
+Welcome to my new page!
+
+== This is a section title
+
+This is a paragraph.
+----
+////

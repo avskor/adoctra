@@ -1,0 +1,63 @@
+= Site Start Page
+
+When you assign the valid resource ID of a page to the `start_page` key in your playbook, site visitors will be redirected from the site's index page at the xref:site-url.adoc[site URL] to the URL of the start page.
+
+[#start-page-key]
+== start_page key
+
+The `start_page` key is optional.
+It's configured under the xref:configure-site.adoc[site key] in a playbook.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Site Title
+  url: https://example.org
+  start_page: component:module:file-coordinate-of-page.adoc
+----
+
+You can use any page that belongs to a component version as the index page for your site.
+The `start_page` key accepts the resource ID of a page as a value.
+*The resource ID must include the xref:page:resource-id-coordinates.adoc#id-component[component, module, and file coordinates]*.
+The xref:page:resource-id-coordinates.adoc#id-version[version coordinate] can be specified if you want to use a specific version of a page instead of the latest version.
+Alternatively, `start_page` can be assigned from the xref:cli:options.adoc#start-page[CLI].
+
+If your site has a xref:ROOT:component-name-key.adoc#root-component[versionless component named ROOT] (i.e., name: ROOT, version: +~+), that component will be published to the root of the site.
+The component name will not appear in the URL of those pages.
+That means that the index.adoc page in the ROOT module (i.e., modules/ROOT/pages/index.adoc) of the versionless ROOT component implicitly acts as the site start page without having to specify it in the playbook.
+In other words, the site start page is effectively `ROOT::index.adoc`.
+If you specify a different site start page in this case, it will be ignored since the site already has a start page.
+
+== Use a page's latest version
+
+To have the `start_page` key always point to the xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version] of the specified page, don't enter the version coordinate in the resource ID of the page.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Demo Docs Site
+  url: https://demo.antora.org
+  start_page: component-b::index.adoc
+----
+
+For this example, let's say that version 2.0 is the latest version of Component B.
+In this case, _\https://demo.antora.org/index.html_ will redirect to _\https://demo.antora.org/component-b/2.0/index.html_.
+
+== Use a specific version of a page
+
+If you want the site's start page to be a specific version of the designated page, include the xref:page:resource-id-coordinates.adoc#id-version[version coordinate in the resource ID].
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Demo Docs Site
+  url: https://demo.antora.org
+  start_page: 1.0@component-b::index.adoc
+----
+
+In this example, _\https://demo.antora.org/index.html_ will redirect to _\https://demo.antora.org/component-b/1.0/index.html_.
+
+NOTE: To configure a start page for a component version, see xref:ROOT:component-start-page.adoc[].

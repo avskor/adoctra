@@ -1,0 +1,104 @@
+= Define an Extension
+:url-strict-mode: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode
+:url-object-destructuring: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#object_destructuring
+
+An Antora extension is an exported JavaScript function named `register`.
+Antora invokes the function as soon as the generator starts (after the playbook is built).
+This function will typically add event listeners that listen for xref:generator-events-reference.adoc[generator events].
+The event listeners hook into the lifecycle of the Antora generator to do the bulk of the work of the extension.
+
+To define an extension, start by creating a new JavaScript file (herein: _extension file_).
+We'll name this extension [.path]_my-extension.js_.
+In the extension file, create a function and assign it to the `register` property of the module's exports.
+We refer to this export as the register function.
+Exporting the function allows Antora to access it.
+
+.my-extension.js
+[,js]
+----
+'use strict'
+
+module.exports.register = () => {
+}
+----
+
+It's good practice to start your extension file with the statement `'use strict'`.
+This statement enables strict mode across all versions of Node.js.
+{url-strict-mode}[Strict mode^] activates a restricted variant of JavaScript that catches common programming errors.
+We'll exclude it from the remaining examples in this area of the documentation, but assume it's ever present.
+
+You can split out the function definition from the export statement, if you prefer that style.
+
+.my-extension.js
+[,js]
+----
+const register = () => {
+}
+
+module.exports = { register }
+----
+
+Alternately, you can define your extension as a xref:class-based-extension.adoc[class-based extension].
+
+TIP: This example defines the register function using the https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions[arrow function^] syntax.
+You can also use the more formal `function () {}` syntax, which you'll need to do in order to access the generator context.
+
+Put the script in your playbook repository.
+Later, you can publish it to a package repository such as npmjs.com to share it between different sites or branches.
+
+So far, our extension doesn't actually do anything.
+Since the register function is a kind of listener, you can use it as an opportunity to perform an action immediately after the playbook is built.
+Let's use it to say hi.
+
+.my-extension.js
+[,js]
+----
+module.exports.register = () => {
+  console.log('Hello from Antora!')
+}
+----
+
+While that's a fun trick, it's not really what we're after.
+What we want to do is tie deeper into the mechanics of the generator so we can do some real work, perhaps even modify the content that Antora is processing.
+For that, we need to grab the generator context.
+
+If the register function can be bound, meaning it's defined using the `function` keyword or equivalent, Antora will bind the generator context to its `this` keyword.
+The `this` keyword is one way the extension can access the generator context.
+
+.my-extension.js
+[,js]
+----
+module.exports.register = function () {
+  this.on(...)
+}
+----
+
+Alternately, if the function accepts the generator context as the first parameter (using any name that begins with a letter), Antora will pass it as the first argument of the function instead of binding it to the `this` keyword.
+
+.my-extension.js without binding
+[,js]
+----
+module.exports.register = (context) => {
+  context.on(...)
+}
+----
+
+The generator context is what you use to register event listeners.
+Before we get there, let's look at the optional parameter for accessing context variables.
+
+The first positional parameter of the register function (or the second, if the function declares the generator context as the first parameter) is an object of context variables.
+This object includes the playbook and extension config.
+You should use {url-object-destructuring}[object destructuring^] to pick individual variables out of this object.
+
+All event listeners can retrieve the playbook, but you might need it earlier when registering listeners.
+Here's how you can access the playbook from the register function:
+
+.my-extension.js
+[,js]
+----
+module.exports.register = function ({ playbook }) {
+  console.log(`Antora is building the ${playbook.site.title}.`)
+}
+----
+
+Now, let's now xref:register-extension.adoc[register our extension], then xref:add-event-listeners.adoc[add event listeners].

@@ -1,0 +1,437 @@
+= Image Resource ID Examples
+
+You can insert an image into any page in your site, regardless of the module or component version to which the target image file belongs.
+On this page, you'll learn how to assign the correct resource ID coordinates to an image macro based on the version, component, and module the image belongs to in relation to the page where you want to embed it.
+
+.Images and resource IDs
+****
+For an overview of the block image macro and inline image macro and step-by-step instructions on how to add them to a page, see:
+
+* xref:block-images.adoc[]
+* xref:inline-images.adoc[]
+
+If you aren't familiar with the Antora resource ID or its coordinates, see:
+
+* xref:resource-id.adoc[]
+* xref:resource-id-coordinates.adoc[]
+
+Keep in mind that the `imagesdir` attribute is not relevant in Antora and is ignored.
+Unless the image target is a URI, Antora always rewrites the target using the relative URL of the resolved image resource.
+****
+
+All of the examples on this page, regardless of the image macro they use to demonstrate a concept, apply to both the xref:block-images.adoc[block image macro] and xref:inline-images.adoc[inline image macro].
+
+== Use an image within a module
+
+Most of the images you reference with an image macro will probably belong to the xref:ROOT:module-directories.adoc#module[same module] and xref:ROOT:component-version.adoc[component version] as the current page.
+In such circumstances, the AsciiDoc image macros only require the xref:resource-id-coordinates.adoc#id-resource[file coordinate] of the target image's resource ID be assigned as a value.
+
+[NOTE]
+====
+// tag::target-current-def[]
+[[target]]The [.term]*target image* is the image source file that's being referenced by the current page.
+The target image is referenced by assigning its resource ID to an inline or block image macro in the content of the current page.
+[[current]]The [.term]*current page* is the page source file containing the image macro that references the target image.
+// end::target-current-def[]
+====
+
+The structure of the target image's file coordinate varies depending on whether the target image is stored at the root of the [.path]_images_ family directory or in a subdirectory of the [.path]_images_ directory.
+
+.current-page.adoc
+[#ex-file]
+----
+image:target-image-filename.ext[optional attribute] <.>
+
+image:path/to/target-image-filename.ext[optional attribute] <.>
+
+image:./target-image-filename.ext[optional attribute] <.>
+----
+<.> File coordinate of the target image when it's stored at the root of the [.path]_images_ directory.
+<.> File coordinate of the target image when it's stored in a subdirectory of the [.path]_images_ directory.
+<.> File coordinate of the target image when the target image and current page are stored in a subdirectory with the same family-relative directory path.
+_This is an advanced use case._
+
+The following sections provide examples showing the different file coordinate structures.
+
+[#images-root]
+=== File coordinate at images directory root
+
+When the target image is stored at the root of the [.path]_images_ family directory, the file coordinate is the target image's filename and file extension.
+Remember, the file coordinate of the target image is always calculated from the root of the [.path]_images_ family directory.
+
+.File coordinate in an image macro when the target image is stored at the root of an images directory
+[#ex-image-base]
+----
+image::target-image-filename.ext[optional attribute]
+----
+
+Let's use the files that belong to the component version _colorado 5.2_ as the basis for the example in this section.
+The component version's source files are assigned to modules and families based on the xref:ROOT:standard-directories.adoc[set of standard directories] listed in <<ex-co>>.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita <.>
+    📂 images <.>
+      📄 wilderness-map.jpg
+    📂 pages <.>
+      📄 ridge.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines a module named _la-garita_
+<.> Defines subsequent files as images
+<.> Defines subsequent files as pages
+
+Using the two files that belong to the _la-garita_ module, shown in <<ex-co>> above, let's insert the [.path]_wilderness-map.jpg_ image into the [.path]_ridge.adoc_ page.
+That means the source file [.path]_wilderness-map.jpg_ is the target image and [.path]_ridge.adoc_ is the current page.
+
+<<ex-image>> shows a block image macro in the [.path]_ridge.adoc_ page (current page) that references, the [.path]_wilderness-map.jpg_ image (target image).
+When the target image and current page belong to the same module, only the file coordinate of the target image's resource ID needs to be entered in the image macro.
+
+.ridge.adoc (current page)
+[#ex-image]
+----
+The trailhead is north of town.
+
+image::wilderness-map.jpg[]
+----
+
+In <<ex-image>>, the file coordinate for the [.path]_wilderness-map.jpg_ image is `wilderness-map.jpg`.
+Its file coordinate consists solely of its filename and file extension because [.path]_wilderness-map.jpg_ is stored at the root of the [.path]_images_ directory.
+
+If the target image is stored in a subdirectory of the [.path]_images_ directory, its file coordinate must specify the __images__-relative directory path, filename, and file extension.
+See <<relative-path>> for file coordinate examples when the target image is stored in a subdirectory.
+
+[#relative-path]
+=== File coordinate with images-relative directory path
+
+The __images__-relative directory path of the <<target,target image>> is required in its file coordinate when it's stored in a subdirectory of the [.path]_images_ directory.
+
+.File coordinate in an image macro when the target image is stored in a subdirectory of an images directory
+[#ex-subdir-base]
+----
+image::path/to/target-image-filename.ext[optional attribute]
+----
+
+Let's use the pages that belong to the component version shown in <<ex-co-subdir>> as the basis for the examples in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-subdir]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita <.>
+    📂 images <.>
+      📂 aerial <.>
+        📄 skyline.jpg
+    📂 pages <.>
+      📄 ridge.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines a module named _la-garita_
+<.> Defines subsequent files as images
+<.> A subdirectory in _images_ containing the source files of images
+<.> Defines subsequent files as pages
+
+Let's reference [.path]_skyline.jpg_ from [.path]_ridge.adoc_.
+As you can see in <<ex-co-subdir>> above, the image and page belong to the _la-garita_ module.
+In <<ex-subdir>>, an image macro in the [.path]_ridge.adoc_ page (current page) references the [.path]_skyline.jpg_ image (target image).
+
+.ridge.adoc (current page)
+[#ex-subdir]
+----
+= La Garita Ridgeline
+
+image::aerial/skyline.jpg[]
+----
+
+As shown in <<ex-subdir>>, the file coordinate for [.path]_skyline.jpg_ is `aerial/skyline.jpg`.
+The file coordinate for [.path]_skyline.jpg_ consists of its [.path]__images__-relative directory path, filename, and file extension because it's stored in the subdirectory [.path]_aerial_.
+
+TIP: In special circumstances where the __images__-relative directory path of the target image and the __pages__-relative directory path of the current page are parallel, the __images__-relative directory path of the file coordinate can be replaced with the relative path token, `./`.
+
+//[#use-image-across-modules]
+[#modules]
+== Use an image from another module
+
+When the <<target,target image>> and <<current,current page>> don't belong to the same module, you must specify the target image's xref:resource-id-coordinates.adoc#id-module[module coordinate] and xref:resource-id-coordinates.adoc#id-resource[file coordinate] in the image macro.
+
+.Module and file coordinates assigned to an image macro
+[#ex-module-base]
+----
+image:module:target-image-filename.ext[optional attribute] <.>
+
+image:module:path/to/target-image-filename.ext[optional attribute] <.>
+----
+<.> The image macro is assigned the module coordinate and file coordinate of the target image when the target image doesn't belong to the same module as the current page.
+The target image's file coordinate is its filename and file extension when the target image is <<images-root,stored at the root of an _images_ family directory>>.
+<.> If <<relative-path,the target image is stored in a subdirectory of an _images_ directory>>, the target image's file coordinate must specify its __images__-relative directory path, filename, and file extension.
+
+Let's use the files that belong to the component version shown in <<ex-co-mod>> as the basis for the examples in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-mod]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita <.>
+    📂 images <.>
+      📂 aerial <.>
+        📄 skyline.jpg
+    📂 pages <.>
+      📄 ridge.adoc
+      📄 willow-creek.adoc
+  📂 ROOT <.>
+    📂 images <.>
+      📄 peak.svg
+    📂 pages <.>
+      📄 index.adoc
+      📄 ranges.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines a module named _la-garita_
+<.> Defines subsequent files as images
+<.> A subdirectory in _images_ containing the source files of images
+<.> Defines subsequent files as pages
+<.> Defines the _ROOT_ module
+<.> Defines subsequent files as images
+<.> Defines subsequent files as pages
+
+From the _colorado 5.2_ component version, shown in <<ex-co-mod>> above, let's insert the [.path]_peak.svg_ image into the [.path]_willow-creek.adoc_ page.
+That means the source file [.path]_peak.svg_ is the target image and [.path]_willow-creek.adoc_ is the current page.
+
+<<ex-module>> shows an inline image macro in [.path]_willow-creek.adoc_ (current page) that references the image file [.path]_peak.svg_ (target image).
+The module and file coordinates of the target image's resource ID are assigned to the image macro.
+The [.path]_willow-creek.adoc_ page belongs to the _la-garita_ module.
+The [.path]_peak.svg_ image belongs to the _ROOT_ module.
+
+.Insert peak.svg (target image) into willow-creek.adoc (current page)
+[#ex-module]
+----
+The elevation is image:ROOT:peak.svg[] 10,067 ft (3,068 m).
+----
+
+As shown in <<ex-module>>, the target image's module coordinate is `ROOT` and its file coordinate is `peak.svg`.
+
+In <<ex-module-subdir>>, let's embed the [.path]_skyline.jpg_ image (target image) into [.path]_ranges.adoc_ (current page).
+The [.path]_skyline.jpg_ image belongs to the _la-garita_ module and [.path]_ranges.adoc_ belongs to the _ROOT_ module.
+
+.Insert skyline.jpg (target image) into ranges.adoc (current page)
+[#ex-module-subdir]
+----
+image::la-garita:aerial/skyline.jpg[]
+----
+
+As shown in <<ex-module-subdir>>, the target image's module coordinate is `la-garita` and its file coordinate is `aerial/skyline.jpg` because it's stored in the [.path]_aerial_ subdirectory of the [.path]_images_ family directory.
+
+//[#use-image-in-different-docs-component]
+[#component-versions]
+== Use an image from another docs component
+
+When the <<target,target image>> and <<current,current page>> belong to different documentation components, you must specify, at a minimum, the target image's xref:resource-id-coordinates.adoc#id-component[component, module, and file coordinates] in the image macro.
+You'll almost always specify the version coordinate, too.
+
+.Version, component, module, and file coordinates assigned to an image macro
+[#ex-component-version-base]
+----
+image:version@component:module:target-image-filename.ext[optional attribute] <.>
+
+image:version@component:module:path/to/target-image-filename.ext[optional attribute] <.>
+
+image:component:module:file-coordinate-of-target-image.ext[optional attribute] <.>
+----
+<.> The image macro is assigned the version, component, module, and file coordinates of the target image when the target image and current page don't belong to the same component version.
+The target image's file coordinate is its filename and file extension when the target image is <<images-root,stored at the root of an _images_ family directory>>.
+<.> If <<relative-path,the target image is stored in a subdirectory of an _images_ directory>>, the target image's file coordinate must specify its __images__-relative directory path, filename, and file extension.
+<.> If the version coordinate isn't specified, Antora uses the <<latest-version,latest version of the target image's component>> to complete the resource ID at runtime.
+This behavior only applies when the target image and current page belong to different docs components.
+
+Let's use the files that belong to the component versions _colorado 5.2_ (<<ex-co-v>>) and _wyoming 1.0_ (<<ex-wy>>) as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co-v]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 ROOT <.>
+    📂 images <.>
+      📄 peak.svg
+    📂 pages <.>
+      📄 index.adoc
+      📄 ranges.adoc
+----
+<.> Defines the component version as _colorado 5.2_
+<.> Defines the _ROOT_ module
+<.> Defines subsequent files as images
+<.> Defines subsequent source files as pages
+
+.Directories and files assigned to wyoming 1.0
+[listing#ex-wy]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 sierra-madre <.>
+    📂 images <.>
+      📄 panorama.png
+    📂 pages <.>
+      📄 elevation.adoc
+      📄 wilderness-areas.adoc
+----
+<.> Defines the component version as _wyoming 1.0_
+<.> Defines a module named _sierra-madre_
+<.> Defines subsequent files as images
+<.> Defines subsequent files as pages
+
+Using files from <<ex-co-v>> and <<ex-wy>>, let's insert [.path]_panorama.png_ (target image) into [.path]_ranges.adoc_ (current page).
+The image [.path]_panorama.png_ belongs to the _sierra-madre_ module of _wyoming 1.0_.
+In <<ex-across-components>>, the resource ID assigned to the image macro specifies the version, component, module, and file coordinates of the target image because the target image belongs to the _wyoming 1.0_ component version whereas the current page belongs to _colorado 5.2_.
+
+.Insert panorama.png (target image) as a block image into ranges.adoc (current page)
+[#ex-across-components]
+----
+image::1.0@wyoming:sierra-madre:panorama.png[]
+----
+
+As shown in <<ex-across-components>>, the target image's version coordinate is `1.0`, its component coordinate is `wyoming`, its module coordinate is `sierra-madre`, and its file coordinate is `panorama.png`.
+
+Now, in <<ex-across-components-root>>, let's insert [.path]_peak.svg_ (target image) into [.path]_wilderness-areas.adoc_ (current page).
+The [.path]_peak.svg_ image belongs to the component version _colorado 5.2_.
+The [.path]_wilderness-areas.adoc_ page belongs to the component version _wyoming 1.0_.
+
+.wilderness-areas.adoc (current page)
+[#ex-across-components-root]
+----
+image:5.2@colorado::peak.svg[] Bridger Peak is in the Sierra Madre range.
+----
+
+Notice in <<ex-across-components-root>> that the module coordinate `ROOT` seems to be missing from the resource ID.
+When a component coordinate is specified in a resource ID, and the target image belongs to the _ROOT_ module, the module coordinate `ROOT` doesn't have to be explicitly specified.
+But you must still enter the colon (`:`) that would follow the module coordinate.
+You can see this `:` directly before the file coordinate `peak.svg`.
+This shorthand only works when a component coordinate is specified and the module coordinate of the target image is `ROOT`.
+In all other cases where the module coordinate is required, the name of the module must be specified.
+
+You may have noticed that the version coordinate is specified in both <<ex-across-components>> and <<ex-across-components-root>>.
+If you don't specify the version, Antora will complete the resource ID of the target image using the version coordinate of the target image's latest component version at runtime.
+
+//[#use-latest-version-of-image]
+[#latest-version]
+=== Use the latest version of an image
+
+TIP: This behavior only applies when the target image and current page belong to different docs components!
+
+If a version isn't specified in the resource ID, *and the target image and current page belong to different documentation components*, Antora uses the version coordinate of the xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version] of the target image's component to complete the resource ID at runtime.
+
+Let's use the files that belong to _colorado 5.2_ (<<ex-co-v>> in the previous section), _wyoming 1.0_ (<<ex-wy>> in the previous section), and _wyoming 1.5_ (<<ex-wy-latest>> below) as the basis for the example in this section.
+
+.Directories and files assigned to wyoming 1.5
+[listing#ex-wy-latest]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 sierra-madre
+    📂 images
+      📄 panorama.png
+    📂 pages
+      📄 elevation.adoc
+      📄 wilderness-areas.adoc
+----
+<.> Defines the component version as _wyoming 1.5_
+
+Let's reference the [.path]_panorama.png_ image (target image) from [.path]_index.adoc_ (current page).
+[.path]_index.adoc_ belongs to the _colorado 5.2_ component version .
+There are two files named [.path]_panorama.png_ that belong to the _wyoming_ component, _sierra-madre_ module, and _images_ family.
+One [.path]_panorama.png_ belongs to version _1.0_, the other [.path]_panorama.png_ to version _1.5_.
+
+<<ex-across-components-latest>> shows a block image macro referencing [.path]_panorama.png_ (target image) from [.path]_index.adoc_ (current page).
+Notice that the target image's version coordinate isn't specified.
+
+.index.adoc (current page)
+[#ex-across-components-latest]
+----
+image::wyoming:sierra-madre:panorama.png[]
+----
+
+When Antora runs, it will identify _wyoming 1.5_ as the latest version of the _wyoming_ component according to its xref:ROOT:how-component-versions-are-sorted.adoc#version-sorting-rules[version sorting rules] and xref:ROOT:how-component-versions-are-sorted.adoc#latest-version[latest version criteria].
+Because a version coordinate isn't specified in <<ex-across-components-latest>>, Antora will complete the resource ID assigned to the image macro using the version coordinate -- `1.5` -- of the latest _wyoming_ component.
+
+WARNING: This behavior of linking to the latest version only applies when the version coordinate is unspecified and the target image and current page belong to different components.
+If the version and component coordinates aren't specified in the resource ID, Antora assumes the target image belongs to the same component version as the current page and uses the current page's version and component coordinates to complete the target image's resource ID.
+
+//[#use-image-in-different-version]
+[#versions]
+== Use an image from another version of its component
+
+When the <<current,current page>> and <<target,target image>> belong to the same component, but the target image belongs to a different version of the component, you'll specify the version, module (if it's different than the current page's module), and file coordinates.
+
+.current-page.adoc
+[#ex-version-base]
+----
+image:version@module:file-coordinate-of-target-image.ext[optional attribute] <.>
+
+image:version@file-coordinate-of-target-image.ext[optional attribute] <.>
+----
+<.> The image macro is assigned the version, module, and file coordinates of the target image when the target image doesn't belong to the same version and module as the current page.
+<.> The image macro is assigned the version and file coordinates of the target image when the target image doesn't belong to the same version as the current page.
+
+Let's use the files that belong to the component version _colorado 5.2_ (<<ex-co5>>) and the component version _colorado 6.0_ (<<ex-co6>>) as the basis for the example in this section.
+
+.Directories and files assigned to colorado 5.2
+[listing#ex-co5]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita
+    📂 images
+      📄 wilderness-map.jpg
+    📂 pages
+      📄 index.adoc
+      ...
+----
+<.> Defines the component version as _colorado 5.2_
+
+.Directories and files assigned to colorado 6.0
+[listing#ex-co6]
+----
+📄 antora.yml <.>
+📂 modules
+  📂 la-garita
+    📂 pages
+      📄 index.adoc
+      📄 ridge.adoc
+      📄 willow-creek.adoc
+----
+<.> Defines the component version as _colorado 6.0_
+
+Notice that the _colorado 5.2_ component version in <<ex-co5>> has the image [.path]_wilderness-map.jpg_.
+However, _colorado 6.0_, shown in <<ex-co6>>, has no such image file.
+
+Let's reference the image [.path]_wilderness-map.jpg_ (target image), which belongs to _colorado 5.2_, from the [.path]_ridge.adoc_ page (current page) that belongs to the _colorado 6.0_ component version.
+Both resources belong to the _la-garita_ module.
+In <<ex-across-versions>>, the image [.path]_wilderness-map.jpg_ (target image) is embedded in the page [.path]_ridge.adoc_ (current page).
+
+.ridge.adoc (current page) in colorado 6.0
+[#ex-across-versions]
+----
+image::5.2@wilderness-map.jpg[]
+----
+
+As shown in <<ex-across-versions>>, the target image's version coordinate is `5.2` and its file coordinate is `wilderness-map.jpg`.
+
+////
+This needs to either become its own page or be added as section to another page
+
+== Apply attributes to an image
+
+The brackets can contain an list of attributes such as alt text, width, or height.
+Attributes are optional.
+The attributes are entered as key=value pairs separated by commas.
+To add alt text to the image, enter the information between the square brackets (`+[]+`).
++
+[subs=+quotes]
+----
+image::name-of-file.ext**[This is the alt text for this image]**
+----
+////

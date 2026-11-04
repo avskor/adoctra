@@ -1,0 +1,135 @@
+= Supported Platforms and System Requirements
+:navtitle: Supported Platforms
+:test-count: over 2008
+:test-coverage: 99%
+// URLs
+:url-issues: {url-repo}/issues
+:emdash: &#8212;{zwsp}
+
+Antora runs on Linux, macOS, and Windows.
+Thanks to this broad platform support, Antora is also used on many cloud platforms and continuous integration and delivery servers.
+
+== Platforms
+
+Our general policy is to align Antora's support of a platform version with the upstream project's lifecycle schedule for that version.
+When a platform version reaches the end of active support by its maintainers or its end of life (EOL){emdash}which ever comes first{emdash}Antora no longer supports it.
+
+// When we have specific notes about a platform (tweaks and/or links to bugs) add a 3rd column to this table labeled "Good to Know"
+[cols="20,25a",width="50%"]
+|===
+|Supported Platform |Supported Version(s)
+
+|Node.js
+|[%hardbreaks]
+&#8805; 20
+(aligned with package in Debian stable)
+
+|Alpine Linux
+|&#8805; 3.20
+
+|Debian
+|any LTS
+
+|Fedora
+|&#8805; 42
+
+|Ubuntu
+|[%hardbreaks]
+24.04 LTS
+26.04 LTS
+
+|macOS
+|[%hardbreaks]
+Sonoma (14.8)
+Sequoia (15.7)
+Tahoe (26.5)
+
+|Microsoft
+|[%hardbreaks]
+Windows 11
+Windows Server 2022
+Windows Server 2025
+
+|Browser
+|Latest stable version of Chrome, Firefox, or MS Edge
+|===
+
+.About the Antora Test Suite
+****
+At last count, Antora had {test-count} tests that cover {test-coverage} of the lines.
+You could say we're just a teeny-tiny bit obsessed with writing high quality tests and improving test coverage.
+****
+
+=== Cloud platforms
+
+Antora should operate as designed on common cloud platforms.
+How you provision your cloud instance depends on your workload requirements and remote git repository sizes.
+If you're running Antora on a cloud platform, we would love to hear about your experience in Antora's {url-chat}[community chat^].
+
+== Hardware recommendations
+
+Your hardware requirements will depend primarily on the size of the remote git repositories your Antora pipeline fetches content from when it is generating your site.
+
+The first time Antora runs, it fetches and clones all of the remote git repositories specified in a playbook.
+The speed of this operation is dictated by the size of the remote repositories, environment input/output parameters, and network performance.
+After the initial run, Antora caches the repositories locally.
+On subsequent runs, Antora only reconnects to the remote repositories if the xref:playbook:runtime-fetch.adoc[fetch option] is enabled or the xref:playbook:runtime-cache-dir.adoc[cache folder] is removed.
+
+[cols="2s,4",width="75%"]
+|===
+|RAM
+|Memory requirements depend on the size of your Git repositories.
+3GB should provide sufficient headroom.
+
+|I/O
+|Maximum throughput and minimum latency always make things nicer but aren't required.
+|===
+
+=== Tuning the memory limit
+
+Even if the machine you're using has sufficient memory (RAM), not all that memory will be allocated to the Node.js process.
+If the Node.js process tries to use more memory than is allocated to it, the system may terminate the Node.js process (SIGKILL).
+
+Node.js starts with a conservative memory limit (typically 2048 MiB, but it depends on the system).
+You can allocate more memory to the Node.js process using the `--max-old-space-size` CLI option.
+You can pass this option to Node.js when running Antora using the `NODE_OPTIONS` environment variable.
+
+ NODE_OPTIONS='--max-old-space-size=4096'
+
+You'll need to experiment with this value to find the setting that works best for your site.
+Refer to https://stackoverflow.com/questions/48387040/how-do-i-determine-the-correct-max-old-space-size-for-node-js[How do I determine the correct "max-old-space-size" for Node.js?^] for more information on this topic.
+
+== Learn more
+
+* xref:upgrade-antora.adoc[Upgrade to the latest Antora release].
+
+* Install Antora for the first time on:
+
+** xref:linux-requirements.adoc[Linux]
+** xref:macos-requirements.adoc[macOS]
+** xref:windows-requirements.adoc[Windows]
+
+* Try the official xref:ROOT:antora-container.adoc[Antora Docker container].
+
+////
+OS Release schedule links
+
+Alpine: https://alpinelinux.org/releases/
+
+Arch: https://www.archlinux.org/releng/releases/
+
+Arch Linux releases once a month, with only the 3 most recent distros being officially available
+
+Debian: https://www.debian.org/releases/
+
+Fedora: https://fedoraproject.org/wiki/Releases
+
+Ubuntu Linux: https://wiki.ubuntu.com/Releases
+
+openSUSE: https://en.opensuse.org/Portal:42.3
+Checkout the Open Build Project: http://openbuildservice.org
+
+Windows: https://en.wikipedia.org/wiki/Comparison_of_Microsoft_Windows_versions
+
+MacOS https://en.wikipedia.org/wiki/MacOS_version_history
+////

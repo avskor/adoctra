@@ -1,0 +1,620 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora’s site generator is implemented as a sequence of steps. Each step is performed by a function. These functions are known as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "generator functions"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "term"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ". Generator functions may contain functions for key substeps a generator function may perform, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convertDocument"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The generator retrieves these functions from the generator context. These functions can also be retrieved and replaced programmatically by an Antora extension. As such, these generator functions are designed to be replaceable, providing a more powerful way to extend Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Replacing functions in an extension does put the code at greater risk of breaking between major versions of Antora."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Like with context variables, generator functions are available from the generator context. The generator functions can be retrieved by calling the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getFunctions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method inside the listener of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event, or at any point thereafter. This method returns an object of key-value pairs, where the keys are the function names and the values are the function objects."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The built-in generator functions are not available until the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event is emitted."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example that shows how to retrieve the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "aggregateContent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " function in an extension, assuming "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "this"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is bound to the generator content."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this.once('contextStarted', () => {\n  const { aggregateContent } = this.getFunctions()\n})"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One reason to retrieve a generator function is to use it as a utility. For example, if you need your extension to load AsciiDoc as Antora does, you might retrieve the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "loadAsciiDoc"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " function for this purpose. Here’s an example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this.once('contentClassified', (contentCatalog, siteAsciiDocConfig) => {\n  const { loadAsciiDoc } = this.getFunctions()\n  const page = contentCatalog.resolvePage('ROOT::index.adoc')\n  const scopedAsciiDocConfig = contentCatalog.getComponentVersion(page.src.component, page.src.version).asciidoc\n  const doc = loadAsciiDoc(page, contentCatalog, scopedAsciiDocConfig || siteAsciiDocConfig)\n  const sections = doc.findBy({ context: 'section' }, (it) => it !== doc.getHeader())\n  console.log(sections.map((it) => it.getTitle()))\n})"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another reason to retrieve a generator function is to decorate (aka wrap) it. In this case, you’ll need to replace the original function with the decorated one. Alternately, you can replace the original function with your own implementation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "get-the-functions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Get the functions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Replacing generator functions gives you the ability to override steps in Antora’s site generator."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The generator functions can be replaced by passing functions to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "replaceFunctions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. This method accepts the same object signature that the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getFunctions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method returns, where the keys are the function names and the values are the function objects."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You only have to pass functions to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "replaceFunctions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that you want to replace. The generator will default to using the built-in functions for any function that’s not replaced."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example that shows how to replace the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "publishFiles"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " function in an extension:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.replaceFunctions({\n    async publishFiles () {\n      console.log('Not publishing today')\n      return []\n    }\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " the functions are replaced matters. If you replace a function directly in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "register"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method (before the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event is emitted), it will stop Antora from requiring and registering the corresponding built-in function. If you replace a function in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " listener, the function will replace the corresponding built-in function that has already been required and registered."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contextStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event gives you the opportunity to delegate to (i.e., wrap) a built-in function, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function () {\n  this.once('contextStarted', () => {\n    const { publishFiles: publishFilesDelegate } = this.getFunctions()\n    this.replaceFunctions({\n      async publishFiles (playbook, catalogs) {\n        console.log('It\\'s publish time!')\n        return publishFilesDelegate.call(this, playbook, catalogs)\n      }\n    })\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When replacing a function, you must adhere to the function’s signature as defined in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Function reference"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#function-reference"
+              },
+              {
+                "kind": "text",
+                "value": ". Like with the register function and event listener functions, the generator functions are automatically bound to the generator context."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "replace-a-function",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Replace a function"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The list of functions that can be replaced by an extension, shown along with their signatures, are as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "aggregateContent(playbook): Promise<Object>\nbuildAlternateNavigation(contentCatalog, componentVersion, navFiles, asciidocConfigOverrides): Array\nbuildNavigation(contentCatalog, siteAsciiDocConfig): NavigationCatalog\nclassifyContent(playbook, contentAggregate, siteAsciiDocConfig): ContentCatalog\nconvertDocument(file, contentCatalog, siteAsciiDocConfig): File\nconvertDocuments(contentCatalog, siteAsciiDocConfig): void\ncreatePageComposer(playbook, contentCatalog, uiCatalog, env): Function\nextractAsciiDocMetadata(doc): Object\nloadAsciiDoc(file, contentCatalog, config): Document\nloadUi(uiCatalog): Promise<UiCatalog>\nmapSite(playbook, publishablePages): File[]\nproduceRedirects(playbook, contentCatalog): File[]\npublishFiles(playbook, catalogs): Promise<Object[]>\nresolveAsciiDocConfig(playbook): Object"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To learn more about these functions, consult the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Antora source code"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/antora/antora/tree/{page-origin-refname}/packages"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "function-reference",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Function reference"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Replace Generator Functions"
+      }
+    ]
+  }
+}

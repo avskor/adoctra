@@ -1,0 +1,3301 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order for Antora to access private repositories, you must supply it with authentication credentials for any private repository URL you use in your playbook. These credentials can be externalized so they don’t have to be hard-coded into the playbook. This page covers various ways you can pass the credentials to Antora, including the built-in git credential store, a custom credential store, and even your own credential manager."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s start by looking at the authentication credential types Antora accepts by default, then move on to how to set them up and put them to use."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora can authenticate with private repositories using HTTP Basic authentication. HTTP Basic authentication requires sending credentials to the server (over HTTPS) to verify your identity. Authentication credentials consist of either a username/password pair or an access (OAuth 2.0) token."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The username/password pair is usually what you use to log in to the service (GitHub, GitLab, etc.) where the repository is hosted. If the username or password contains characters which have special meaning in a URL, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", these characters must be URL encoded (i.e., percent encoded) so they aren’t misinterpreted by the URL parser. Keep in mind that while some git hosts support this means of authentication, others do not. You may have better luck using an access token."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When two-factor authentication (2FA) is enabled on your account, you can’t use the username/password pair to authenticate with a private repository. You’ll receive the error "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "401 HTTP Basic: Access Denied"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " when you try."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Regardless of the reason, if the git host does not allow you to authenticate using a username/password pair, you’ll need to use an access token instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are two types of access tokens: personal access tokens and deploy tokens."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "personal access token"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": [
+                      "term"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is bound to the user and grants access to any private repository that your account can access (subject to the scope settings of the token itself)."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "deploy token"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": [
+                      "term"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (not a deploy key) is bound to the project (i.e., repository) and grants access to a single repository (subject to the scope settings on the token itself)."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Deploy keys "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cannot"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " be used with Antora since they require the use of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SSH authentication"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#ssh-auth"
+              },
+              {
+                "kind": "text",
+                "value": ", which the git client in Antora does not support."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You typically use a single personal access token on your own machine and one or more deploy tokens on a CI server."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To create an access token for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "GitHub"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Creating a personal access token (PAT) for the command line"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". GitHub has two types of access tokens, fine-grained and classic. Both are supported by Antora, though the fine-grained token must be granted the Contents permission to the repositories you want to use."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GitHub also supports "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Installation Access Tokens (IAT)"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which are bound to an application instead of user. These access tokens are more suitable for use in an organization."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GitHub does not support deploy tokens at this time."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To learn more about how to create access tokens for use with GitHub, refer to the articles "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Antora with GitHub PAT"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://rmoff.net/2023/12/19/deploying-antora-with-github-actions-and-a-private-github-repo/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Antora with GitHub IAT"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://rmoff.net/2024/01/17/antora-deployment-to-cloudflare-across-private-repositories-with-github-actions/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "github",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "GitHub"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To create an access token for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "GitLab"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Personal Access Tokens"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://docs.gitlab.com/ee/user/profile/personal_access_tokens.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy Tokens"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://docs.gitlab.com/ee/user/project/deploy_tokens/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "gitlab",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "GitLab"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Bitbucket"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", you’ll need to create an "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "app password"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with read access to repositories. An app password is a user-based access token."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now let’s see how to supply these credentials to Antora’s built-in credential manager via the default git credential store."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "bitbucket",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Bitbucket"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "credential-types",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Credential types"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here are examples of credential URLs for several popular git hosts. You will need to substitute the placeholders in bold with the real values."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": "host-credential-structure",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "https://"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":@github.com/org/project-docs\nhttps://oauth2:"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@gitlab.com/org/project-docs.git\nhttps://gitlab+deploy-token-"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN_ID"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@gitlab.com/org/project-docs.git\nhttps://x-oauth-token:"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@bitbucket.org/org/project-docs.git\nhttps://"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "USERNAME"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "APP_PASSWORD"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@bitbucket.org/org/project-docs.git"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Formats supported by popular Git hosts for embedding credentials in the URL"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Specifying the repository path in the URL is optional and takes precedence. If you don’t include it, that credential pair will be used for all URLs that share the same git host and don’t match an entry with a repository path."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may need to append the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file extension depending on which URL format you use for your content sources and whether you’ve configured the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ensure_git_suffix key"
+                  }
+                ],
+                "kind": "xref",
+                "target": "git-suffix.html"
+              },
+              {
+                "kind": "text",
+                "value": " in your playbook."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "caution"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that the tokens are located in different locations in the URL depending on the git host. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OAuth2 formats"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://isomorphic-git.org/docs/en/authentication"
+              },
+              {
+                "kind": "text",
+                "value": " for more details. If you’re using a Bitbucket app password, notice you must include your own username (using the format "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "USERNAME:APP_PASSWORD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When defining the URL in a credentials store, you can append the project path to the hostname to make the match exact. If you exclude the project path, then that entry will be used for all URLs with the same hostname for which an exact match is not made."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "credential-urls",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Credential URLs"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, Antora’s built-in credential manager automatically checks for credentials in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git credential store"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://git-scm.com/docs/git-credential-store"
+              },
+              {
+                "kind": "text",
+                "value": " (a database file). The default path for the git credential store is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$HOME/.git-credentials"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$XDG_CONFIG_HOME/git/credentials"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if the first location doesn’t exist. Note that this path is a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "file"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", not a directory."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since Antora consults the credential manager automatically when credentials are requested by the git host (aka on demand), you don’t have to specify credentials directly in your playbook. In fact, the content sources in your playbook that are private will look just like content sources that are public. Here’s how a private content source in your playbook might look:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "content:\n  sources:\n  - url: https://hostname/your-org/private-repository"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When Antora is notified by the git host that a URL requires authentication, it will look for a matching entry in the credentials store. Antora looks for a match using the URL as the key. If a protocol (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and hostname (and, optionally, the repository path) are found in the credentials store, those credentials are returned to Antora’s credential manager and passed on to the git server."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The credential store contains zero or more line-based entries. If you need to specify multiple credentials for a single hostname (such as multiple deploy tokens), put each entry on its own line. The structure of each entry is as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "https://<credentials>@<hostname>"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<credentials>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is either a username/password pair ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "username:password"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or an access token ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "token:"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<hostname>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is the address of the git server (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "github.com"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the username or password contains characters which have special meaning in a URL, such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "#"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", these characters must be URL encoded. (The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " does not have special meaning in a username or password). It’s usually safe to always URL encode the username and password components in the URL. This requirement only applies for URLs that are defined in the git credential store."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To URL encode a component, open the JavaScript console in your browser, and run "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "encodeURIComponent('<component>')"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", where "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<component>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the username or password value. Use the printed result in place of your username or password, if different. For example, the URL encoded version of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my#password"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my%23password"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can populate the credential store interactively using the system "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command or by editing the credential store directly. Let’s start with the interactive approach."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "git"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command to populate the credential store interactively. This approach is especially useful since it allows you to verify that your credentials are accepted by the git server."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "First, select the URL of a private repository you want to use with Antora. Next, in your terminal, run the following command for each private repository you need to access from Antora:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ echo -n 'Repository URL: ' && read REPLY && \\\n  git -c credential.helper=store ls-remote -h $REPLY > /dev/null"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This command performs the following steps:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Prompts you for the URL of a private repository."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "admonition",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If you aren’t prompted for your credentials, it means your credentials are already stored."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null,
+                        "type": "note"
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Communicates with the private repository, triggering a prompt for your credentials."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Stores the credentials in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "$HOME/.git-credentials"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": [
+                          "path"
+                        ]
+                      },
+                      {
+                        "kind": "text",
+                        "value": " file (and assigns it the appropriate permissions)."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If this script succeeds, you can use the applicable private repositories in Antora without any further configuration."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the interactive approach didn’t work for you, you can populate the credential store directly. Let’s give that a shot."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "populate-credentials-interactively",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Populate the credential store interactively"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To add credentials to the git credential store directly, create the file (not directory) "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$HOME/.git-credentials"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and open it in your editor. Put each unique set of credentials (i.e., username/password pair or access token plus hostname and optional repository path) on its own line. If you’re using a single git host and a personal access token, you only need one entry. If you’re using multiple git hosts or multiple deploy tokens, you’ll need more than one entry."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example entry that uses a username/password pair:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https://octocat:ilovegit@github.com"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example that uses a token (pay attention to the trailing "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " after the token):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https://abcdefg0123456:@github.com"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use different credentials for a given repository on the same git host, you can append a repository path (i.e., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<repo>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to the entry to make the matching more strict. (The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".git"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file extension in the repository path is optional)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https://<credentials>@<hostname>/<repo>"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example of an entry for a specific repository path:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "https://octocat:ilovegit@github.com/octocat/Hello-World"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Credential URLs"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#credential-urls"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for more examples."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To ensure the credentials file is protected, immediately set its file permissions so it cannot be read by others."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ chmod 600 $HOME/.git-credentials"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "populate-credentials-directly",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Populate the credential store directly"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "supply-credentials-using-the-default-git-credential-store",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Supply credentials using the default git credential store"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of using the credential store at the default path(s), you can instruct Antora to look for the file in a different location using either the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--git-credentials-path"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GIT_CREDENTIALS_PATH"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " environment variable, both of which set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.path"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " playbook key at runtime."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example that uses the CLI option to specify a path relative to the playbook file:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ antora --git-credentials-path ./.git-credentials antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To learn more about how to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.path"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " playbook key, including how to set it directly in the playbook, consult the reference for the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.path key"
+                  }
+                ],
+                "kind": "xref",
+                "target": "git-credentials-path-and-contents.html#path-key"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "custom-credential-path",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Specify a custom git credential store path"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Instead of reading the credentials from a file, you can have Antora read the credentials directly from the environment variable named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GIT_CREDENTIALS"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which sets the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.contents"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " playbook key at runtime."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example that demonstrates the concept:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ export GIT_CREDENTIALS='https://octocat:ilovegit@github.com'\n$ antora antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can even reduce this to a single line (which only defines the environment variable for the scope of the command):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ GIT_CREDENTIALS='https://octocat:ilovegit@github.com' antora antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using the Windows command prompt, you need to define the environment variable using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "set"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "C:\\> set \"GIT_CREDENTIALS=https://octocat:ilovegit@github.com\" && antora antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This strategy is most useful in a CI environment where environment variables can be secured. It’s also a quick and informal way of passing credentials to Antora when generating the site on your own machine."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using the environment variable, multiple entries may be separated either by a comma or a newline character. For example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ GIT_CREDENTIALS='https://my-github-token:@github.com,https://oauth2:my-gitlab-token@gitlab.com' antora antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Exporting the environment variable saves you from having to type it each time you run Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To learn more about how to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.contents"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " playbook key, including how to set it directly in the playbook, consult the reference for the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git.credentials.contents key"
+                  }
+                ],
+                "kind": "xref",
+                "target": "git-credentials-path-and-contents.html#contents-key"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "git-credentials-environment-variable",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Pass credentials via an environment variable"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another option for passing credentials to the credential manager is to encode them directly in the URL listed in the playbook. Since this option doesn’t trigger the challenge-response workflow, Antora automatically assumes the repository is private."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This approach is not recommended for use in the playbook file directly as it exposes the credentials to anyone who can see the playbook file. However, you could use an Antora extension to programmatically insert these URLs into the playbook at runtime, which would keep them concealed. For example, you could use a placeholder to inject the real credentials, as described at the end of this section."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora will extract the credentials that precede the hostname (i.e., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "username:password@"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "token@"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and use them to perform authentication on your behalf if requested by the server."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here are examples for several popular git hosts (for which you’d substitute the placeholders in bold with the real values):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "content:\n  sources:\n  - url: https://"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":@github.com/org/project-docs\n  - url: https://oauth2:"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@gitlab.com/org/project-docs.git\n  - url: https://gitlab+deploy-token-"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN_ID"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@gitlab.com/org/project-docs.git\n  - url: https://x-oauth-token:"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOKEN"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@bitbucket.org/org/project-docs.git\n  - url: https://"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "USERNAME"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "APP_PASSWORD"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "@bitbucket.org/org/project-docs.git"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml (fragment)"
+              }
+            ]
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that the tokens are located in different locations in the URL depending on the git host. See "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OAuth2 formats"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://isomorphic-git.org/docs/en/authentication"
+              },
+              {
+                "kind": "text",
+                "value": " for more details. If you’re using a Bitbucket app password, notice you must include your own username (using the format "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "USERNAME:APP_PASSWORD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The drawback of this approach is that it requires putting the credentials directly into the playbook file. Unfortunately, Antora does not yet support resolving environment variables located in the playbook file. However, you can emulate this behavior by using a script to substitute references to an environment variable in the playbook file with its value."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s assume you have the following source defined in your playbook file:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "content:\n  sources:\n  - url: https://$GITHUB_TOKEN:@github.com/org-name/project-docs"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml (fragment)"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re using multiple private repositories that require the same credentials, you can instead define the credentials once under the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "git:\n  credentials:\n    contents: https://$GITHUB_TOKEN:@github.com"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml (fragment)"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can then use the following script to expand the references to the environment variable, which you may run in CI prior to invoking Antora:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ sed -i s/\\$GITHUB_TOKEN/$GITHUB_TOKEN/ antora-playbook.yml\n$ antora antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Despite this workaround, we still recommend using the credential store integration described earlier."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "encode-credentials-in-a-url-in-the-playook",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Encode credentials in a URL in the playook"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The git client used by Antora, isomorphic-git, provides a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pluggable credential manager"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/isomorphic-git/isomorphic-git/blob/v0.78.5/docs/plugin_credentialManager.md"
+              },
+              {
+                "kind": "text",
+                "value": " for looking up authentication credentials. Antora provides a default implementation of this plugin. As you’ve seen in previous sections, this implementation assumes Antora can access the credentials directly, in plain text, either via a file or environment variable. If this arrangement does not meet your security requirements, you can replace the built-in credential manager with your own."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To write a custom credential manager, export a JavaScript object that implements the following methods:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "configure ({ config, startDir })\nasync fill ({ url })\nasync approved ({ url })\nasync rejected ({ url, auth })\nstatus ({ url })"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "API for custom git credential manager"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The method that looks up the credentials is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fill"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". It must return either a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{ username, password }"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{ token }"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " data object. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "approved"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "rejected"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods are called when the credentials are approved or rejected by the server, respectively."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The optional "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configure"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "status"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods are specific to Antora, extending the capabilities of what a credential manager in isomorphic-git typically provides. If defined, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configure"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method is called each time Antora starts, providing an opportunity to perform initialization steps such as defining properties. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "status"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, if available, is used by Antora to look up whether authentication was requested for a given URL."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To activate your custom credential manager, first write your implementation in a dedicated JavaScript file and configure it as the default export:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports = {\n  async fill ({ url }) { ... },\n  async approved ({ url }) { ... },\n  async rejected ({ url, auth }) { ... },\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "custom-git-credential-manager.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then register the credential manager with the playbook as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "git:\n  plugins:\n    credential_manager: ./custom-git-credential-manager.js"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternately, you can configure the plugin to self register:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const git = require('isomorphic-git')\n\nif (!git.cores) git.cores = new Map()\ngit.cores.set('antora', new Map().set('credentialManager', {\n  async fill ({ url }) { ... },\n  async approved ({ url }) { ... },\n  async rejected ({ url, auth }) { ... },\n}))"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "custom-git-credential-manager.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that in this case, the plugin name is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "credentialManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " rather than "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "credential_manager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". That’s because the playbook builder automatically applies the camelCase transformation to the key name for us, which is the key name that git client expects."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using a self-registering credential manager, you pass it to Antora using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-r"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option instead of registering it with the playbook:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ antora -r ./custom-git-credential-manager.js antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’ve installed Antora globally using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "npm"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", you may run into problems getting your self-registering credential manager to work. Either you’ll encounter the error "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cannot find module 'isomorphic-git'"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or your custom credential manager won’t be called. To fix this problem, set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "NODE_PATH"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " environment variable to tell Node.js where to look for Antora’s dependencies:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ NODE_PATH=$(npm -g list --parseable true @antora/site-generator)/node_modules \\\n  antora -r ./custom-git-credential-manager.js antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The alternate solution is to install Antora locally (i.e., add the Antora packages to the dependencies in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package.json"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file and run "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "npm i"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since self-registering a plugin is more complex, we’ll proceed with the example of registering the plugin in the playbook."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Git offers a command named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "git credential"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that serves as a simple interface for storing and retrieving credentials from system-specific helpers in the same manner as git itself. It can also prompt the user for a username and password. We can use this command in a custom credential manager to allow Antora to delegate to git to look up credentials (and thus integrate with the user’s own git settings)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s start by creating a helper function that interfaces with the system git via "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "git credentials fill"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to retrieve the credentials for a URL:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "const { spawn } = require('node:child_process')\n\nfunction callGitCredentialFill (url) {\n  const { protocol, host } = new URL(url)\n  return new Promise((resolve, reject) => {\n    const output = []\n    const process = spawn('git', ['credential', 'fill'])\n    process.on('close', (code) => {\n      if (code) return reject(code)\n      const { username, password } = output\n        .join('\\n')\n        .split('\\n')\n        .reduce((acc, line) => {\n          if (line.startsWith('username') || line.startsWith('password')) {\n            const [key, val] = line.split('=')\n            acc[key] = val\n          }\n          return acc\n        }, {})\n      resolve(password ? { username, password } : username ? { token: username } : undefined)\n    })\n    process.stdout.on('data', (data) => output.push(data.toString().trim()))\n    process.stdin.write(`protocol=${protocol.slice(0, -1)}\\nhost=${host}\\n\\n`)\n  })\n}"
+                  }
+                ],
+                "language": "js",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "system-git-credential-manager.js (callGitCredentialFill function)"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next, let’s create a credential manager that uses this function to fill the credentials for a URL:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "// ...\n\nmodule.exports = {\n  configure () {\n    this.urls = {}\n  },\n  async fill ({ url }) {\n    this.urls[url] = 'requested'\n    return callGitCredentialFill(url)\n  },\n  async approved ({ url }) {\n    this.urls[url] = 'approved'\n  },\n  async rejected ({ url, auth }) {\n    this.urls[url] = 'rejected'\n    const data = { statusCode: 401, statusMessage: 'HTTP Basic: Access Denied' }\n    const err = new Error(`HTTP Error: ${data.statusCode} ${data.statusMessage}`)\n    err.name = err.code = 'HttpError'\n    err.data = data\n    if (auth) err.rejected = true\n    throw err\n  },\n  status ({ url }) {\n    return this.urls[url]\n  },\n}"
+                  }
+                ],
+                "language": "js",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "system-git-credential-manager.js (module.exports)"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s the code in all:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "const { spawn } = require('node:child_process')\n\nfunction callGitCredentialFill (url) {\n  const { protocol, host } = new URL(url)\n  return new Promise((resolve, reject) => {\n    const output = []\n    const process = spawn('git', ['credential', 'fill'])\n    process.on('close', (code) => {\n      if (code) return reject(code)\n      const { username, password } = output\n        .join('\\n')\n        .split('\\n')\n        .reduce((acc, line) => {\n          if (line.startsWith('username') || line.startsWith('password')) {\n            const [key, val] = line.split('=')\n            acc[key] = val\n          }\n          return acc\n        }, {})\n      resolve(password ? { username, password } : username ? { token: username } : undefined)\n    })\n    process.stdout.on('data', (data) => output.push(data.toString().trim()))\n    process.stdin.write(`protocol=${protocol.slice(0, -1)}\\nhost=${host}\\n\\n`)\n  })\n}\n\nmodule.exports = {\n  configure () {\n    this.urls = {}\n  },\n  async fill ({ url }) {\n    this.urls[url] = 'requested'\n    return callGitCredentialFill(url)\n  },\n  async approved ({ url }) {\n    this.urls[url] = 'approved'\n  },\n  async rejected ({ url, auth }) {\n    this.urls[url] = 'rejected'\n    const data = { statusCode: 401, statusMessage: 'HTTP Basic: Access Denied' }\n    const err = new Error(`HTTP Error: ${data.statusCode} ${data.statusMessage}`)\n    err.name = err.code = 'HttpError'\n    err.data = data\n    if (auth) err.rejected = true\n    throw err\n  },\n  status ({ url }) {\n    return this.urls[url]\n  },\n}"
+                  }
+                ],
+                "language": "js",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "system-git-credential-manager.js"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Finally, we need to register the credential manager with the playbook:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git:\n  plugins:\n    credential_manager: ./system-git-credential-manager.js"
+                  }
+                ],
+                "language": "yaml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Antora will now delegate to the system git to fill the credentials for a URL:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ antora antora-playbook.yml"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to register the system git credential manager conditionally, you can do so using an Antora extension that listens for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "playbookBuilt"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " event."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "module.exports.register = function () {\n  this.once('playbookBuilt', ({ playbook }) => {\n    if (playbook.env.GIT_CREDENTIAL_MANAGER) {\n      playbook.git.plugins.credentialManager = playbook.env.GIT_CREDENTIAL_MANAGER\n      this.updateVariables({ playbook })\n    }\n  })\n}"
+                  }
+                ],
+                "language": "js",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It’s left up to an exercise for the reader to store or erase the credentials based on whether they were approved or rejected by the server (hint: use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "approved"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "rejected"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " methods to invoke "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "git credential"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " again)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "get-credentials-from-git",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Get credentials from git"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configure a custom credential manager"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since 2.0, Antora no longer supports public/private key authentication over SSH using an SSH agent. Instead, Antora transparently converts git SSH URLs in the playbook to HTTPS URLs and uses the credential manager for authentication. That means you can use SSH URLs and HTTPS URLs interchangeably in your playbook file, but ultimately the git client will communicate over HTTPS. If, for some reason, this automatic translation doesn’t work, you’ll need to update your playbook file to use the correct HTTPS URL."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "ssh-auth",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "SSH authentication"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Private Repository Authentication"
+      }
+    ]
+  }
+}

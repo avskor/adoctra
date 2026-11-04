@@ -1,0 +1,72 @@
+= Output Directory
+
+The `dir` key specifies the directory where the generated site files are published.
+It provides a simpler way to use the default `fs` provider without having to set the more formal `destinations` and `provider` keys.
+
+[#default]
+== Default output directory
+
+The default output directory is [.path]_./build/site_.
+If `dir` isn't set, the site files are written to this directory (unless `destinations` are specified, which can alter this behavior).
+
+[#dir-key]
+== dir key
+
+The `dir` key is configured under the xref:configure-output.adoc#output-key[output key] in a playbook.
+The `dir` key specifies the directory where the generated site files are published.
+It accepts a relative or absolute filesystem path.
+include::partial$relative-path-rules.adoc[]
+
+The `dir` key can be used in combination with the xref:configure-output.adoc#destinations-key[destinations key].
+If the first destination is an `fs` provider and the `path` is not specified, it inherits the value of `dir` key.
+Otherwise, the `dir` key acts as an additional `fs` destination.
+When the output directory is specified from the CLI using the xref:cli:options.adoc#to-dir[--to-dir option], the behavior is the same as if the `dir` key is set in the playbook.
+
+[#relative-path]
+=== Specify a relative path
+
+In <<ex-rel>>, the site will be published to a folder named [.path]_launch_ relative to the playbook file.
+
+.Assign a relative path to the dir key
+[#ex-rel,yaml]
+----
+output:
+  dir: ./launch
+----
+
+[#absolute-path]
+=== Specify an absolute path
+
+In <<ex-abs>>, the site will be published to [.path]_home/dev/docs-site/beta_, regardless of where the playbook is located.
+
+.Assign an absolute path to the dir key
+[#ex-abs,yaml]
+----
+output:
+  dir: /home/dev/docs-site/beta
+----
+
+[#clean-key]
+== Clean the output directory
+
+The `clean` key is optional and is deactivated (assigned the value `false`) by default.
+When it's assigned the value `true` in a playbook, it removes the path assigned to `dir` recursively before generating the site.
+
+.Activate the clean key
+[#ex-clean,yaml]
+----
+output:
+  clean: true # <.>
+----
+<.> `clean` is activated with the value `true` and deactivated with `false`.
+
+This key is only relevant for the filesystem (fs) provider.
+The key can be overridden per destination when using the `destinations` key.
+
+[WARNING#clean-warning]
+====
+Use this key with great care.
+For example, if you set `dir` to your [.path]_home_ directory and `clean` to `true`, you'll delete ALL of the folders and files in [.path]_home_.
+====
+
+The `clean` key can also be activated via the CLI using the xref:cli:options.adoc#clean[--clean option].

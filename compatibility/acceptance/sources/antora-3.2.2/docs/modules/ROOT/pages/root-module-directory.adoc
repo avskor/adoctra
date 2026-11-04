@@ -1,0 +1,82 @@
+= ROOT Module Directory
+
+[#root-dir]
+== What's a ROOT module directory?
+
+The [.path]_ROOT_ directory is an xref:module-directories.adoc#module-dir[optional module directory].
+A [.path]_ROOT_ module directory is located in a xref:module-directories.adoc#modules-dir[_modules_ directory], and its name must be written in all uppercase letters.
+A [.path]_ROOT_ directory stores content source files in one or more of the xref:family-directories.adoc[family directories].
+
+[listing]
+----
+📒 repository
+  📂 docs <.>
+    📄 antora.yml <.>
+    📂 modules <.>
+      📂 ROOT <.>
+        📂 pages <.>
+          📄 index.adoc <.>
+          📄 another-page.adoc <.>
+        📄 nav.adoc <.>
+----
+<.> Content source root
+<.> Required [.path]_antora.yml_ file
+<.> Required [.path]_modules_ directory
+<.> [.path]_ROOT_ module directory
+<.> [.path]_pages_ family directory
+<.> A source file for the default component version start page
+<.> A source file for another page in the ROOT module
+<.> A navigation file
+
+If the [.path]_ROOT_ module directory is present, it must contain at least one xref:family-directories.adoc[family directory] with at least one source file.
+It can also contain an optional navigation file.
+
+The source files stored in a [.path]_ROOT_ directory become part of a <<root-module,ROOT module>> in a component version.
+We recommended that you create a [.path]_ROOT_ module directory because Antora applies special preset behavior to the publishable resources in a <<root-module,ROOT module>>.
+For example, the source file [.path]_index.adoc_ in the [.path]_pages_ directory becomes the xref:component-start-page.adoc#default-start-page[default start page] for a component version.
+Those familiar with the terminology of HTML web hosting will recognize this as the index page for a component version.
+
+Small documentation projects may never need more than a [.path]_ROOT_ module directory.
+However, as your project grows, you can easily add more module directories and gradually reorganize your source files.
+While the extra structure seems like overkill now, in the long run, you'll be glad you gave your content the space to grow.
+
+=== Implicit ROOT module
+
+If the content source root (i.e., the location of antora.yml) does not have a [.path]_modules_ directory, then the content source root is assumed to be the ROOT module.
+In other words, you can put the [.path]_pages_ directory and other family directories directly adjacent to the [.path]_antora.yml_ file.
+
+[listing]
+----
+📒 repository
+  📂 docs <.>
+    📄 antora.yml
+    📂 pages
+      📄 index.adoc
+----
+
+This alternate layout is available per content source root (per origin in Antora lingo).
+In other words, the content source roots that make up a distributed component version may use different layouts for the ROOT module.
+It does not have to be uniform for each content source root for distributed component version.
+
+If you later add the modules directory, then the files (e.g., pages) for the ROOT module must be moved to [.path]_modules/ROOT_.
+
+[#root-module]
+== What's a ROOT module?
+
+Source files that are stored in a [.path]_ROOT_ directory become part of a module named `ROOT` in a xref:component-version.adoc[component version].
+A ROOT module's pages become the top-level pages of a component version.
+In other words, unlike other modules, the name of the ROOT module does not get used in the generated site.
+
+You can think of the name "`ROOT`" as an alias for a blank module name (i.e., no module segment).
+Using this special value allows all modules to be siblings.
+
+It's important to carefully consider what files you store in a [.path]_ROOT_ module directory since there is a potential for them to conflict with files in the named module directories.
+Generally, the ROOT module doesn't use topic folders for this reason.
+
+[#where-root-name-is-used]
+== Where's the ROOT module name used?
+
+When you reference content that belongs to a ROOT module from another module or component version, you'll specify the module name `ROOT` in the xref:page:resource-id.adoc[resource IDs] for pages, attachments, images, examples, and partials.
+`ROOT` is always written in uppercase letters when it's specified.
+
+Since Antora considers the pages in a ROOT module to be top-level component version pages, the module name `ROOT` isn't displayed in the xref:module-url-segment.adoc#root-module-urls[module segment of its page URLs].

@@ -839,6 +839,8 @@ impl Execution<'_, '_> {
             return label;
         }
         let title = match &target.title {
+            // A short label does not show (so does not convert) the title.
+            Some(_) if !crate::resolve::styled_uses_title(&target.numbering, style) => Vec::new(),
             Some(crate::resolve::Title::Nodes(nodes)) => self.title(nodes),
             Some(crate::resolve::Title::Heading(key, nodes)) => self.heading(*key, nodes),
             Some(crate::resolve::Title::Header) => return self.header_label(),

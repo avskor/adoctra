@@ -1,0 +1,130 @@
+= Environment Variables
+
+Antora recognizes a number of environment variables that map to keys in the playbook.
+These environment variable can be used to configure Antora for different environments without having to modify the playbook file.
+
+== What is an environment variable?
+
+An environment variable is a persistent variable (i.e., key=value pair) in your terminal which becomes available to all commands you execute at the prompt.
+This facility allows the behavior of commands to be altered based on which environment they are running in.
+For example, you may use an environment variable in a continuous integration (CI) or publishing environment to enable a behavior which may not be enabled by default.
+
+You can output the current value of an environment variable using the `echo` command.
+In a Linux or macOS terminal, type:
+
+ $ echo $PATH
+
+In the Windows command prompt, type:
+
+ $ echo %PATH%
+
+And in Windows PowerShell, type:
+
+ $ echo $env:PATH
+
+Environment variables are not required for using Antora.
+You can configure these variables using the corresponding command line options or in your playbook with the matching keys.
+
+== Precedence
+
+Environment variables take precedence over keys defined in the xref:index.adoc[playbook file].
+However, the xref:cli:options.adoc[CLI option] for a key takes precedence over the environment variable for that key.
+
+If an environment variable (such as `URL` or `https_proxy`) is already set in your environment, and you wish to unset it temporarily when you run the `antora` command (i.e., a single invocation), you can do so using the `env` command:
+
+ $ env -u URL antora antora-playbook.yml
+
+Another option is to run the `antora` command in a subshell.
+Inside a subshell, you can unset an environment variable without it affecting the environment of your main shell or operating system.
+
+ $ (unset URL; antora antora-playbook.yml)
+
+Remember that environment variables take precedence over keys defined in your playbook file.
+So if you're getting results you don't expect, always check your environment variables to find out if they are the culprit.
+
+== Variables and formats
+
+The following table summarizes the environment variables you can use to control the operation of Antora.
+
+[cols="4,2,2,4"]
+|===
+|Variable |Format |Default |Learn More
+
+|[[cache-dir]]`ANTORA_CACHE_DIR`
+|String
+|[.path]_<user cache>/antora_
+|See xref:runtime-cache-dir.adoc[cache_dir key] and xref:cli:options.adoc#cache-dir[--cache-dir option]
+
+|[[failure-level]]`ANTORA_LOG_FAILURE_LEVEL`
+|String
+|Not set
+|See xref:runtime-log-failure-level.adoc[failure_level key] and xref:cli:options.adoc#failure-level[--log-failure-level option]
+
+|[[log-file]]`ANTORA_LOG_FILE`
+|String
+|Not set
+|See xref:runtime-log-destination.adoc#file-key[file key] and xref:cli:options.adoc#log-file[--log-file option]
+
+|[[log-format]]`ANTORA_LOG_FORMAT`
+|String
+|`pretty` if CI=true or terminal is interactive, otherwise `json`
+|See xref:runtime-log-format.adoc[format key] and xref:cli:options.adoc#log-format[--log-format option]
+
+|[[log-level]]`ANTORA_LOG_LEVEL`
+|String
+|`warn`
+|See xref:runtime-log-level.adoc[level key] and xref:cli:options.adoc#log-level[--log-level option]
+
+|[[log-level-format]]`ANTORA_LOG_LEVEL_FORMAT`
+|String
+|`label`
+|See xref:runtime-log-format.adoc#level-format-key[level_format key] and xref:cli:options.adoc#log-level-format[--log-level-format option].
+Only applies when the log format is `json`.
+
+|[[ci]]`CI`
+|Boolean
+|Not set
+|When set to `true`, signals to Antora that it's being run in a CI environment.
+Modifies default log format, suppresses stdout, and impacts behavior of xref:playbook:content-edit-url.adoc[edit page link] (when using default UI).
+
+|[[force-show-edit-page-link]]`FORCE_SHOW_EDIT_PAGE_LINK`
+|Boolean
+|Not set
+|When set to `true`, forces the xref:playbook:content-edit-url.adoc[edit page link] to be shown even if repositories is private (when using default UI).
+
+|`GIT_CREDENTIALS`
+|String
+|Not set
+|See xref:playbook:private-repository-auth.adoc[]
+
+|`GIT_CREDENTIALS_PATH`
+|String
+|Not set
+|See xref:playbook:private-repository-auth.adoc#custom-credential-path[git credentials file path] and xref:cli:options.adoc#git-credentials-path[--git-credentials-path option]
+
+|`GOOGLE_ANALYTICS_KEY`
+|String
+|Not set
+|See xref:playbook:site-keys.adoc#google-analytics-key[Google Analytics key]
+
+|`http_proxy`
+|String
+|Not set
+|See xref:playbook:network-proxy.adoc#http-proxy[http_proxy key] and xref:cli:options.adoc#http-proxy[--http-proxy option]
+
+|`https_proxy`
+|String
+|Not set
+|See xref:playbook:network-proxy.adoc#https-proxy[https_proxy key] and xref:cli:options.adoc#https-proxy[--https-proxy option]
+
+|`no_proxy`
+|Boolean
+|Not set
+|See xref:playbook:network-proxy.adoc#no-proxy[no_proxy key] and xref:cli:options.adoc#noproxy[--noproxy option].
+Note the name of the CLI option differs from the name of the environment variable and playbook key.
+
+|[[site-url]]`URL`
+|String
+|Not set
+|See xref:site-url.adoc[site url key] and xref:cli:options.adoc#site-url[--url option]
+|===

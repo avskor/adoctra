@@ -1,0 +1,61 @@
+= Named Module Directory
+
+== What's a named module directory?
+
+Named module directories are xref:module-directories.adoc#module-dir[optional module directories] located in a xref:module-directories.adoc#modules-dir[_modules_ directory].
+You can create as many named module directories as you need.
+
+.Named module directories
+[listing#ex-named]
+----
+📒 repository
+  📂 docs <.>
+    📄 antora.yml <.>
+    📂 modules <.>
+      📂 bears <.>
+        📂 pages <.>
+          📄 page-source-file.adoc <.>
+        📄 nav.adoc <.>
+      📂 get-started <.>
+        📂 pages
+          📄 page-source-file.adoc
+----
+<.> Content source root
+<.> Required [.path]_antora.yml_ file
+<.> Required [.path]_modules_ directory
+<.> A module directory named [.path]_bears_
+<.> [.path]_pages_ family directory
+<.> A source file for a page
+<.> A navigation file
+<.> A module directory named [.path]_get-started_
+
+A named module directory must contain at least one xref:family-directories.adoc[family directory] with at least one source file.
+A named module directory can also contain an optional navigation file.
+
+Antora uses a module's directory name to create a <<named-module,module's name>>.
+A module name is used for source-to-source referencing and as a URL segment for the publishable resources that belong to the module.
+Therefore, the name of the module directory:
+
+* Should be accessible to content writers
+* Can't contain characters that aren't permitted in AsciiDoc macros and directives
+* Shouldn't contain characters that inhibit web server portability, search engine optimization, or the best practices of your site's search solution
+* Should meet your site's accessibility requirements
+
+For the reasons listed above, it's important to carefully consider what you name your named module directories.
+See xref:module-directory-names.adoc[] to learn about the prohibited characters and recommended practices.
+
+[#named-module]
+== What's a named module?
+
+Source files in each named module directory become part of a named module in a xref:component-version.adoc[component version].
+The name of a module corresponds to the name of a module directory.
+For instance, source files stored in the [.path]_get-started_ module directory shown in <<ex-named>> will be assigned to the module `get-started`.
+
+////
+[#where-name-is-used]
+== Where's a module's name used?
+
+When you reference content that belongs to a named module from another module or component version, you specify the module's name in the xref:page:resource-id.adoc[resource IDs] for pages, attachments, images, examples, and partials.
+
+The module's name is also used as a xref:module-url-segment.adoc#named-module-urls[segment in the publishable resource URLs].
+////

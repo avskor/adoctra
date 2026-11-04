@@ -1,0 +1,676 @@
+= Extended Converter Use Cases
+:navtitle: Use Cases
+
+In xref:create-converter.adoc[], we only touched on what you can do with an extended converter.
+This page presents more realistic use cases that can be accomplished by extending and customizing the converter.
+Each section introduces a different use case and presents the code for an extended converter you can use as a starting point.
+
+TIP: An extended converter can access predefined or custom theme keys via the `theme` accessor.
+The segments in a key are always separated by an underscore character (e.g., `theme.title_page_font_color`).
+Consulting the value of theme keys allows the extra behavior provided by the extended converter to be styled using the theme.
+
+The source code for each use case on this page can be found in the {url-project-repo}/tree/{page-origin-refname}/docs/modules/extend/examples[docs/modules/extend/examples] directory in the Asciidoctor PDF repository.
+To use one of them, you can either download the script to your local disk or clone the Asciidoctor PDF repository.
+Once you have done so, refer to xref:use-converter.adoc[] to learn how to register and use it with Asciidoctor PDF.
+For example, to register and use the extended converter that allows you to theme admonitions by type, you'd use this command:
+
+ $ asciidoctor-pdf -r pdf-converter-admonition-theme-per-type.rb doc.adoc
+
+If you're using Asciidoctor PDF via the `asciidoctorj` command provided by AsciidoctorJ, you'll need to first require the `asciidoctor-pdf` gem.
+This step is necessary since the extended converter assumes that Asciidoctor PDF has already been required by the time it's required itself.
+
+ $ asciidoctorj -b pdf -r asciidoctor-pdf -r pdf-converter-admonition-theme-per-type.rb doc.adoc
+
+Refer to the sections below for details about how to use each extended converter.
+
+== Custom thematic break
+
+One of the simplest ways to extend the converter is to make a thematic break.
+For this case, we'll override the convert handler method for a thematic break, which is `convert_thematic_break`.
+The thematic break only consists of line graphics, no text.
+That means we can make use of graphics fill and stroke methods provided by Asciidoctor PDF or Prawn.
+
+.Extended converter with custom thematic break
+[,ruby]
+----
+include::example$pdf-converter-custom-thematic-break.rb[tags=**]
+----
+
+The return value of the convert handler method for a block node is ignored, which is why there's no clear return value in this override.
+If this were a convert handler method for an inline node, a return value would be required, which becomes the text to render.
+
+== Custom title page
+
+Every title page is as unique as the work itself.
+That's why Asciidoctor PDF gives you the ability to customize the title page by overriding the `ink_title_page` method in an extended converter.
+The `ink_title_page` method is called after the title page has been created and the background applied, so it can focus on writing content.
+In this method, you can choose to honor the `title-page` settings from the theme, or go your own way.
+The one rule is that the `ink_title_page` method *must not* start a new page.
+If it tries to start a new page, that request will be ignored and a warning will be generated.
+
+Let's create a custom title page that shows the document title and subtitle between two lines in the top half and a logo in the bottom half.
+
+.Extended converter with custom title page
+[,ruby]
+----
+include::example$pdf-converter-custom-title-page.rb[]
+----
+
+The methods `move_cursor_to` and `move_cursor` advance the cursor on the page where the next content will be written.
+The method `theme_font` applies the font from the specified category in the theme (with hyphens in the category name replaced by underscores).
+The method `stroke_horizontal_rule` draws a horizontal line using the specified color and line width.
+The method `ink_prose` is provided by Asciidoctor PDF to make writing text to the page easier.
+Finally, the method `convert` will convert and render the Asciidoctor node that is passed to it, in this case a block image.
+
+== Custom article title with details
+
+Documents rendered as articles (i.e., `doctype=article`) by Asciidoctor PDF don't have a title page by default.
+Instead the document title of the article, the article title, is shown on the first content page above the main content.
+
+The document details, which includes the author, date, and revision information (revnumber and revremark), are not shown in this mode.
+To insert them below the document title (similar to what the built-in HTML converter does), we can use an extended converter.
+To do so, we hook into the method `ink_general_heading`, which renders the document title of an article.
+Since this method is also responsible for rendering other headings (e.g. section titles), we allow it fall back to the default implementation unless it is processing the document title of an article.
+
+.Extended converter that renders the document details below the article title
+[,ruby]
+----
+include::example$pdf-converter-article-title-with-details.rb[]
+----
+<.> Fall back to default implementation unless handling the document title.
+<.> Render the document title.
+See the definition of `ink_document_title` for details.
+<.> Render the author, date, and revision information, if available.
+See the definition of `ink_document_details` for details.
+<.> Render a vertical gap between the header and body of the document.
+<.> The revnumber isn't available as a field of `doc`, so we have to retrieve it using the method `doc.attr` instead.
+Because we'll use the revnumber multiple times, we store it in a local variable.
+<.> Only include the additional line if there's actually content for it so we don't end up with unused vertical space.
+<.> Insert a vertical gap between the document title and the line with author, date, and revision information if the theme sets a size of that gap.
+Otherwise, don't insert a gap.
+<.> When we get here, a heading-specific style will already be set by the code that calls `ink_general_heading`.
+Since we don't want the document details to use the heading font, we first have to revert to the base font using the `:base` category.
+Then, we can apply the `heading_h1_details` category from the theme.
+<.> Build the revision information if the revnumber is set.
+If a revmark is specified, add it after the revnumber, separating the two by a vertical bar.
+<.> An em dash is put before the between author and date, but only if either are set.
+<.> An em dash is put before the revision, but only if it isn't empty and there's content in front of it.
+<.> Put the author, date, and revision information and their separators together using Ruby string interpolation and render the resulting string.
+
+== Custom part title
+
+A common need is to add extra styling to the title page for a part in a multi-part book.
+Since this is a specialized section element, there's a dedicated method named `ink_part_title` that you can override.
+The converter already allocates a dedicated page for the part title (so there's no need to worry about doing that).
+The extended converter can override the method that inks the part title to add extra decoration or content to that page.
+
+Let's customize the part title page by making the background orange, making the font white, aligning the title to the right, adding a line below it, and switching off the running content.
+
+.Extended converter with custom part title
+[,ruby]
+----
+include::example$pdf-converter-custom-part-title.rb[]
+----
+
+The method `ink_prose` is provided by Asciidoctor PDF to make writing text to the page easier.
+If you wanted, you could just use the low-level `text` method provided by Prawn.
+
+TIP: It's also possible to override the `start_new_part` method if all you want to do is called `page.imported` to turn off the running content.
+
+Now let's look at how to center the part title both vertically and horizontally.
+For this, we first need to compute the height of the title using the `height_of_typeset_text` helper, taking into account the vertical padding as well.
+Then, we use that height to position the cursor so that the title falls in the vertical center of the page.
+Next, we set the text alignment to center (which alternately could be done using the theme).
+Finally, we delegate to the super method to handle rendering the title in the new position.
+
+.Extended converter with centered part title
+[,ruby]
+----
+include::example$pdf-converter-centered-part-title.rb[]
+----
+
+To find all the methods available to an extended converter, consult the {url-api-docs}[API docs^].
+
+== Custom chapter title
+
+A similar need is to add extra styling to the title of a chapter, or to place it on a page by itself.
+The extended converter can override the method that inks the chapter title to add extra decoration or content to that page, then insert a page break afterwards.
+
+.Extended converter with custom chapter title
+[,ruby]
+----
+include::example$pdf-converter-custom-chapter-title.rb[]
+----
+
+TIP: It's also possible to override the `start_new_chapter` method if all you want to do is called `page.imported` to turn off the running content.
+
+== Chapter image
+
+As another way to customize the chapter title, you may want to add an image above the chapter title if specified.
+Once again, the extended converter can override the method that inks the chapter title and use it as an opportunity to insert an image.
+
+.Extended converter with chapter image
+[,ruby]
+----
+include::example$pdf-converter-chapter-image.rb[]
+----
+
+The path to the image is controlled using the `image` block attribute on the chapter.
+
+[,asciidoc]
+----
+[image=gears.png]
+== Chapter Title
+----
+
+== Per chapter TOC
+
+In addition to (or instead of) a TOC for the whole book, you may want to insert a TOC per chapter immediately following the chapter title.
+Inserting a TOC into the PDF is a two-step process.
+First, you need to allocate the space for the chapter TOC using the `allocate_toc` method.
+Then, you need to come back and ink the TOC after the chapter has been rendered using the `ink_toc` method.
+
+.Extended converter with TOC per chapter
+[,ruby]
+----
+include::example$pdf-converter-chapter-toc.rb[]
+----
+
+The chapter TOC can is activated by setting the `chapter-toc` attribute and the depth of the TOC is controlled using the `chapter-toclevels` attribute.
+For example:
+
+[,asciidoc]
+----
+= Book Title
+:chapter-toc:
+:chapter-toclevels: 2
+----
+
+== Colophon before TOC
+
+Some publishers prefer the colophon to precede the table of contents.
+Asciidoctor PDF provides support for this out of the box.
+The trick is to use the TOC macro to position the TOC at the end of the colophon.
+The converter will start the TOC on the next available recto page.
+If the publisher requires it, you can configure the colophon to be non-facing so it starts on the verso page that follows the title page.
+
+Use the following AsciiDoc source as a starting point:
+
+[,asciidoc]
+----
+= Book Title
+:doctype: book
+:media: prepress
+:toc: macro
+
+[colophon%notitle%nonfacing]
+= Colophon
+
+This is the text of the colophon.
+It will start on the verso page following the title page since it has the `nonfacing` option set.
+The title will be hidden on that page since it has the `notitle` option set.
+
+toc::[]
+
+== First Chapter
+
+This the the text of the first chapter.
+This chapter will start on the first recto page after the table of contents.
+----
+
+TIP: If you want the running content and/or page numbering to start at the first chapter, you'll need to set the `start-at` key to `after-toc` in the `running-content` and/or `page-numbering` keys in your theme.
+
+Instead of using the built-in support through configuration, you can achieve these customizations using an extended converter instead.
+To do so, you need to override the built-in `ink_toc` method and render the colophon before the TOC is rendered (i.e., inked).
+
+.Extended converter that modifies the placement of the colophon
+[,ruby]
+----
+include::example$pdf-converter-colophon-placement.rb[]
+----
+
+It's important to note that this converter, as written, assumes the colophon fits on a single page.
+More effort would be needed to accomodate a multi-page colophon using an extended converter only.
+Thus, you are better off using the configuration-based approach described above.
+
+== License page
+
+Let's say you want to insert a license page into your documents, but you don't want to have to put a block macro for it in the document source.
+You can use an extended converter to add new pages to the body of the document.
+
+Let's consider the case of reading the license text from a file and inserting it into the first page of the body.
+
+.Extended converter with license page
+[,ruby]
+----
+include::example$pdf-converter-license-page.rb[]
+----
+
+The method `start_new_page` will create a new page in the document.
+The `ink_prose` method provides a `normalize` option.
+When this option is false, it will preserve the newlines in the content, which is what we want in the case of license text.
+You may want to take this a bit further and allow the location of the license file to be configurable.
+
+== Paragraph numbering
+
+To help with content auditing or correlation, you may want to add a number in front of each paragraph.
+You can do this first by assigning a number to each paragraph in the document in the `init_pdf` method.
+Then, you can add this number in the left margin at the start of each paragraph by overriding the `convert_paragraph` method.
+
+.Extended converter with paragraph numbering
+[,ruby]
+----
+include::example$pdf-converter-numbered-paragraphs.rb[]
+----
+
+== No running content on empty page
+
+If a page is labeled as imported, Asciidoctor PDF will not add running content to that page.
+Thus, you can use an extended converter to turn off the running content on otherwise empty pages by marking them as imported.
+You can access this property from the pages attached to the PDF state or you can switch to each page in turn, as shown in the commented code.
+
+Instead of marking pages as imported, you can add them to the set of pages, by page number, on which the running content will not be added.
+These sets are stored in the `:header` and `:footer` keys of the `@disable_running_content` instance variable.
+This benefit of this approach is that you can control the header and footer independently.
+
+.Extended converter to turn off running content on empty page
+[,ruby]
+----
+include::example$pdf-converter-no-running-content-empty-page.rb[]
+----
+
+This converter does not attempt to detect pages that are empty to make the next page facing (i.e., empty verso pages).
+Therefore, you may want to add a filter to only turn off the running content on those pages.
+
+== Change bars
+
+If you have a preprocessor that adds change metadata to the content, you can use an extended converter to draw change bars to add a visual indicator in the rendered output.
+
+.Extended converter with change bars
+[,ruby]
+----
+include::example$pdf-converter-change-bars.rb[]
+----
+
+This converter will look for paragraphs like this one:
+
+[,asciidoc]
+----
+[.changed]
+This line has been changed.
+----
+
+== Avoid break after heading
+
+This functionality is already provided by the converter if you set the `breakable` option on section title or discrete heading or you set the `heading-min-height-after` theme key to `auto`.
+The code is presented here both to explain how it works and show how to do it programmatically (perhaps to tune it for specific headings).
+
+If an in-flow heading is followed by content that doesn't fit on the current page, and the `breakable` option is not set on the heading, the converter will orphan the heading on the current page.
+You can fix this behavior by overriding the `arrange_heading` method in an extended converter.
+
+This extended converter takes this opportunity to use `dry_run` to make an attempt to write content in the remaining space on the page after the heading.
+If no content is written, it advances to the next page before inking the heading (and its corresponding anchor).
+
+.Extended converter that avoids a page break after a heading
+[,ruby]
+----
+include::example$pdf-converter-avoid-break-after-heading.rb[]
+----
+<.> An optional optimization to skip this logic if the cursor is above the bottom third of the page.
+<.> Initiate a dry run up to the end of the current page.
+<.> Render the heading as normal.
+<.> Proceed with converting content until the end of the page is reached. Returns true if content is written, false otherwise.
+<.> Start new page before rendering heading if orphaned.
+
+== Additional TOC entries
+
+By default, the table of contents (TOC) only includes section references.
+If you want to include additional entries in the TOC, or to filter the sections that are included, you can extend the converter and override the `get_entries_for_toc` method.
+This method is invoked for each parent entry in the TOC, starting from the document.
+
+.Extended converter that adds additional entries to the TOC
+[,ruby]
+----
+include::example$pdf-converter-additional-toc-entries.rb[]
+----
+
+The depth of the TOC is automatically controlled by the `toclevels` attribute.
+Once this limit is reached, the converter will not call `get_entries_for_toc` for that parent (as none of its children will be included in the TOC).
+
+[#breakable-tables]
+== Breakable tables
+
+As explained on xref:ROOT:breakable-and-unbreakable.adoc[], tables are not configured with orphan prevention of the anchor and title by default.
+In order to activate this behavior, the `breakable` option must be specified on the table.
+
+To avoid having to add this option on every table, you can use an Asciidoctor extension to add it at runtime.
+This use case employs a tree processor rather than an extended PDF converter, though its behavior does impact conversion.
+
+.Extension that adds the breakable option to all tables
+[,ruby]
+----
+include::example$breakable-tables-tree-processor.rb[]
+----
+
+This same technique can be used to add the `breakable` or `unbreakable` option at runtime to any blocks that support `breakable` or `unbreakable`.
+See xref:ROOT:breakable-and-unbreakable.adoc[].
+
+== Narrow TOC
+
+Let's say you want to make the content on the TOC page(s) really narrow.
+You can do so by overriding the `ink_toc` method and squeezing the margins by applying extra indentation.
+
+.Extended converter with narrow TOC
+[,ruby]
+----
+include::example$pdf-converter-narrow-toc.rb[]
+----
+
+== Indent block image
+
+If you want all (or some) block images to be indented by an amount specified in the theme, you can override the convert handler method for block images, `convert_image`, and call super within an indented context.
+
+.Extended converter that indents block images
+[,ruby]
+----
+include::example$pdf-converter-image-indent.rb[]
+----
+
+The `indent` DSL method adds padding to either side of the content area, delegates to the specified code block, then shaves it back off.
+
+This converter works when a custom theme defines the `image-indent` key, as follows:
+
+[,yaml]
+----
+extends: default
+image:
+  indent: [0.5in, 0]
+----
+
+== Look for images in multiple dirs
+
+By default, an AsciiDoc converter only supports resolving images from a single location, the value of the `imagesdir` attribute.
+You can use an extended converter to have Asciidoctor PDF look in multiple locations until it finds the image.
+
+.Extended converter that resolve images from multiple locations
+[,ruby]
+----
+include::example$pdf-converter-multiple-imagesdirs.rb[]
+----
+
+If you need the converter to support more than two locations, update the list of attribute names in the extended converter.
+
+== Language label on code block
+
+The built-in HTML converter inserts a source language label in the upper right corner of the code block, which appears on hover.
+You can use an extended converter to imprint a fixed label in the PDF output.
+
+To add this label, you'll need to override the `arrange_block` method of the converter.
+This method arranges content blocks that have a border and/or background or support unbreakable, such as code blocks.
+The override needs to filter the arguments for a node that has the `source` style and `language` attribute.
+If the method detects that combination, it must decorate the callback passed via the `&block` argument to inject the extra logic.
+Otherwise, the method should delegate directly to `super`.
+
+When a code block is detected, the decorator should first call the block argument using `instance_exec`.
+Then, it should look to see if the extent is set and that this is not a dry run.
+The extent provides information about where the background and border of the code block started.
+The extended converter should move to that page and cursor, reapply the code block padding, and ink the label using the code font settings.
+
+.Extended converter that imprints a source langauge label on code blocks
+[,ruby]
+----
+include::example$pdf-converter-source-language-label.rb[]
+----
+
+The way this extended converter is written, the label is inked on top of the inked code block.
+You're free to customize where the label is placed.
+The float method allows you to move the cursor around in absolute space without impacting the flow of the content.
+The extent gives you the information about the location of the code block.
+
+[#wrap-code-blocks-around-image]
+== Wrap code blocks around an image float
+
+Asciidoctor PDF provides basic support for image floats.
+It will wrap paragraph text on the opposing side of the float.
+However, if it encounters a non-paragraph, the converter will clear the float and continue positioning content below the image.
+
+As a companion to this basic support, the converter provides a framework for broadening support for float wrapping.
+We can take advantage of this framework in an extended converter.
+By extending the converter and overriding the `supports_float_wrapping?` method as well as the convert handler for the block you want to enlist (e.g., `convert_code`), you can arrange additional content into the empty space adjacent to the floated image.
+In the following example, code (listing and literal) blocks are included in the float wrapping.
+
+.Extended converter that additionally wraps code blocks around an image float
+[,ruby]
+----
+include::example$pdf-converter-code-float-wrapping.rb[]
+----
+
+You can configure the gap next to and below the image using the `image-float-gap` key in the theme.
+
+[,yaml]
+----
+extends: default
+image:
+  float-gap: [12, 6]
+----
+
+== Make room for large tables
+
+Large tables may require extra space to arrange.
+Unlike HTML, PDF is a fixed-size canvas.
+That means large tables have to be squeezed to fit, which can sometimes cause them to overflow to other pages (and possibly even get cut off).
+
+Fortunately, PDF does not (practically) restrict the size of the canvas.
+That means we can allocate a larger page in order to get the table to fit.
+
+The PDF converter does not support changing the page size mid document.
+However, what it does allow you to do is import pages with any page size from another PDF.
+That means we can extend the converter in order to render the table in another document with a custom page size, then import those pages back into the main PDF.
+That's what the extended converter below does.
+
+.Extended converter that supports large tables
+[,ruby]
+----
+include::example$pdf-converter-large-tables.rb[]
+----
+
+In the overridden `convert_table` method, we first detect whether the table has either the `page-size` or `page-layout` attributes set, which effectively flags it as a large table.
+Then, we use the Asciidoctor API to convert the table in a separate document with that page size and/or layout.
+We mark that document as `:scratch` to avoid processing the same table again.
+Next, we grab the pages from the resulting PDF and import them back into the current PDF.
+Some additional work must be done with attributes to ensure the scratch document has access to the same environment as the main document.
+
+Here's how you would mark up a table to activate this functionality.
+
+[,asciidoc]
+----
+\ifdef::backend-pdf[]
+[%autowidth,cols=8,page-size=A2,page-layout=landscape]
+|===
+// table cells here
+|===
+\endif::[]
+----
+
+The page size can be any value accepted by the `pdf-page-size` document attribute.
+The page layout can be landscape or portrait.
+Note that we're allowing the converter to set the column widths automatically.
+You still have the option to set explicit width ratios, though the numbers must be greater than 0.
+
+== Theme table using roles
+
+The converter only supports custom roles on paragraphs and phrases.
+You can use an extended converter to add this capability to tables.
+
+.Extended converter that supports a custom role on a table
+[,ruby]
+----
+include::example$pdf-converter-table-role.rb[]
+----
+
+This extended converter allows you to specify any theme key on the custom role that's supported for tables.
+The role must be defined under a special role name `<table>` (to avoid clashing with other role names).
+Here's an example of a custom table role named `heavy` that increases the width of the table border and grid lines and increases the font size.
+
+[,yaml]
+----
+extends: default
+role:
+  <table>:
+    heavy:
+      border-width: 1.5
+      grid-width: 1.5
+      font-size: 12.5
+----
+
+You apply this role to a table by prepending `.heavy` to the first positional attribute in the block attribute line above the table.
+
+[,asciidoc]
+----
+[.heavy,cols=2*]
+|===
+|big
+|data
+|===
+----
+
+As written, the extended converter only supports the first role on the table.
+It could be enhanced to support an arbitrary number of roles, with each successive role cascading (like CSS).
+
+TIP: You can use the technique shown in this extended converter to add role-based theming to any other block type recognized by the theme (e.g., code, sidebar, etc).
+
+== Theme admonition per type
+
+Similarly to the custom table role, we can use an extended converter to add support for theme keys per admonition type.
+
+.Extended converter that supports theme keys per admonition type
+[,ruby]
+----
+include::example$pdf-converter-admonition-theme-per-type.rb[]
+----
+
+This converter temporarily promotes keys under the `admonition-<type>` theme category to the `admonition` theme category, overriding any existing keys.
+The placeholder `<type>` represents the admonition type; caution, important, note, tip, or warning.
+
+Here's an example that shows how you'd use the theme to apply a border to the important admonition type when using this extended converter:
+
+[,yaml]
+----
+admonition:
+  important:
+    border-color: #BF0000
+    border-width: 1
+    column-rule-width: 0
+    padding: 12
+----
+
+== Multiple columns
+
+Starting with Asciidoctor PDF 2.1, this converter provides built-in support for multiple columns.
+This feature is available when the doctype is article or manpage, but not book.
+The columns get applied to the body of the document, which excludes the document title and TOC, if present.
+
+The Asciidoctor PDF converter also provides the framework for making multi-column layouts in an extended converter.
+This framework is accessible via the helper method `column_box`.
+To make a multi-column layout, you put statements that ink content inside a code block and pass it to the `column_box` method as follows:
+
+[,ruby]
+----
+column_box [bounds.left, cursor], columns: 2, width: bounds.width, reflow_margins: true do
+  ink_prose 'left column'
+  bounds.move_past_bottom
+  ink_prose 'right column'
+end
+----
+
+If you want a multi-column layout for a specific chapter or section, you can override the `traverse` method, look for the section you want to arrange, and wrap the call to `super` in a `column_box` enclosure.
+
+== Access page number from inline macro
+
+Although not an extended converter, this use case uses information from the converter in much the same way.
+In this case, we're interested in retrieving the page number and inserting it into the content.
+
+Let's create an inline macro named `pagenum` that inserts the current page number into the document when the macro is converted.
+
+.inline-pagenum-macro.rb
+[,ruby]
+----
+include::example$inline-pagenum-macro.rb[]
+----
+
+Here's how this macro would be used.
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+
+You're looking at page number pagenum:[].
+----
+
+We can build on this extension to show the start page of the current section by adding support for a scope parameter.
+We can also have it show the page number label instead of the physical page number by subtracting the start page number (which is stored on the index catalog).
+
+.advanced-inline-pagenum-macro.rb
+[,ruby]
+----
+include::example$advanced-inline-pagenum-macro.rb[]
+----
+
+The macro can now be used to show the page number label for the current section:
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+
+== Chapter A
+
+You're reading a section that begins on page pagenum:[section].
+----
+
+Taking inspiration from this extension, we develop another inline macro named `pageref` that resolves the page number of the closest parent section of a reference.
+
+.inline-pageref-macro.rb
+[,ruby]
+----
+include::example$inline-pageref-macro.rb[]
+----
+
+The only caveat of this extension is that it has to use a two-phase conversion.
+In other words, it has to convert the document a second time to resolve any forward references.
+That's because the page number of a section is not known until it is rendered.
+And not all sections are rendered until the first conversion is complete.
+
+Here's how the `pageref` macro would be used:
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+
+== Chapter A
+
+Content.
+
+== Chapter B
+
+Refer to <<_chapter_a>> on page pageref:_chapter_a[].
+----
+
+== Border in page margins
+
+You can use an extended converter to emulate the "`Page Border`" and "`Surround Header`" feature of Word from Microsoft Office.
+This can be accomplished using the `stroke_horizontal_rule` and `stroke_vertical_rule` helper functions to draw lines in the margins of the page.
+
+You can find the code, description, and a screenshot of the result in the following blog post:
+
+https://shumpei-tanaka.github.io/en/posts/2024-11-23-asciidoc-page-border-in-margin/
+
+The code is also stored in the following git repository:
+
+https://github.com/Shumpei-Tanaka/asciidoc-borderinmargin
+
+== Resources
+
+To find even more examples of how to override the behavior of the converter, refer to the extended converter in the {url-infoq-template}[InfoQ Mini-Book template^].

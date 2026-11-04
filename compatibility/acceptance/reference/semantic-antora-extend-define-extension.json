@@ -1,0 +1,568 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "An Antora extension is an exported JavaScript function named "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "register"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Antora invokes the function as soon as the generator starts (after the playbook is built). This function will typically add event listeners that listen for "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "generator events"
+              }
+            ],
+            "kind": "xref",
+            "target": "generator-events-reference.html"
+          },
+          {
+            "kind": "text",
+            "value": ". The event listeners hook into the lifecycle of the Antora generator to do the bulk of the work of the extension."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To define an extension, start by creating a new JavaScript file (herein: "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "extension file"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). We’ll name this extension "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "my-extension.js"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": [
+              "path"
+            ]
+          },
+          {
+            "kind": "text",
+            "value": ". In the extension file, create a function and assign it to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "register"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " property of the module’s exports. We refer to this export as the register function. Exporting the function allows Antora to access it."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "'use strict'\n\nmodule.exports.register = () => {\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "It’s good practice to start your extension file with the statement "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "'use strict'"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". This statement enables strict mode across all versions of Node.js. "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Strict mode"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode"
+          },
+          {
+            "kind": "text",
+            "value": " activates a restricted variant of JavaScript that catches common programming errors. We’ll exclude it from the remaining examples in this area of the documentation, but assume it’s ever present."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "You can split out the function definition from the export statement, if you prefer that style."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "const register = () => {\n}\n\nmodule.exports = { register }"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Alternately, you can define your extension as a "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class-based extension"
+              }
+            ],
+            "kind": "xref",
+            "target": "class-based-extension.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This example defines the register function using the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "arrow function"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions"
+          },
+          {
+            "kind": "text",
+            "value": " syntax. You can also use the more formal "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "function () {}"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " syntax, which you’ll need to do in order to access the generator context."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Put the script in your playbook repository. Later, you can publish it to a package repository such as npmjs.com to share it between different sites or branches."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "So far, our extension doesn’t actually do anything. Since the register function is a kind of listener, you can use it as an opportunity to perform an action immediately after the playbook is built. Let’s use it to say hi."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = () => {\n  console.log('Hello from Antora!')\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "While that’s a fun trick, it’s not really what we’re after. What we want to do is tie deeper into the mechanics of the generator so we can do some real work, perhaps even modify the content that Antora is processing. For that, we need to grab the generator context."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If the register function can be bound, meaning it’s defined using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "function"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " keyword or equivalent, Antora will bind the generator context to its "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " keyword. The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " keyword is one way the extension can access the generator context."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = function () {\n  this.on(...)\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Alternately, if the function accepts the generator context as the first parameter (using any name that begins with a letter), Antora will pass it as the first argument of the function instead of binding it to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " keyword."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = (context) => {\n  context.on(...)\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js without binding"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The generator context is what you use to register event listeners. Before we get there, let’s look at the optional parameter for accessing context variables."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The first positional parameter of the register function (or the second, if the function declares the generator context as the first parameter) is an object of context variables. This object includes the playbook and extension config. You should use "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "object destructuring"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment#object_destructuring"
+          },
+          {
+            "kind": "text",
+            "value": " to pick individual variables out of this object."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "All event listeners can retrieve the playbook, but you might need it earlier when registering listeners. Here’s how you can access the playbook from the register function:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = function ({ playbook }) {\n  console.log(`Antora is building the ${playbook.site.title}.`)\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "my-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Now, let’s now "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "register our extension"
+              }
+            ],
+            "kind": "xref",
+            "target": "register-extension.html"
+          },
+          {
+            "kind": "text",
+            "value": ", then "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "add event listeners"
+              }
+            ],
+            "kind": "xref",
+            "target": "add-event-listeners.html"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Define an Extension"
+      }
+    ]
+  }
+}

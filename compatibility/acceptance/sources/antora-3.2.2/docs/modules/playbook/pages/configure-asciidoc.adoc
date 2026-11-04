@@ -1,0 +1,48 @@
+= AsciiDoc Keys
+
+The playbook keys configured under `asciidoc` apply attributes, Asciidoctor extensions, and additional behavior to the AsciiDoc processor.
+
+[#asciidoc-key]
+== asciidoc key
+
+The `asciidoc` key specifies the attributes that are assigned and made available to all of the site's pages.
+It also registers Asciidoctor extensions and activates additional AsciiDoc syntax error reporting features.
+
+.antora-playbook.yml
+[,yaml]
+----
+asciidoc: # <.>
+  sourcemap: true # <.>
+  attributes: # <.>
+    table-caption: ~ # <.>
+  extensions: # <.>
+  - ./lib/custom-block.js # <.>
+----
+<.> Optional `asciidoc` key
+<.> Optional `sourcemap` key
+<.> Optional `attributes` key
+<.> Defined built-in AsciiDoc attribute
+<.> Optional `extensions` key
+<.> Path to a local extension script
+
+[#asciidoc-reference]
+== Available AsciiDoc keys
+
+[cols="3,6,1"]
+|===
+|AsciiDoc Keys |Description |Required
+
+|xref:asciidoc-attributes.adoc[attributes]
+|Accepts a map of built-in, custom, and page attributes that are applied to and made available to all of the site's pages.
+|No
+
+|xref:asciidoc-extensions.adoc[extensions]
+|Accepts a list of Asciidoctor extensions.
+Depending on the capabilities of the extension, the extension will either be registered globally or be scoped to the AsciiDoc processor instance for a page.
+|No
+
+|xref:asciidoc-sourcemap.adoc[sourcemap]
+|When `true`, provides additional file and line number information about AsciiDoc blocks to Antora's logger and Asciidoctor extensions.
+The default value is `false`.
+|No
+|===

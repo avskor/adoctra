@@ -1,0 +1,110 @@
+= Name Key
+
+A component name is defined by assigning a value to the `name` key.
+
+== What's a component name?
+
+A [.term]*component name*, also called [.term]*name*, is the value assigned to the `name` key in a component version descriptor file ([.path]_antora.yml_).
+A component name typically represents the name of a project, library, service, etc., such as `fauna`, `rudder`, `nrepl`, etc.
+The value of a `name` key, in combination with the value of a `version` key, defines a xref:component-version.adoc[component version].
+
+[#usage]
+=== How Antora uses name
+
+The component name is fundamental to many of Antora's operations.
+Antora uses the name:
+
+* as the xref:how-antora-builds-urls.adoc#component[component segment] in page and asset URLs, unless <<root-component,the name of the component is _ROOT_>>.
+
+Additionally, if the component title key isn't set, Antora uses the name:
+
+* to xref:how-component-versions-are-sorted.adoc[sort component versions]
+* for display purposes in the reference UI, which includes the xref:navigation:index.adoc#component-menu[component version page menu], xref:navigation:index.adoc#component-dropdown[component version selector menu], and
+the first breadcrumb position on a component version's pages
+
+Note that component name is case sensitive.
+This means that if you have two components with the same name that only are different in case, Antora will treat them as different components.
+
+Content writers use the name as the xref:page:resource-id-coordinates.adoc#id-component[component coordinate in resource IDs] when referencing a resource in another documentation component.
+
+[#key]
+== name key
+
+The `name` key is required.
+It's set and assigned a value in a component version descriptor file ([.path]_antora.yml_).
+
+.antora.yml with defined component name
+[,yaml]
+----
+name: colorado # <.>
+----
+<.> At the beginning of a new line, type `name`, directly followed by a colon and a space (`:{sp}`).
+Then type the value you want assigned to `name`.
+
+[#requirements]
+=== name requirements
+
+The value assigned to the `name` key can contain letters, numbers, underscores (`+_+`), hyphens (`-`), and periods (`.`).
+To ensure portability between host platforms, letters used in the `name` value should be lowercase.
+
+IMPORTANT: We *strongly* encourage you to select a name that only consists of _lowercase_ characters.
+Component names, except for <<root-component,the special _ROOT_ value>>, are used in your site's URLs, therefore, using consistent casing makes the component name, and thus your site, more portable.
+That's because some file systems, and thus the web server running on it, can't distinguish between uppercase and lowercase characters.
+
+The value *cannot* contain spaces, forward slashes (`/`), or HTML special characters (`&`, `<`, or `>`).
+The value *cannot* be empty.
+
+See xref:component-title.adoc[] to learn how to display a name that contains spaces, uppercase letters, and other characters in your site's UI.
+
+[#root-component]
+=== ROOT component
+
+When a component's name is set to _ROOT_ and its version is set to `~` in its [.path]_antora.yml_, then that component will be placed directly at the site's root.
+It will not be placed inside a folder named `ROOT`.
+This is analogous to how modules named _ROOT_ are placed at the root of their component.
+
+Like other components, a _ROOT_ component must have an [.path]_antora.yml_ file and a [.path]_modules_ folder.
+Let's re-use the example from xref:module-url-segment#ex-modules[Module Segment in Page URLs]:
+
+[listing#ex-modules]
+----
+📒 repository
+  📄 antora.yml # name: ROOT and version: ~
+  📂 modules
+    📂 admin
+      📂 pages
+        📄 user-management.adoc
+      📄 nav.adoc
+    📂 ROOT
+      📁 images
+      📂 pages
+        📄 deploy.adoc
+        📄 index.adoc
+      📄 nav.adoc
+----
+
+But now let's instead assume that this component is named _ROOT_ instead of _hyperlemur_, and its version set to `~`.
+Here is what the URLs of the pages would be (assuming that `html_extension_style` is set to `default` in your playbook):
+
+[.path]_repository/modules/ROOT/pages/index.adoc_:: \https://my-company.com/index.html (which means it will also be found at \https://my-company.com)
+[.path]_repository/modules/ROOT/pages/deploy.adoc_:: \https://my-company.com/deploy.html
+[.path]_repository/modules/admin/pages/user-management.adoc_:: \https://my-company.com/admin/user-management.html
+
+Because both the component name _ROOT_ and the module name _ROOT_ are excluded from URLs, the pages in the _ROOT_ component's _ROOT_ module live directly at your site's root, with [.path]_root_component/modules/ROOT/pages/index.adoc_ serving as the site's home page.
+That means that the index.adoc page in the ROOT module of the ROOT component acts as the site start page *without* having to specify it (no additional configuration is required).
+
+If the ROOT component were to be versioned (i.e., have a non-empty version), then the files in that component version would be placed inside the version folder at the root of the site.
+
+[CAUTION]
+Because the _ROOT_ component's name does not appear in URLs, its modules are effectively scoped under your site's root.
+This means it's possible for pages in the _ROOT_ component to conflict with pages in a named component.
+For instance, the file [.path]_modules/xyz/pages/index.adoc_ in the versionless _ROOT_ component and the file [.path]_modules/ROOT/pages/index.adoc_ in the versionless _xyz_ component will both resolve to the URL \https://my-company.com/xyz/index.html, which is invalid.
+Therefore, you should be mindful of this situation when using modules in the _ROOT_ component.
+
+Since _ROOT_ is not a user-friendly title for a component, you should also set the title in [.path]_antora.yml_, as demonstrated in xref:component-title.adoc[Customize the Title].
+
+////
+Antora uses the `name` key when interpreting resource IDs and generating the URLs for the component version's pages.
+Unless the xref:component-title.adoc[title key is set], it uses `name` for sorting components in the component version selector and where ever the component's name is displayed in the reference UI, which includes the xref:navigation:index.adoc#component-menu[component version page menu], xref:navigation:index.adoc#component-dropdown[component version selector], and
+the first breadcrumb position on a component version's pages.
+////

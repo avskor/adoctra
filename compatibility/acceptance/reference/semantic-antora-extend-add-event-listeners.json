@@ -1,0 +1,614 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The bulk of the work of an Antora extension is done by the event listeners. An event listener is a function that’s called whenever an event it’s listening for is emitted. Any value returned by the listener is ignored (so any value is permitted). The register function is responsible for associating these listener functions with particular events. It does so by passing the event name and the listener function to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "on"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method of the generator context, called adding a listener. The "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "API of the generator context"
+              }
+            ],
+            "kind": "xref",
+            "target": "generator-context-reference.html"
+          },
+          {
+            "kind": "text",
+            "value": " follows that of a Node.js "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "EventEmitter"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://nodejs.org/api/events.html#events_class_eventemitter"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Let’s build on the extension we have defined by updating it to add an event listener. We’ll listen for the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "playbookBuilt"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "sitePublished"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " events, which are the first and last events to be emitted by the generator. This gives us the opportunity to roughly measure how long it took to generate and publish the site."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": "ex-listen",
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = function () {\n  this.on('playbookBuilt', () => {\n    console.time('generation time')\n  })\n  this.on('sitePublished', () => {\n    console.timeEnd('generation time')\n  })\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "time-generation-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Example 1"
+              }
+            ],
+            "kind": "xref",
+            "target": "#ex-listen"
+          },
+          {
+            "kind": "text",
+            "value": ", we use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "on"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method of the generator context to add two listeners, one for when the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "playbookBuilt"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " event is emitted and one for when the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "sitePublished"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " event is emitted. The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "on"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method returns the generator context, so we can use it to chain calls, as show in the previous example."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since built-in events are only emitted once, you can register the listener for a built-in event using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "once"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instead of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "on"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this.once('playbookBuilt', () => { ... })"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "once"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " provides a very slight optimization. It allows the event emitter to deactivate itself once there are no more listeners remaining."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "By default, listeners are invoked in the order they are added, even if they are async. To guarantee our timer starts before listeners from other extensions are called, our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "playbookBuilt"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " listener should be called before other listeners of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "playbookBuilt"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " event and our "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "sitePublished"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " listener should be called after other listeners of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "sitePublished"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " event. There are two changes we must make to get this to work."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "First, we can use the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "prependListener"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " method as an alternative to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "on"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to add the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "playbookBuilt"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " listener before other listeners that have already been associated with that event."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "module.exports.register = function () {\n  this.prependListener('playbookBuilt', () => {\n    console.time('generation time')\n  })\n  this.on('sitePublished', () => {\n    console.timeEnd('generation time')\n  })\n}"
+          }
+        ],
+        "language": "js",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "time-generation-extension.js"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Second, we should list our extension last in the playbook. Taking these two steps ensures our timer runs around all other listeners."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to time a specific stage of the generator, you can update this extension to listen to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "other generator events"
+                  }
+                ],
+                "kind": "xref",
+                "target": "generator-events-reference.html"
+              },
+              {
+                "kind": "text",
+                "value": ". To extend the timer all the way to when Node.js exits, you can listen for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exit"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event on the Node.js process object."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "process.on('exit', () => {\n  console.timeEnd('generation time')\n})"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To learn more about the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exit"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event and other events emitted by the Node.js process, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Node.js process events"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://nodejs.org/api/process.html#process-events"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The EventEmitter API, which the generator context inherits, also allows listeners to be retrieved, removed, and added again. That opens up the possibility that one extension can rearrange listeners added by other extensions, if the need arises. Extensions can also emit and listen for custom events using the same methods."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "To do something more interesting than time the execution and print messages to the console, we need to "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "use context variables"
+              }
+            ],
+            "kind": "xref",
+            "target": "use-context-variables.html"
+          },
+          {
+            "kind": "text",
+            "value": ". Let’s learn how that’s done next."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Add Event Listeners"
+      }
+    ]
+  }
+}

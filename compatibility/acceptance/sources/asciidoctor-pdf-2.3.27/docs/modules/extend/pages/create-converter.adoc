@@ -1,0 +1,32 @@
+= Create an Extended Converter
+:navtitle: Create a Converter
+
+== Register an extended converter
+
+Asciidoctor provides a mechanism for looking up a registered converter so it can be extended (i.e., used as a base class), then another mechanism for registering the extended converter in its place.
+Let's see how that looks.
+
+.extended-pdf-converter.rb
+[,ruby]
+----
+include::example$extended-pdf-converter.rb[]
+----
+
+When this script is required by Asciidoctor, it will replace the primary converter with the extended one automatically.
+As it stands, this converter doesn't do anything different than the primary converter because we haven't yet overridden any of its methods.
+
+== Override a method
+
+Let's start by overriding the thematic break (i.e., horizontal rule) to make it render like a red ribbon.
+
+[,ruby]
+----
+include::example$pdf-converter-custom-thematic-break.rb[tag=convert_thematic_break]
+----
+
+The return value of a convert handler for a block node is ignored.
+The return value of a convert handler for an inline node must be a string, which may contain the HTML-like markup that this convert supports.
+
+To find all the available methods to override, see the {url-api-docs}[API docs^].
+
+Now that you've made a change to the converter, let's xref:use-converter.adoc[learn how to activate it].

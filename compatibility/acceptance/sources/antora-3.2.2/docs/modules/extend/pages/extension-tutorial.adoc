@@ -1,0 +1,212 @@
+= Extension Tutorial
+
+If you understand how Antora extensions work, and have a solid grasp of the concepts, this page offers an end-to-end tutorial that walks you through an in-depth example to give you a full view and help you get the most out of this feature of Antora.
+
+In this tutorial, we'll create an extension that locates unlisted pages, which are pages not accessible from the navigation.
+The extension will first retrieve the navigation tree for each component version.
+It will then iterate through the pages in that component version and locate any pages that are not found in that navigation tree.
+If it finds any unlisted pages, it will log a warning for each.
+If configured to do so, it will also add those pages under a dedicated category in the navigation.
+
+This example gives you an opportunity to use much of the functionality available to extensions.
+We'll create the extension, register it in the playbook, configure it, and finally run Antora with it enabled.
+//In the future, we may go through the steps of publishing the extension to a package repository and consuming it
+Let's get started.
+
+== Create the extension
+
+To begin, you first need to create the extension.
+Let's name the extension file [.path]_unlisted-pages-extension.js_ and place it in the [.path]_lib/_ folder adjacent to the playbook so it's neatly organized in the playbook repository.
+//Q: should we name the folder ext instead?
+//Later on, we'll publish the extension to a package repository
+
+Populate the extension file with the source code shown in <<ex-ext>>.
+The next section will analyze what this code is doing.
+
+.lib/unlisted-pages-extension.js
+[#ex-ext,js]
+----
+include::example$unlisted-pages-extension.js[tags=**;!use-strict]
+----
+
+Let's pause to break down what this extension does, step by step.
+
+== How the extension works
+
+The extension starts by exporting the register function, which Antora calls immediately after requiring the extension file.
+The register function is bound to the generator context, which it can use to add listeners.
+The function accepts the config object for the extension (via object destructuring) as the sole argument.
+It goes on to pull several configuration keys out of the config object to customize its behavior.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=register,indent=0]
+----
+
+Next, the extension creates a named logger that it can use for reporting unlisted pages.
+It does so by calling `getLogger` on the context to create a named logger.
+This method, in turn, requires the `@antora/logger` module provided by Antora, then passes the name to its default function to create the child logger.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=logger,indent=0]
+----
+
+TIP: To add context to the log message, the `{ file: file.src, source: file.src.origin }` is typically passed as the merging object.
+
+The extension then adds a listener for the `navigationBuilt` event.
+Since the extension needs access to the navigation, this is the right opportunity in the generator to examine the navigation trees.
+To access the navigation and the pages, the listener retrieves the `contentCatalog` object from the context variables using object destructuring.
+The `navigationBuilt` event is emitted after the pages have been converted, which provides access to the navtitle for each page.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=on,indent=0]
+----
+
+When called, the listener for the `navigationBuilt` event retrieves the navigation tree for each component version from the content catalog, as well as some information about the component version for locating its pages.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=each-nav,indent=0]
+----
+
+To make it easier to find pages in the navigation, the extension provides a helper to create a lookup table for each entry in the navigation by URL, ignoring any duplicates.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=helper,indent=0]
+----
+
+The extension then uses this helper to create that lookup table for each navigation:
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=create-lookup-table,indent=0]
+----
+
+Now the real work begins.
+The extension returns to the content catalog to find all pages in the current component version, filtering that list to find only the publishable pages (i.e., pages which have an `out` property).
+It then checks to see if the page is found in the navigation by comparing resource URLs.
+If it can't find a match, it logs a warning using the logger and adds the page to the collector being returned.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=find-unlisted,indent=0]
+----
+
+Let's have a closer look at that warning message.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=warn,indent=0]
+----
+
+Notice that we're passing an object as the first argument and the message as the second.
+The keys of the object passed as the first argument get merged into the structured log message.
+Antora's logger provides a custom formatter for the `file` and `source` keys when outputting a pretty log message.
+The `file` key should point to an object with a `path` key and, if applicable, an `abspath` key.
+The simplest way to provide this content is to pass the `src` property of the virtual file, which has all the necessary information about where the file is located.
+The `origin` key should point to the `src.origin` property on the virtual file, which provides information about the content source.
+(Note that the information stored in in the `origin` property is meant to be read-only).
+You can also pass in an optional line number using the `line` key.
+The custom formatter will compile all this information into a formatted message to help the user locate the relevant file.
+
+Finally, if the extension finds unlisted pages, it adds them to a new category in the navigation with the special heading if configured to do so.
+
+[,js]
+----
+include::example$unlisted-pages-extension.js[tag=add-to-nav,indent=0]
+----
+
+The `addToNavigation` variable comes from the configuration key `add_to_navigation` on the extension entry.
+Antora automatically converts configuration key names to camelCase to make them consistent with variable naming conventions in JavaScript.
+
+.Remove unlisted pages
+[#remove-unlisted]
+****
+Instead of adding unlisted pages to the navigation, you could instead remove them from the site.
+This would be one way of limiting which pages get published.
+
+[,js]
+----
+unlistedPages.forEach((page) => contentCatalog.removeFile(page))
+----
+
+If you go this route, you'll probably want to remove the warning for unlisted pages, or downgrade it to the info or debug severity level.
+****
+
+Now that the extension is written, and you understand what it does, it's time to register it.
+
+== Register the extension
+
+To register the extension, you add a require request entry for it in the `antora.extensions` key in the playbook.
+In our case, the require request is the relative path from the playbook file to the extension file.
+
+[,yaml]
+----
+antora:
+  extensions:
+  - ./lib/unlisted-pages-extension.js
+----
+
+The extension will be called the next time you run Antora.
+However, since this extension is configurable, we'll want to use the more formal entry format to make room for those configuration keys.
+
+== Configure the extension
+
+To register an extension with configuration, you add a map entry for it in the `antora.extensions` key in the playbook.
+In doing so, you'll define the require request in the `require` key, making way for the other configuration keys.
+
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./lib/unlisted-pages-extension.js
+    add_to_navigation: true
+    unlisted_pages_heading: Orphans
+----
+
+If you want the extension to only be used when specified using the `--extension` CLI option, you'll need to set the `id` and `enabled` keys as well.
+
+[,yaml]
+----
+antora:
+  extensions:
+  - id: unlisted-pages
+    enabled: false
+    require: ./lib/unlisted-pages-extension.js
+    add_to_navigation: true
+    unlisted_pages_heading: Orphans
+----
+
+Now the extension will only run if you pass `--extension unlisted-pages` to Antora when you run it.
+
+TIP: When an extension accepts configuration, it's always wise to register it in the playbook, even if you don't want it to be enabled by default.
+
+== Use the extension
+
+All that's left is to use the extension when you run Antora.
+If the extension is enabled (as it is by default), all you need to do is run Antora and pass the playbook file, as you normally would:
+
+ $ antora antora-playbook
+
+If the extension is not enabled, you need to enable it when you run Antora using the `--extension` CLI option:
+
+ $ antora --extension unlisted-pages antora-playbook.yml
+
+If you have unlisted pages in your playbook, you'll see a warning message similar to this one:
+
+[.output]
+....
+[12:02:02.532] WARN (unlisted-pages-extension): detected unlisted page
+    source: /path/to/worktree (refname: main <worktree>, start path: docs)
+    file: modules/ROOT/pages/name-of-page.adoc
+....
+
+If the `add_to_navigation` key is true, you'll also find the page listed in the unlisted pages category at the bottom of the navigation tree.
+
+To fix the problem of an unlisted page, find the appropriate nav file and add an entry for the unlisted page, then run Antora again to check your work.
+
+Congratulations!
+You've made your first Antora extension.

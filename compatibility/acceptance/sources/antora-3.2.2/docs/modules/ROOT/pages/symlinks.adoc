@@ -1,0 +1,321 @@
+= Symlinks
+
+Although Antora requires that files adhere to a xref:standard-directories.adoc[standard hierarchy], it's possible to remap files at an existing location into this hierarchy using symlinks.
+This page introduces symlinks and explains how they can be used in Antora to help construct the content hierarchy.
+
+== What is a symlink?
+
+A [.term]*symlink*, short for symbolic link, is a shortcut to a file that itself acts like a file.
+In other words, it's a file that points to another file.
+The purpose of a symlink is to give a file a second location without having to duplicate it.
+A symlink can also point to a directory, which effectively links all the files under that directory to the new location.
+And a symlink can even point to another symlink, making it possible to give a file or directory even more locations.
+
+A symlink acts just like a regular file or directory, albeit with some additional metadata.
+Applications like Antora that come across a symlink will treat it just like any other file or directory.
+This property makes symlinks an ideal tool for remapping files, such as examples and partials, into the Antora hierarchy.
+Before we get into that, let's look at where symlinks are supported and how to create them.
+
+== Where are symlinks supported?
+
+While symlinks were once only common in Unix and Unix-like (*nix) operating systems, in modern computing, support for symlinks is universal.
+Symlinks can be used on a local filesystem and in a git repository, and they're translated between the two transparently.
+
+.Symlinks on Windows
+****
+In case you're wondering, yes, symlinks work on Windows too.
+Since Windows 10, symlinks (and not some imitation) are fully supported on Windows.
+See https://blogs.windows.com/windowsdeveloper/2016/12/02/symlinks-windows-10[Symlinks in Windows 10] to learn about the debut of this capability.
+
+Creating symlinks on Windows requires elevated privileges.
+Using the default settings, creating symlinks requires using an administrator console.
+Alternately, you must turn on https://learn.microsoft.com/en-us/windows/apps/get-started/developer-mode-features-and-debugging[Developer Mode^].
+For non-administrators, the user must be given the "`Create Symbolic Links`" privilege or be in a group that has been given that privilege.
+
+If you put symlinks in git, any git operations that manipulates the workspace, including `checkout`, `fetch`, and `pull`, must have the aforementioned privilege.
+
+See https://portal.perforce.com/s/article/3472[Enabling Symlinks on Windows^] to learn how to ensure this feature is available.
+****
+
+NOTE: A symlink in git is actually different than a symlink on the filesystem for the OS.
+In git, the symlink is a data file (with a special file mode) that stores a reference to relative path in the repository.
+When you check out the branch containing the symlink to a worktree (e.g., `git clone` or `git checkout`), that reference gets converted to a symlink on the local filesystem.
+But even if that doesn't happen (`core.symlinks` is not enabled), the symlink is created as a regular file that contains the path reference (just like it is in the git repository).
+
+== How do I make a symlink?
+
+A symlink can point to a file, a directory, or even another symlink.
+
+When you make a symlink, the relationship should always be expressed as a relative path.
+If you use an absolute path, it will bind the symlink to the layout of your local filesystem and won't translate into git.
+
+The command you use to make a symlink differs depending on whether you're using a Unix-like operating system or Windows.
+However, the result it produces is the same.
+
+=== *nix
+
+To make a symlink on a Unix-like operating system (aka *nix), you use the `ln` command with the `-s` flag.
+Here's an example of how to make a symlink to a sibling file:
+
+ $ ln -s target.adoc link.adoc
+
+In this scenario, [.path]_link.adoc_ is a symlink to (i.e., points to) the file [.path]_target.adoc_.
+
+This also works for directories (i.e., folders):
+
+ $ ln -s target link
+
+In this scenario, [.path]_link_ is a symlink to (i.e., points to) the directory [.path]_target_.
+The symlink acts as a directory.
+
+More often, you'll want to map to a location outside of the current directory.
+That means including one or more directory segments in the path of the symlink target.
+
+To make a symlink to a file in a directory, first navigate to the directory where you want it to be made.
+Then, specify the target as the path relative from that directory.
+This is going to look backwards, but it will create a pointer starting at link and pointing to target.
+
+ $ ln -s ../../path/to/target.adoc link.adoc
+
+In this scenario, [.path]_link.adoc_ is a symlink to (i.e., points to) the file [.path]_../../path/to/target.adoc_ relative to the directory containing the symlink.
+The target could be in a nested directory instead of a parent directory.
+
+You can do the same for directories:
+
+ $ ln -s ../../path/to/target link
+
+In this scenario, [.path]_link_ is a symlink to (i.e., points to) the directory [.path]_../../path/to/target_ relative to the directory containing the symlink.
+The symlink acts as a directory.
+
+=== Windows
+
+To make a symlink on Windows, you use the https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/mklink[mklink^] command.
+This command can be used to create a symlink to either a file or a directory.
+(Using a symlink is preferred over a hard link or a directory junction).
+
+To create a symlink to a file, the syntax is as follows:
+
+ mklink <link> <target>
+
+To create a symlink to a directory, the syntax is as follows:
+
+ mklink /d <link> <target>
+
+NOTE: In Windows, the order of the link and target is reversed when compared to the *nix `ln` command.
+
+Here's an example of how to make a symlink to a sibling file using `mklink`:
+
+ $ mklink link.adoc target.adoc
+
+In this scenario, [.path]_link.adoc_ is a symlink to (i.e., points to) the file [.path]_target.adoc_.
+
+Now let's create a symlink to a sibling folder.
+
+ mklink /d link target
+
+In this scenario, [.path]_link_ is a symlink to (i.e., points to) the directory [.path]_target_.
+The symlink acts as a directory.
+
+More often, you'll want to link to a location outside of the current directory.
+That means including one or more directory segments in the path of the symlink target.
+
+To make a symlink to a file in a directory, first navigate to the directory where you want it to be made.
+Then, specify the target as the path relative from that directory.
+This is going to create a pointer starting at link and pointing to target.
+
+ $ mklink link.adoc ..\..\path\to\target.adoc
+
+In this scenario, [.path]_link.adoc_ is a symlink to (i.e., points to) the file [.path]_..\..\path\to\target.adoc_ relative to the directory containing the symlink.
+The target could be in a nested directory instead of a parent directory.
+
+You can do the same for directories:
+
+ $ mklink /d link ..\..\path\to\target
+
+In this scenario, [.path]_link_ is a symlink to (i.e., points to) the directory [.path]_..\..\path\to\target_ relative to the directory containing the symlink.
+The symlink acts as a directory.
+
+== Symlinks in Antora
+
+Antora fully supports symlinks.
+That means you can use symlinks in the worktree and you can use symlinks in the git tree.
+(Yes, git supports symlinks, too).
+
+=== How does it work?
+
+When Antora encounters a symlink to a file, it doesn't attempt to preserve it as a symlink.
+Rather, it creates a regular virtual file like it would for any other file it encounters.
+We can say that within Antora's virtual file system, the file is duplicated, though it may end up being the only instance if it's the only part of the symlink under the Antora hierarchy.
+
+When Antora encounters a symlink to a directory, it reads all the files under the target directory and creates a regular virtual file for each one.
+In this case, Antora preserves the path of the symlink, then appends the path to the file from that point.
+As far as Antora is concerned, the file lives inside the directory represented by the symlink, as though the symlink were a real directory.
+We can say that within Antora's virtual file system, all the files under that directory are duplicated, though they may end up being the only instances of those file if the target directory is not part of the Antora hierarchy.
+
+The takeaway here is that by using symlinks, you can convince Antora that a file or directory is in a different location than it actually is.
+If it's a symlink to a file, Antora treats it as though you copied the file there, except you didn't.
+If it's a symlink to a directory, Antora treats it as though you copied the directory there recursively, except you didn't.
+
+Let's learn how to make use of this capability.
+
+=== Remap files using symlinks
+
+Let's consider one of the most common uses for the symlink feature in Antora.
+You have example files you want to include in your documentation, but those files don't live inside the standard Antora directory structure.
+In order to make them available to Antora, you need to remap them into the Antora hierarchy.
+
+Let's get a picture of that layout:
+
+[listing]
+----
+📒 docs
+  📄 antora.yml
+  📂 modules
+    📂 ROOT
+      📂 pages
+        📄 index.adoc
+      📄 nav.adoc
+📒 src
+  📒 main
+    📒 java
+      📒 org
+        📒 example
+          📄 MyClass.java
+----
+
+What we want to do is include the source file [.path]_MyClass.java_ (or some portion of it) in the page [.path]_index.adoc_.
+However, that's not currently possible since the source file is not under the Antora hierarchy.
+Symlinks to the rescue!
+
+Start by creating the [.path]_examples_ folder under the ROOT module where the symlink will live.
+
+[listing]
+----
+📒 docs
+  📄 antora.yml
+  📂 modules
+    📂 ROOT
+      📂 examples
+      📂 pages
+        📄 index.adoc
+      📄 nav.adoc
+📒 src
+  📒 main
+    📒 java
+      📒 org
+        📒 example
+          📄 MyClass.java
+----
+
+Next, let's create a symlink from the [.path]_examples_ folder to [.path]_MyClass.java_ to pull it into the Antora hierarchy.
+Start by switching to that directory in your terminal.
+
+ $ cd docs/modules/ROOT/examples
+
+Then, create the symlink using the command appropriate for your operating system.
+
+.*nix
+ $ ln -s ../../../src/main/java/org/example/MyClass.java MyClass.java
+
+.Windows
+ $ mklink MyClass.java ..\..\..\src\main\java\org\example\MyClass.java
+
+Here's the result.
+
+[listing]
+----
+📒 docs
+  📄 antora.yml
+  📂 modules
+    📂 ROOT
+      📂 examples
+        🔗 MyClass.java <.>
+      📂 pages
+        📄 index.adoc
+      📄 nav.adoc
+📒 src
+  📒 main
+    📒 java
+      📒 org
+        📒 example
+          📄 MyClass.java
+----
+<.> MyClass.java is a symlink to the MyClass.java file under src/main/java/org/example at the repository root
+
+TIP: If you're sourcing your documentation content from a git reference, commit the symlink to the git repository, just like you would any other file.
+
+You can now include the source file in the [.path]_index.adoc_ page using the following include directive:
+
+[source]
+----
+\include::example$MyClass.java[]
+----
+
+You may find it tedious to have to create a symlink for every file you want to include.
+That's where directory symlinks come into play.
+You can create a symlink to a directory, which effectively grafts that hierarchy into the Antora hierarchy.
+
+Instead of creating a symlink directory to the source file, let's create a symlink to the [.path]_src_ folder.
+Again, start by switching to the [.path]_examples_ directory.
+
+ $ cd docs/modules/ROOT/examples
+
+Then, create the symlink using the command appropriate for your operating system.
+
+.*nix
+ $ ln -s ../../../src src
+
+.Windows
+ $ mklink src ..\..\..\src
+
+Here's the result:
+
+[listing]
+----
+📒 docs
+  📄 antora.yml
+  📂 modules
+    📂 ROOT
+      📂 examples
+        🔗 src <.>
+      📂 pages
+        📄 index.adoc
+      📄 nav.adoc
+📒 src
+  📒 main
+    📒 java
+      📒 org
+        📒 example
+          📄 MyClass.java
+----
+<.> src is a symlink to the src folder at the repository root
+
+TIP: If you're sourcing your documentation content from a git reference, commit the symlink to the git repository, just like you would any other file.
+Even though the symlink points to a directory, in git, it's still treated like a file.
+
+You can now include the source file in the [.path]_index.adoc_ page using the following include directive:
+
+[source]
+----
+\include::example$src/main/java/org/example/MyClass.java[]
+----
+
+You can create symlinks for any type of resource, including examples, partials, pages, images, and so forth.
+Although the target of the symlink is usually outside of the Antora hierarchy, a symlink can point to a location within the Antora hierarchy if the intent is to duplicate the file or directory.
+
+== Limitations
+
+There are some limitations to be aware of when using symlinks in Antora.
+
+* The target of the symlink must exist.
+If Antora can't resolve the symlink, it will throw an error.
+* A symlink can't point to itself.
+If Antora detects this scenario, it will throw an error.
+* A symlink in a git repository can't point to a location outside the git repository.
+* A symlink in a git repository can't point to a location in another reference in the git repository.
+* The target of the symlink should be relative.
+Creating a symlink that targets an absolute path has undefined or non-portable behavior.
+
+Don't map a lot of files into the Antora hierarchy that aren't used in your documentation site.
+Doing so adds extra processing for Antora that can slow down your build.
+Be as surgical and precise as you can about which files you map into the Antora hierarchy.

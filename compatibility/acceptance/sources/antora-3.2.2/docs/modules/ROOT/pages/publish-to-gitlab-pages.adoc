@@ -1,0 +1,152 @@
+= Publish to GitLab Pages
+:url-gitlab: https://gitlab.com
+:url-gitlab-docs: https://docs.gitlab.com
+:url-gitlab-redirects: {url-gitlab-docs}/ee/user/project/pages/redirects.html
+:url-gitlab-ci-cd-concepts: {url-gitlab-docs}/ee/ci/introduction/
+:url-gitlab-ci-yml: {url-gitlab-docs}/ee/ci/yaml/gitlab_ci_yaml.html
+:url-gitlab-deploy-tokens: {url-gitlab-docs}/ee/user/project/deploy_tokens/
+
+{url-gitlab}[GitLab] is a DevOps platform that provides everything you need to publish your Antora-based documentation to the web.
+On this page, we'll explore how to use GitLab to publish your first documentation site using Antora.
+
+== GitLab overview
+
+Each GitLab project provides code hosting (a git repository), continuous integration (GitLab CI), and static web hosting with {url-gitlab-redirects}[redirect support] (GitLab Pages).
+GitLab is thus suitable to manage your entire Antora-based documentation site end-to-end, from source to published site.
+
+To use GitLab CI/CD for publishing an Antora site, you need:
+
+* A playbook project, which starts as a local git repository that stores the Antora playbook file.
+* Zero or more content projects, each with a git repository that hosts the content files.
+* A file named [.path]_.gitlab-ci.yml_ in the root of the git repository in your playbook project, which provides the CI/CD configuration.
+
+Before proceeding, we recommend studying core {url-gitlab-ci-cd-concepts}[CI/CD concepts] and the overview of the {url-gitlab-ci-yml}[.gitlab-ci.yml file] in the GitLab documentation.
+
+== Get started
+
+Begin by creating a new project on GitLab to host your playbook project.
+Follow the instructions on that page to push your local git repository to GitLab.
+If your playbook refers to other content source repositories, make sure to push those to GitLab as well.
+
+Next, you'll need to configure CI/CD.
+You only need to set up GitLab CI/CD in the default branch of your playbook repository.
+Antora will fetch content from other repositories that are declared in your playbook automatically.
+
+We'll start with a basic GitLab CI/CD configuration file that uses the Antora Docker image to build a site with Antora and publish it to GitLab Pages.
+
+..gitlab-ci.yml to build and deploy an Antora site
+[source,yaml]
+----
+image:
+  name: antora/antora
+pages:
+  stage: deploy
+  interruptible: true
+  script:
+  - antora --fetch --redirect-facility gitlab --to-dir public antora-playbook.yml
+  artifacts:
+    paths:
+    - public
+----
+
+Commit the [.path]_.gitlab-ci.yml_ file to git and push it to the remote repository.
+That will trigger the first CI/CD pipeline.
+If the pipeline succeeds, your site will be accessible at the URL listed on the Pages settings page.
+
+By default, GitLab Pages automatically enables the *Use unique domain* option, which adds a unique number to the URL where the site is hosted.
+Chances are, this is not what you want.
+It's not only an obscure URL, it can disrupt the use of a custom domain.
+Follow these steps to correct it:
+
+. Navigate to the menu:Deploy[Pages] menu option from the project repository.
+. De-select the *Use unique domain* option.
+. Click btn:[Save changes].
+
+The URL for the GitLab Pages site will now follow this pattern:
+
+ https://<group-name>.gitlab.io/<project-name>
+
+The site will be public even if the project is private.
+
+You can refer to the https://gitlab.com/antora/demo/docs-site[playbook project] for the Antora demo to see another example of building and publishing an Antora site using GitLab Pages that taps into a few additional capabilities of GitLab CI/CD.
+
+== Customize the build
+
+So far, we've relied on the Antora Docker image to run Antora in CI/CD.
+The Antora Docker image only provides the Antora core components.
+It does not include any extensions.
+
+While using the Antora Docker image is a convenient way to get up and running quickly, we strongly recommend declaring the dependencies of your site within your playbook project (or extending the Docker image).
+By doing so, you keep your build self-contained and portable.
+This is especially important if you rely on additional packages such as the *@antora/lunr-extension* and *asciidoctor-kroki*.
+
+Let's assume you have the following [.path]_package.json_ file in your playbook project that declares a dependency on Antora, the Antora Lunr Extension, and Asciidoctor Kroki.
+The `overrides` key is necessary to pin the version of Asciidoctor.js to the version used by Antora.
+
+.package.json
+[,json]
+----
+{
+  "name": "my-docs-site",
+  "description": "My Docs Site",
+  "private": true,
+  "devDependencies": {
+    "antora": "latest",
+    "@antora/lunr-extension": "1.0.0-alpha.13",
+    "asciidoctor-kroki": "latest-0"
+  },
+  "overrides": {
+    "asciidoctor-kroki": {
+      "@asciidoctor/core": "~2.2"
+    }
+  }
+}
+----
+
+You'll first want to run `npm i` to generate the [.path]_package-lock.json_ file and commit both files.
+
+With that configuration in place, you can modify your GitLab CI/CD configuration to be based on *node:{version-node-major}-alpine*, the base image used by Antora Docker.
+You'll then need to fetch the dependencies on each build since the base image does not provide Antora.
+
+..gitlab-ci.yml
+[source,yaml,subs=+attributes]
+----
+image:
+  name: node:{version-node-major}-alpine # <1>
+variables:
+  ANTORA_CACHE_DIR: .cache/antora # <2>
+  NODE_OPTIONS: --max-old-space-size=4096 # <3>
+before_script:
+- npm ci # <4>
+pages:
+  stage: deploy
+  interruptible: true
+  rules:
+  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH # <5>
+  cache:
+    paths:
+    - .cache # <2>
+  script:
+  - npx antora --fetch --redirect-facility gitlab --to-dir public antora-playbook.yml # <6>
+  artifacts:
+    paths:
+    - public # <7>
+----
+<1> The base image used by Antora Docker, which you can use if you're installing packages locally to the playbook project.
+<2> Stores the repository and UI bundle cache between runs.
+<3> (optional) Increases the memory reserved for the Node.js to allow Antora to process heavier builds.
+<4> Installs dependencies defined in the [.path]_package-lock.js_ file.
+Using `npm ci` instead of `npm i` ensures that the versions of your dependencies remain stable between runs.
+<5> Only run on the default branch for this repository.
+<6> Call Antora using `npx`, which will locate and run the `antora` command installed within the project.
+The `--fetch` flag ensure Antora fetches updates into the cache saved from a previous run.
+The `--redirect-facility` option makes use of the server-side facility provided by GitLab Pages for performing URL redirects.
+The `--to-dir` option ensures the site is published to the location where GitLab Pages looks for files to deploy.
+<7> The [.path]_public_ directory is the predefined folder for publishing as site to GitLab Pages.
+Note that this value must match the value of the `--to-dir` option passed to the Antora CLI.
+
+If any of your content repositories are private, you can define a `GIT_CREDENTIALS` CI/CD variable that holds the credentials to give Antora access to those repositories in this environment.
+You can set up {url-gitlab-deploy-tokens}[deploy tokens] in your content repository to give the CI/CD pipeline in your playbook project (and thus Antora) read-only access to those repositories.
+
+If you want Antora to fail the CI/CD pipeline if there are any warnings or non-fatal errors, add `--log-failure-level warn` to the `antora` command.
+Alternately, you can set the `runtime.log.failure_level` key in the playbook to make it a permanent setting.

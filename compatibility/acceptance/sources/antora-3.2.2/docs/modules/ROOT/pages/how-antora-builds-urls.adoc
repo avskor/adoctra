@@ -1,0 +1,212 @@
+= How Antora Builds URLs
+
+Antora builds the URLs for publishable resources--pages, attachments, and images--using information from resource IDs, the site URL, and URL settings in the site's playbook.
+
+[#site]
+== The site URL
+
+_User-defined._
+_Optional._
+
+A [.term]*site URL* identifies the location where your site is published.
+A site URL is defined by assigning an allowable value to the xref:playbook:site-url.adoc[site.url key in the playbook], xref:cli:options.adoc#site-url[--url command line option], or xref:playbook:environment-variables.adoc#site-url[URL environment variable].
+There are two types of allowable site URLs: absolute and root-relative.
+
+Antora is designed to generate sites that are viewable offline and from a local filesystem.
+For this reason, Antora doesn't require a site URL to build a site.
+However, when Antora doesn't detect an allowable site URL value, it automatically deactivates certain publishing features.
+See xref:playbook:site-url.adoc#site-url-features[Features that depend on the site URL] for a complete list of affected features.
+
+[#absolute-site]
+=== Absolute site URL
+
+An absolute site URL begins with _https://_ and is followed by the site domain or subdomain.
+
+.Absolute site URL
+[#fig-absolute]
+image::ROOT:site-url-absolute.svg[Diagram of an absolute site URL]
+
+If you're publishing your site to a subfolder, the site domain is followed by a subpath.
+
+.Absolute site URL with subpath
+[#fig-subpath]
+image::ROOT:site-url-subpath.svg[Diagram of an absolute site URL with a subpath]
+
+The [[subpath-def]][.term]*subpath*, also known as a *path segment* or *pathname*, represents the location from the root of the domain where the site managed by Antora is located.
+That is, if your site is published to a subfolder of your domain, then the absolute site URL should include this path.
+See xref:playbook:site-url.adoc#absolute-site-url[Configure an absolute site URL] and xref:playbook:site-url.adoc#subpath[When should the site URL include a subpath?] for more information about using an absolute site URL with a subpath.
+
+[#root-relative]
+=== Root-relative site URL
+
+A root-relative site URL begins with a forward slash (`/`) and, if more than one character, is the <<subpath-def,subpath>>.
+
+.Root-relative site URL
+[#fig-root]
+image::ROOT:site-url-root-relative.svg[Diagram of a root-relative site URL]
+
+See xref:playbook:site-url.adoc#root-relative-site-url[Configure a root-relative site URL] for more information.
+
+[#pathname]
+=== Site pathname
+
+_Computed._
+
+The site pathname represents an internal property, `site.path`, that Antora uses when a publishing feature requires URLs that are relative to the root of your site.
+Antora computes the site pathname based on the site URL.
+The site pathname value is typically empty except when an absolute site URL contains a subpath or the site URL is a root-relative site URL.
+If `site.url` is an absolute site URL that contains a subpath, Antora extracts the subpath and uses it as the site pathname.
+For example, using the absolute site URL in <<fig-subpath>>, Antora extracts the subpath, `/docs`, and assigns it to `site.path`.
+When the value assigned to `site.url` is a root-relative site URL, Antora extracts the entire value and uses it as the site pathname.
+Antora appends the <<resource,resource URLs>> to the site pathname to create a <<domain-relative,domain-relative URLs>> when a feature, such as redirects, requires the computed URLs be relative to the site domain or site root.
+
+== Right URL, right place
+
+Antora generates and manages all URLs in your site.
+Antora builds the <<resource,resource URLs>> for publishable resources as absolute paths relative to the <<pathname,site pathname>>.
+Then, the resource URLs are converted to URLs relative to the current page, the site URL (site-pathname/resource-URL), or absolute URLs (absolute-site-URL/resource-URL) depending on the context and feature in which the URL is used.
+
+[#resource]
+=== Resource URL
+
+_Computed._
+
+Antora computes a resource URL for each publishable resource in a site.
+A [[publishable-def]][.term]*publishable resource* is a source file that belongs to the pages, images, and attachments families.
+Resource URLs are computed as absolute paths relative to the <<pathname,site pathname>> so they are normalized across the application.
+
+A resource URL begins with a forward slash (`/`) and contains segments that Antora derives from the ID of a resource and the URL settings in the playbook.
+These segments often represent the component name, version, module, and resource file name.
+
+.Resource URL computed by Antora
+[#fig-resource]
+image::ROOT:resource-url.svg[Diagram of the resource URL computed by Antora]
+
+Certain playbook keys can modify, add, or remove portions of a resource URL.
+Some resource URL segments are added or absent if a resource isn't a page or it belongs to a _ROOT_ component, a component version with an empty version, or the _ROOT_ module.
+See <<segments>> for information about each segment and from where Antora extracts their values.
+
+Antora assigns the computed resource URL of a resource to the internal property, `pub.url`, where `pub` is the property group for properties that pertain to publishing.
+
+=== Relativized URL
+
+_Computed._
+
+Antora converts the references to resources into relative URLs.
+Antora refers to this translation as [.term]*relativize*.
+
+Where the relativize translation occurs depends on the resource, which can be a page, image, attachment, or UI resource.
+For xrefs and images in AsciiDoc, Antora calls relativize internally in the extended HTML converter for Asciidoctor.
+For navigation entries, breadcrumbs, pagination links, and the page version selector, the UI uses the relativize helper to convert a resource URL into a relative URL from the current page.
+For UI resources, the UI uses the `uiRootPath` variable to create a relative URL to the resource.
+
+There are two reasons Antora creates relative URLs to link to resources.
+First, it keeps the length of the URL as short as possible to curb the size of the generated HTML.
+More importantly, it ensures that the URL is portable between environments.
+It's a key reason why an Antora site works when viewed directly from the filesystem.
+The relative references don't rely on a web server to resolve the URL.
+Instead, they start from the current page and walk up and down the filesystem to the target resource, which works everywhere.
+For the same reason, it simplifies publishing because the site is not bound to a given domain or site root.
+
+[#domain-relative]
+=== Domain-relative URL
+
+_Computed_.
+
+Antora computes domain-relative URLs when creating rewrite rules for page aliases, component version start pages, and the latest version segment `redirect:to` and `replace` strategies.
+If a non-empty value is assigned to the site pathname, Antora prepends the site pathname to the resource URL.
+When the site pathname is empty, a resource URL is already equivalent to the domain-relative URL.
+For example, using the resource URL in <<fig-resource>>, and the site pathname `/docs`, Antora computes the domain-relative URL shown in <<fig-domain-relative>>.
+
+.Domain-relative URL computed by Antora
+[#fig-domain-relative]
+image::ROOT:domain-relative-url.svg[Diagram of a domain-relative URL computed by Antora]
+
+If the `site.url` key isn't set, Antora doesn't compute domain-relative URLs and the publishing features that require them are automatically deactivated at runtime.
+
+=== Absolute URL
+
+_Computed_.
+
+An absolute URL is the full URL for a publishable resource.
+To compute an absolute URL, Antora starts with an <<absolute-site,absolute site URL>> and appends a resource URL.
+For example, using the site URL in <<fig-subpath>> and resource URL in <<fig-resource>>, Antora computes the absolute URL shown in <<fig-pub-absolute>>.
+
+.Absolute URL computed by Antora
+[#fig-pub-absolute]
+image::ROOT:published-absolute-url.svg[Diagram of an absolute URL computed by Antora]
+
+<<fig-pub-absolute>> is an example of how a page's URL is displayed in the browser address bar or in the sitemap.
+Antora computes absolute URLs when generating sitemaps and computing the canonical URL for the meta tag in the head of each page.
+If the `site.url` key isn't assigned an absolute site URL, the publishing features that require absolute URLs are automatically deactivated at runtime.
+
+[#segments]
+== Resource URL segments
+
+The following sections describe each segment of a resource URL and from where Antora extracts the value of each segment.
+The segments of resource URLs for published pages are typically organized into the sequence shown in <<fig-page>>.
+
+.Resource URL segments for a published page
+[#fig-page]
+image::ROOT:page-url-segments.svg[Diagram of the page URL segments assembled by Antora]
+
+The resource URLs for images and attachments contain an additional family segment, `_images` or `_attachments`, respectively.
+The family segment follows the module segment as shown in <<fig-image>>.
+
+.Resource URL segments for a published image
+[#fig-image]
+image::ROOT:resource-url-segments-with-family.svg[Diagram of the resource URL segments for an image assembled by Antora]
+
+[#component]
+=== Component segment
+
+The component segment of the URL is the name of the component the published resource belongs to.
+When the resource belongs to the specially named `ROOT` component, the component segment is dropped from the URL.
+A component name is specified by the xref:ROOT:component-name-key.adoc[name key] in an xref:ROOT:component-version-descriptor.adoc[_antora.yml_ file].
+
+The <<resource,resource URL>> that Antora computes and assigns to the `pub.url` property of a resource always starts with this segment.
+
+[#version]
+=== Version segment
+
+The version segment of a URL is the actual version or symbolic version of the component version the published resource belongs to.
+The [.term]*actual version* is the value assigned to the xref:ROOT:component-version-key.adoc[version key] in a component version's xref:ROOT:component-version-descriptor.adoc[_antora.yml_ file] or to the `version` key for a content source that's specified in the playbook.
+All component versions have an actual version, though the version may be defined as empty.
+When a component version xref:ROOT:component-with-no-version.adoc[has an empty version], the version segment is dropped from the URLs of its resources.
+
+The [.term]*symbolic version* is an optional configuration setting that only applies to the version segment if the resource belongs to the latest version or latest prerelease version of a component.
+The symbolic version replaces the actual version in the URL.
+A symbolic version is defined using the `latest_version_segment` key or `latest_prerelease_version_segment` key in the playbook.
+The symbolic version doesn't apply to component versions that have an empty version; the version segment is always dropped from their resources`' published URLs.
+
+[#module]
+=== Module segment
+
+Antora derives the module segment from the xref:ROOT:module-directories.adoc#module[module directory name] where a resource's source file is stored.
+When the resource belongs to the specially named `ROOT` module, the module segment is dropped from the URL.
+See xref:ROOT:module-url-segment.adoc[] for examples and more information.
+
+[#family]
+=== Family segment
+
+The family segment only applies to the resource URLs of images and attachments.
+Image and attachment URLs include a family segment that's prepended with an underscore (`_`).
+For images, this segment is `_images`.
+For attachments, this segment is `_attachments`.
+The URLs for pages do not contain a family segment.
+
+[#relative-path]
+=== Relative path segment
+
+The relative path segment is derived from the family-relative path of the resource's source file.
+For pages, the _.adoc_ extension is dropped and replaced with _.html_ or the specified HTML extension style.
+The URLs for other resources maintain the original file extension, such as _.svg_ or _.pdf_.
+
+=== HTML extension
+
+The _.html_ extension and `html_extension_style` key only applies to the URLs of pages.
+By default, Antora appends the _.html_ extension to page URLs.
+The xref:playbook:urls-html-extension-style.adoc[html_extension_style] playbook key or xref:cli:options.adoc#html-extension[--html-url-extension-style option] modifies this behavior.
+The extension can be dropped (`drop`) or dropped and replaced with a forward slash (`indexify`).
+
+The URLs of non-page resources use the file extension of their source files, regardless of the value assigned to `html_extension_style`.

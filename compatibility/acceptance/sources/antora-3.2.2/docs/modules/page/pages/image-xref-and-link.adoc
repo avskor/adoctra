@@ -1,0 +1,128 @@
+= Resource Links From Images
+// URLs
+:url-element-id: {url-asciidoc}/attributes/id/
+:url-image-attributes: {url-asciidoc}/macros/image-ref/
+
+You can create a link from an image to a page, attachment, image, or element by assigning the `xref` attribute to an inline or block image macro.
+
+== Xref element attribute
+
+The `xref` element attribute can be set in the attribute list of block and inline image macros.
+The `xref` attribute is optional.
+It's structured and behaves the same way regardless of whether you assign it to a block image macro or inline image macro.
+
+The `xref` attribute accepts the resource ID of a publishable resource--a page, attachment, or image--as a value.
+
+.Set the xref attribute and assign it a resource ID
+[#ex-resource-base]
+----
+image::an-image.jpg[xref=version@component:module:family$file.ext]
+----
+
+It also accepts the ID of an element that's specified in the current page.
+The element ID must be prefixed with the hash symbol (`#`) when assigned to the `xref` attribute.
+
+.Set the xref attribute and assign is an element ID
+[#ex-element-base]
+----
+image::an-image.gif[xref=#fragment]
+----
+
+When your site is published and a visitor selects the embedded image, they'll be linked to the URL of the published resource or jump to the anchor in the current published page that corresponds to the specified element ID.
+
+The `xref` attribute in a named attribute.
+If you set positional attributes, such as alt text, width, or height, on the image macro, assign them in the attribute list before setting the `xref` or any other named attributes.
+
+.Optional positional and named attributes assigned to an image macro
+[#ex-attributes-base]
+----
+image:an-image.svg[The image alt text,xref=version@component:module:family$file.ext,title="A tooltip for the image"]
+----
+
+Positional and named element attributes are separated by commas in the attribute list of the image macros.
+
+[#page]
+== Link to a page from an image
+
+To reference a page from an embedded image, set the `xref` attribute in the attribute list, followed by an equals sign (`=`), and then the resource ID of the target page.
+How many of the target page's xref:resource-id-coordinates.adoc[resource ID coordinates] you need to specify depends on the component version and module of the target page in relation to the current page.
+
+.current-page.adoc
+[#ex-page]
+----
+image::console.svg[xref=modes.adoc] <.>
+----
+<.> The resource ID assigned to `xref` only specifies the file coordinate of the page because, for this example, let's assume the current page and target page belong to the same component version and module.
+
+The block image macro shown in <<ex-page>> will embed the image _console.svg_ into the current page and create a link from the image to the published URL of the target page.
+
+You can also xref:xref.adoc#id-fragment[append a fragment] to the end of the page's resource ID to link to an element within the page.
+In <<ex-fragment>>, a fragment that corresponds to the element ID `protocols` that's set in the content of [.path]_modes.adoc_ is appended to the end of the resource ID for [.path]_modes.adoc_.
+
+.current-page.adoc
+[#ex-fragment]
+----
+image::console.svg[xref=modes.adoc#protocols]
+----
+
+You can also link to an <<deep-link,element ID in the current page>>.
+
+[#attachment]
+== Link to an attachment from an image
+
+To reference an attachment from an embedded image, set the `xref` attribute in the attribute list, followed by an equals sign (`=`), and then the resource ID of the target attachment.
+Make sure the family coordinate, `attachment$`, is specified in the value assigned to the `xref` attribute.
+
+<<ex-attachment>> shows an inline image macro with three positional attributes set in the macro's attribute list, followed by the named `xref` attribute.
+The `xref` attribute is assigned the resource ID of an attachment.
+
+.current-page.adoc
+[#ex-attachment]
+----
+Select the image:red-dot.jpg[Red circle,40,40,xref=telemetry:attachment$flight-patterns.pdf]. <1> <2>
+----
+<1> Positional attributes are optional.
+If you do set one or more positional attributes on an image macro, assign them in the attribute list before setting `xref` or any other named attributes.
+In this example, the positional attributes `alt`, `width`, and `height` are set in the order accepted by the image macros.
+<2> The resource ID assigned to `xref` specifies the module, `attachment$`, and file coordinate of the target attachment because, for this example, let's assume the target attachment belongs to a different module than the current page.
+The `attachment$` coordinate is always required when the resource is an attachment.
+
+The inline image macro shown in <<ex-attachment>> will embed the image _red-dot.jpg_ into the current page and create a link from the image to the published URL of the target attachment.
+
+[#deep-link]
+== Deep link to an element in the current page from an image
+
+To reference an element in the current page, assign the ID of the element to the `xref` attribute.
+Prefix the element ID with the hash symbol (`#`) when you assign it to the `xref` attribute.
+<<ex-element>> shows a block image macro with an `xref` attribute assigned an element ID that corresponds to an ID on the current page.
+
+.current-page.adoc
+[#ex-element]
+----
+image::panorama.png[xref=#elevation] <.>
+
+The range can be traversed by Cottonwood Pass, Independence Pass, or Hagerman Pass.
+
+[#elevation] <.>
+== Pass elevations
+
+The passes usually open in late spring.
+----
+<.> Set the `xref` attribute in the attribute list, followed by an equals sign (`=`), the hash symbol (`#`), and then an element ID that corresponds to the ID assigned to an element in the current page.
+<.> An element ID set on and assigned to a section in the current page.
+
+The block image macro shown in <<ex-element>> will embed the image _panorama.png_ into the current page and create a link from the image to the beginning of the section _Pass elevations_ on the current page.
+
+[#link-self]
+== Link to the image itself to open it in its original size
+
+To allow opening an image in its original, unconstrained size (in HTML output), add the `link=self` attribute.
+
+[#ex-link-self]
+----
+image::panorama.png[link=self]
+----
+
+== Learn more
+
+Refer to the AsciiDoc documentation for {url-image-attributes}[additional image macro attributes^] and more information about {url-element-id}[element IDs^].

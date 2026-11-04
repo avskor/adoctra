@@ -1,0 +1,151 @@
+= Extension Helpers
+
+The generator context provides several utility methods that make writing extensions easier.
+These utility methods are called [.term]*helpers* because they help you to write extensions.
+
+== Access helpers
+
+The helpers are located on the generator context, which provides the xref:generator-context-reference.adoc[GeneratorContext API].
+Thus, to use the helpers, you need a reference to the generator context.
+
+There are two ways to get the generator context.
+If the listener functions are defined within the `register` function for the extension, they can access the generator context from the register function by way of variable scoping.
+Otherwise, the listener function can reference the generator context using the standard `this` keyword.
+The generator context is bound to the listener function when the listener function is registered.
+
+[#get-variables]
+== getVariables()
+
+One way to access context variables is to accept them via the first parameter of the register function or event listener function using object destructuring (e.g., `{ playbook }`).
+However, there may be situations where a context variable is only needed conditionally.
+To simplify the function signature, you can retrieve context variables directly from the generator context using the `getVariables` helper.
+
+Here's an example of how to access context variables from the generator context (bound to `this`) using the `getVariables` method:
+
+[,js]
+----
+const { playbook, contentCatalog } = this.getVariables()
+----
+
+Note that parameter destructuring is still the only way for the register function to access the config object for an extension.
+
+[#update-variables]
+== updateVariables(Object)
+
+The `updateVariables` helper method provides a means for adding or replacing context variables.
+The method accepts a single argument of type Object, where the keys of the object are the variable names and the values are the variable values.
+This method doesn't return a value.
+
+If you want to remove a variable, specify the value as `undefined`.
+Keep in mind that locked variables can't be replaced.
+
+Here's an example that shows how to replace the `playbook` and `siteCatalog` variables from a listener:
+
+[,js]
+----
+playbook = JSON.parse(JSON.stringify(playbook))
+siteCatalog = new Proxy(siteCatalog, {})
+this.updateVariables({ playbook, siteCatalog })
+----
+
+You can also use the `updateVariables` method to introduce new variables into the context.
+The site generator will not recognize or use these variables.
+However, other extensions, or listeners in the same extension, can use them.
+
+[#stop]
+== stop(Integer)
+
+The `stop` helper method provides a way to stop the operation of the generator using an orderly shutdown.
+This method accepts an optional exit code value and doesn't return a value.
+
+When called, this method causes the context to emit the `contextStopped` and `contextClosed` events.
+If any messages are logged that exceed the xref:playbook:runtime-log-failure-level.adoc[failure level threshold], Antora will exit with a non-zero exit code.
+Otherwise, Antora will exit with the specified exit code or, if no exit code is specified, a zero exit code (i.e., successfully).
+
+The `stop` helper is useful if you only need to run Antora partially and don't want to throw an error to make Antora stop.
+You might use it for warming up a cache or performing reference validation.
+Keep in mind that if you call `stop` in any listener before the `sitePublished` event, Antora won't publish the site.
+
+Here's an example that shows how to signal to Antora in a listener to stop processing:
+
+[,js]
+----
+console.log('Our work is done here. Wrap it up.')
+this.stop()
+----
+
+[#get-logger]
+== getLogger(String)
+
+The `getLogger` helper method allows you to retrieve an instance of the logger.
+
+Here's an example that shows how to retrieve an instance of the logger and use it in a listener:
+
+[,js]
+----
+module.exports.register = function () {
+  const logger = this.getLogger('extension-name')
+  this.on('playbookBuilt', () => {
+    logger.info('Let it be known. The playbook has been built!')
+  })
+}
+----
+
+You'll see the following message in your terminal when you run Antora with this extension enabled (and the `--log-level info` option):
+
+[.output]
+....
+[12:24:37.731] INFO (extension-name): Let it be known. The playbook has been built!
+....
+
+[#require]
+== require(String)
+
+The `require` helper method allows you to require libraries within the context of the Antora installation.
+This method accepts a single argument of type String, which is a require request (i.e., the name of a Node.js module or a source file within a module).
+This method returns the object that the specified module or source file exports.
+If the request can't be resolved, the method throws an Error with code `MODULE_NOT_FOUND`.
+
+From time to time when writing extensions, you may need to access code provided by Antora.
+Examples include the logger, the ContentCatalog, or a utility function like `parseResourceId`.
+This method allows you to require this code without having to declare a dependency on Antora.
+That dependency is implicit since the extension runs within the context of Antora.
+This method provides a way to require that code.
+
+Here's an example that shows how to get the version of the site generator that is currently running from a listener:
+
+[,js]
+----
+const { name, version } = this.require('@antora/site-generator/package')
+console.log(`Running ${name} version ${version}`)
+----
+
+Since the extension is already running in the context of the site generator, here's a slightly simpler way to achieve the same result:
+
+[,js]
+----
+const { name, version } = this.require('../package')
+console.log(`Running ${name} version ${version}`)
+----
+
+For a more practical example, you can use the `require` helper method to create a child logger for your extension.
+Typically, you'd do so in the `register` function, then access the same instance of the logger throughout your extension.
+
+[,js]
+----
+module.exports.register = function () {
+  const logger = this.require('@antora/logger')('extension-name')
+  this.on('playbookBuilt', () => {
+    logger.info('Let it be known. The playbook has been built!')
+  })
+}
+----
+
+You'll see the following message in your terminal when you run Antora with this extension enabled (and the `--log-level info` option):
+
+[.output]
+....
+[12:24:37.731] INFO (extension-name): Let it be known. The playbook has been built!
+....
+
+A simpler way to retrieve a logger instance is to use the <<get-logger>> method.

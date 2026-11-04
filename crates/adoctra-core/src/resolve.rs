@@ -122,6 +122,21 @@ pub(crate) fn styled(
     }
 }
 
+/// Whether [`styled`] shows the target's title: Ruby's `xreftext` with
+/// `short` builds a captioned block's or numbered section's label from its
+/// signifier and number alone, so the title is not converted (nor memoized)
+/// then.
+pub(crate) fn styled_uses_title(numbering: &Numbering, style: Option<&str>) -> bool {
+    if style != Some("short") {
+        return true;
+    }
+    match numbering {
+        Numbering::Section(section) => !section.is_numbered(),
+        Numbering::Caption { caption, .. } => crate::attributes::parts_text(caption).is_empty(),
+        _ => true,
+    }
+}
+
 /// `Section#xreftext` with an xrefstyle: `full` and `short` show a numbered
 /// section's `<sectname>-refsig` and number (`full` also the quoted title);
 /// otherwise chapters and appendices are emphasized.
@@ -1826,6 +1841,66 @@ mod tests {
         let (target, children) = first_xref(src);
         assert_eq!(target, "_section_two");
         assert_eq!(text_of(&children), "Section Two");
+    }
+
+    /// The cross-reference in block `b`'s title, and the paragraph's one.
+    fn title_and_paragraph_labels(src: &str) -> (String, crate::Span, String) {
+        let result = crate::parse(src);
+        assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+        let blocks = result.document.flat_blocks();
+        let titled = blocks
+            .iter()
+            .find(|b| b.id.as_deref() == Some("b"))
+            .expect("block b");
+        let (span, title) = titled
+            .title
+            .as_ref()
+            .and_then(|t| {
+                t.iter().find_map(|n| match n {
+                    Inline::CrossReference { children, span, .. } => {
+                        Some((*span, text_of(children)))
+                    }
+                    _ => None,
+                })
+            })
+            .expect("a reference in b's title");
+        let paragraph = blocks
+            .iter()
+            .find_map(|b| match &b.kind {
+                BlockKind::Paragraph { inlines } => inlines.iter().find_map(|n| match n {
+                    Inline::CrossReference { children, .. } => Some(text_of(children)),
+                    _ => None,
+                }),
+                _ => None,
+            })
+            .expect("the paragraph's reference");
+        (title, span, paragraph)
+    }
+
+    #[test]
+    fn a_short_label_does_not_convert_the_target_title() {
+        // Ruby's `xreftext` with `short` builds a captioned block's label from
+        // its signifier and number, so the forward reference does not convert
+        // (and memoize) b's title while resolving: the reference inside that
+        // title resolves normally later. Without the style (or with `full`)
+        // the title is converted inside the label and shows `[a]`.
+        let body = ".First\n[#a]\n----\nx\n----\n\nSee <<b>>.\n\n.Second, from <<a>>\n[#b]\n----\ny\n----\n";
+        let short = format!(":listing-caption: Example\n:xrefstyle: short\n\n{body}");
+        let (title, span, paragraph) = title_and_paragraph_labels(&short);
+        assert_eq!(
+            (title.as_str(), paragraph.as_str()),
+            ("Example 1", "Example 2")
+        );
+        assert_eq!(&short[span.start..span.end], "<<a>>");
+        let full = format!(":listing-caption: Example\n:xrefstyle: full\n\n{body}");
+        let (title, _, paragraph) = title_and_paragraph_labels(&full);
+        assert_eq!(title, "[a]");
+        assert_eq!(paragraph, "Example 2, \u{201c}Second, from [a]\u{201d}");
+        let (title, _, paragraph) = title_and_paragraph_labels(body);
+        assert_eq!(
+            (title.as_str(), paragraph.as_str()),
+            ("[a]", "Second, from [a]")
+        );
     }
 
     #[test]

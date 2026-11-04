@@ -1,0 +1,43 @@
+= Git Read Concurrency Limit
+
+Similar to the xref:git-fetch-concurrency.adoc[], the `read_concurrency` key tells Antora how many content repositories (local or managed) to read from at once.
+This key effectively controls how many git indexes are loaded into memory at once (a git index is the backing storage for files in a git repository).
+
+Antora only reads repositories once all fetch/clone operations on those repositories are complete.
+Thus, the fetch and read are separate steps.
+
+== Default read concurrency
+
+By default, Antora does not limit the read concurrency (value `0`), which means it will load all repositories into memory at once when scanning for and collecting files.
+Loading a lot of large repositories at once can consume a lot of memory.
+To alleviate this situation, Antora allows you to tune the read concurrency limit.
+
+NOTE: The read concurrency does not impact the xref:git-fetch-concurrency.adoc[fetch concurrency] or the network traffic.
+
+[#read-concurrency-key]
+== read_concurrency key
+
+The optional `read_concurrency` key is set under the xref:configure-git.adoc[git category] in the playbook.
+This key accepts a positive integer value or `0` for no limit.
+
+.antora-playbook.yml
+[,yaml]
+----
+git:
+  read_concurrency: 4
+----
+
+When working with a lot of repositories, an optimal value is somewhere between 2 and 5.
+
+The purpose of the `read_concurrency` key is to allow you to control how much memory is consumed when reading files from the content repositories.
+Once a git index is loaded into memory, Antora uses unlimited concurrency to read the tree of each reference to collect files into the precursor of the content catalog (creating the content catalog is a subsequent step).
+
+== Related to memory usage
+
+While the residual memory will equate to the size of all content files collected, the git index that contains those files could be substantially larger.
+This is especially true when the documentation is co-located with the source files of a software project.
+Antora has to load the git index even if it is only taking a fraction of the files.
+
+You may find that by limiting the number of concurrent operations, it reduces the time it takes the content aggregator to complete.
+This is presumably because Antora has to do less context switching.
+You will need to experiment with this value to find the setting that works best for your site.

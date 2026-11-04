@@ -1,0 +1,177 @@
+= Background Images
+:description: A background image can be applied to all pages, recto or verso pages, and the title page using designated document attributes.
+
+You can add a background image to all content pages in your document by setting the `page-background-image` document attribute.
+You can also set the background images for recto and verso pages separately using the `page-background-image-recto` and `page-background-image-verso` document attributes.
+You can set (or override) the background image applied to the title page using the `title-page-background-image` document attribute.
+If you want to overlay a background image on top of the page content (i.e., a watermark), you can do so using the `page-foreground-image`.
+
+This page explains how these document attributes are used.
+It also covers how attributes on the image macro can be used to control the size, fit, and position of the image.
+All the document attributes covered on this page must be defined in the document header.
+
+As an alternative to using document attributes, you can define these background images and the foreground image xref:theme:images.adoc[in your theme].
+
+[#page-background-image]
+== page-background-image attribute
+
+Background images can be applied to all content pages using the `page-background-image` document attribute.
+A content page is defined as every page in the document except for cover and imported pages.
+The list of content pages includes the title page as well as non-facing pages in a prepress document.
+
+NOTE: As a counterpart, a foreground image can be added to all pages using the `page-foreground-image`.
+Unlike the background image, the foreground image cannot be added per side or page layout.
+
+The `page-background-image` attribute accepts an inline image macro.
+The target of the image macro can be xref:image-paths-and-formats.adoc#imagesdir[an absolute path or a path relative to imagesdir].
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image: image:bg.png[]
+----
+
+You can also assign a page background image <<recto-verso,per side>> or <<page-layout,per page layout>>.
+
+When you set `page-background-image`, the specified image will be applied to the title page as well.
+You can specify a different image for the title page using the `title-page-background-image` document attribute.
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+:page-background-image: image:bg.png[]
+:title-page-background-image: image:title-bg.png[]
+----
+
+Alternately, you can turn off the background image on the title page by assigning the value `none`.
+
+[,asciidoc]
+----
+= Document Title
+:doctype: book
+:page-background-image: image:bg.png[]
+:title-page-background-image: none
+----
+
+By default, page background images are automatically scaled to fit the bounds of the page (i.e., `fit=contain`) and centered (i.e., `position=center`).
+To alter this behavior, you can set the <<fit,fit>>, sizing, and <<position,position>> attributes on the image macro.
+
+[#fit]
+== fit attribute
+
+Background images, including front and back cover images, can be sized relative to the page using the `fit` attribute on the image macro.
+The `fit` attribute works similarly to the `object-fit` property in CSS.
+Its value must be specified as a single keyword, chosen from the table below.
+The starting size of the image is determined by the explicit width, if specified, or the implicit width.
+The height is always derived from the width while respecting the implicit aspect ratio of the image.
+The available space--the canvas--for a background image is the page.
+If the `fit` attribute is not specified, it defaults to `contain`.
+The `contain` value automatically scales the image to fit the bounds of the page.
+
+.Values accepted by the fit attribute
+[cols="1s,3"]
+|===
+|Value |Purpose
+
+|contain
+|The image is scaled up or down while retaining its aspect ratio to fit within the available space. (default)
+
+|cover
+|The image is scaled up or down while retaining its aspect ratio so the image completely covers the available space, even if it means the image must be clipped in one direction.
+
+|scale-down
+|The image is scaled down while retaining its aspect ratio to fit within the available space.
+If the image already fits, it is not scaled.
+
+|fill
+|The image is scaled to fit the available space even if it requires modifying the aspect ratio of the image.
+The `fill` value does not apply to SVG images.
+
+|none
+|The image is not scaled.
+|===
+
+If you want to scale the image using one of the xref:image-scaling.adoc[sizing attributes] (`pdfwidth`, `scaledwidth`, `width`) on the image macro, you must set the `fit` attribute to the value `none` (i.e., `fit=none`).
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image: image:bg.png[fit=none,pdfwidth=50%] <1>
+----
+<1> `fit` must be assigned the value `none` when using `pdfwidth` or any of the other sizing attributes.
+
+The `fit` attribute is often combined with the `position` attribute, <<position,covered next>>, to control the placement of the image on the canvas.
+
+[#position]
+== position attribute
+
+In addition to scaling, background images for cover pages, content pages, and the title page support positioning using the `position` attribute on the image macro.
+The `position` attribute accepts a syntax similar to the `background-position` property in CSS, except only the keyword positions are supported.
+The position consists of two values, the vertical position and the horizontal position (e.g., `top center`).
+If only one value is specified (e.g., `top`), the other value is assumed to be `center`.
+If the `position` attribute is not specified, its value defaults to is `center center`.
+The `center center` value centers the image vertically and horizontally on the page.
+
+The following table lists of the vertical and horizontal positioning keywords the `position` attribute supports.
+You can use any combination of these keywords to position the image.
+
+|===
+|Vertical Positions |Horizontal Positions
+
+|top +
+center +
+bottom
+
+|left +
+center +
+right
+|===
+
+Here's an example of how to place a background image at the top center of a page:
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image: image:bg.png[position=top]
+----
+
+Here's how to move it to the bottom right:
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image: image:bg.png[fit=none,pdfwidth=50%,position=bottom right]
+----
+
+If an image dimension matches the height or width of the page, the positioning keyword for that axis has no effect.
+
+[#recto-verso]
+== Recto and verso background images
+
+If a background image is assigned to the recto pages (right-hand, odd-numbered pages) or verso pages (left-hand, even-numbered pages), the background will be used only for that side.
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image-recto: image:bg.png[fit=none,pdfwidth=20%,position=bottom right]
+:page-background-image-verso: image:bg.png[fit=none,pdfwidth=20%,position=bottom left]
+----
+
+If a background image isn't specified for a side, the converter will use the default page background image (`page-background-image`), if specified.
+To turn off the background image for a side, assign the value `none`.
+
+[#page-layout]
+== Per page layout
+
+You can configure any background image to be selected per page layout by including the _escaped_ `+{page-layout}+` attribute reference in the image path.
+The reference has to be escaped so it's not expanded until the converter resolves the image for a given page layout.
+
+[,asciidoc]
+----
+= Document Title
+:page-background-image: image:bg-\{page-layout}.png[]
+----
+
+The image is resolved the first time a given page layout is used in the document.
+Using this technique requires that the page layout value be included in the filename of the image (e.g., footer-bg-landscape.png).

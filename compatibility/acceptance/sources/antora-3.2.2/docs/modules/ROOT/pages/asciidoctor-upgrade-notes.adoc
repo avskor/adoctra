@@ -1,0 +1,179 @@
+= Asciidoctor Upgrade Notes
+
+Antora 3 uses Asciidoctor.js 2.2.x (Asciidoctor 2.0.x) instead of Asciidoctor.js 1.5.9 (Asciidoctor 1.5.8) to process content files.
+Asciidoctor 2 introduces many new features and a few substantive changes to existing features.
+
+== Asciidoctor 2 feature changes
+
+The following sections describe the new behavior of existing Asciidoctor features and suggest the actions you should take prior to upgrading from Antora 2 to Antora 3.
+
+=== Non-AsciiDoc files and the include directive
+
+|===
+|Feature |New behavior |Action
+
+|Including non-AsciiDoc files using the include directive, particularly inside verbatim (listing, literal, or source) blocks
+|Trailing space characters aren't removed, tabs aren't expanded, and newlines aren't normalized when including a non-AsciiDoc file using the include directive.
+This can change how the output is displayed.
+.3+.^a|* Update non-AsciiDoc files that use a mix of tabs and spaces or inconsistent newlines if their content isn't displaying as expected when published.
+* Replace any tabs in non-AsciiDoc files if the `indent` attribute is set but not working as expected.
+* Remove trailing space characters from non-AsciiDoc files, especially if using callouts in the file content or applying the `indent` attribute.
+
+|Including non-AsciiDoc files with the `indent` attribute set on the include directive or verbatim block into which they're inserted
+|Since tabs aren't expanded in the non-AsciiDoc content, the `indent` attribute may not work as expected.
+
+|Including non-AsciiDoc files with callouts into a verbatim block using the include directive
+|Since trailing spaces aren't removed, callout numbers may no longer be detected.
+|===
+
+=== Listing and source blocks
+
+|===
+|Feature |New behavior |Action
+
+|Delimited listing blocks without an explicit style when `source-language` is set
+|Delimited listing blocks (`+----+`) that don't have an explicit style are automatically promoted to source blocks if `source-language` is set in the document, component descriptor, or playbook.
+This may result in unwanted syntax highlighting.
+a|If `source-language` isn't set, you don't need to take any action.
+
+If `source-language` is set, do the following:
+
+* Assign the style `listing` to any unstyled delimited listing blocks that shouldn't be promoted to source blocks.
+You can also change them to delimited literal blocks (`+....+`).
+* (optional) Remove the style `source` from delimited listing blocks that should be promoted to source blocks.
+The `source` style is applied automatically.
+
+See xref:asciidoc:source.adoc[] to learn more.
+
+|Source blocks that aren't assigned a language
+|The language `none` is automatically assigned to source blocks (`source`) when no language is set on the block or by `source-language`.
+
+The block is styled like other source blocks, but no syntax highlighting is applied.
+a|If this behavior is acceptable, no change is needed.
+Otherwise, do one of the following:
+
+* assign the appropriate language to the source block, or
+* remove the `source` style and replace it with the `listing` style, or
+* remove the `source` style and change the block to a delimited literal block (`+....+`).
+
+See xref:asciidoc:source.adoc[] to learn more.
+|===
+
+=== Tables
+
+|===
+|Feature |New behavior |Action
+
+|`a` and `l` column modifiers
+|Normal substitutions and default header formatting are now correctly applied to the cells in an implicit header row when the AsciiDoc (`a`) and literal (`l`) modifiers are applied to the columns in a table.
+|Update tables that use the `a` and `l` modifiers in combination with an implicit header row so your desired output is displayed.
+
+|`v` modifier
+|The verse modifier (`v`) is deprecated.
+Columns or cells assigned the `v` modifier are now treated as regular table cells.
+|No action is needed if it's acceptable for the cell content to be displayed as regular content.
+
+|`table-topbot` CSS class
+|The CSS class `table-ends` replaces the deprecated `table-topbot` CSS class.
+|If you customized the styles for `table-topbot` in your UI, update the class name to `table-ends` and build a new UI bundle version.
+
+|Table column width
+|The rounding used when calculating table column widths changed minutely.
+|No action is needed as the change shouldn't be noticeable to site visitors.
+|===
+
+=== Lists
+
+|===
+|Feature |New behavior |Action
+
+|Description list delimiters (`::`)
+|Description list delimiters, that is, double colons (`::`) that are bare or at the start of line are no longer mistaken for a description list item.
+|Remove escape syntax around double colons (`::`) that were previously mistaken for description list delimiters.
+|===
+
+=== Section and block titles
+
+|===
+|Feature |New behavior |Action
+
+|Section and block title substitution order
+|The order of substitutions applied to section and block titles now matches the normal substitution order.
+This can affect section and block titles that use attribute references.
+|Review section and block titles that contain attribute references for errors.
+|===
+
+=== Invalid and unresolved references and attributes
+
+|===
+|Feature |New behavior |Action
+
+|"`Unresolved include directive`" message in the content
+|The message has changed to "`Unresolved directive`".
+|No action unless you're using a postprocessor that looks for this message in the output.
+
+|`page` class
+|The class `page` for xrefs has been replaced with `xref <family>`, where `<family>` is the name of the family of the resource to which the xref points (e.g., `xref page`).
+|You will need to update the selector in your CSS or postprocessor if it attempts to match this class.
+You can now find all xref links in the page using the CSS selector `a.xref`.
+
+|`page unresolved` class
+|The class `page unresolved` has been replaced with `xref unresolved` when the target of an xref is invalid or could not be resolved.
+|You will need to update the selector in your CSS or postprocessor if it attempts to match this class.
+
+|Reference validation for inline anchor
+|If Asciidoctor cannot locate a reference to an inline anchor, even if it exists, it will log a message at the info level about a possible invalid reference.
+|Define inline anchors using the double square bracket enclosure, and only place them in locations where Asciidoctor scans for them.
+Valid locations include anywhere in paragraph text or at the start of a list item or table cell.
+You could also ignore these messages or not enable the info log level.
+
+|`attribute-missing`
+|The `attribute-missing` setting is now honored when include directives and block macros are processed.
+This may reveal new missing include files and references.
+|Check the log messages for new warnings and fix any reported errors.
+|===
+
+=== Footnotes
+
+|===
+|Feature |New behavior |Action
+
+|Footnote macro
+|The `footnoteref` macro is deprecated and the structure of the `footnote` macro has changed to be consistent with other AsciiDoc macros.
+Previously, the footnote target was placed inside the macro's square brackets.
+Now the target is placed directly after the colon (`+footnote:<target>[<optional attributes>]+`).
+|Change `footnoteref` to `footnote` and move the footnote target to the correct position.
+
+|Anchors and xrefs in footnotes
+|Anchor and xref macros are processed before footnote macros so that footnote macros aren't terminated prematurely.
+|Remove escape syntax, such as a backslash (`+\+`), from anchor and xref macros used inside footnote macro attribute lists.
+|===
+
+=== Quote block
+
+|===
+|Feature |New behavior |Action
+
+|`""` quote block delimiter
+|The 2-character `""` quote block delimiter is deprecated.
+|Remove the deprecated `""` delimiters and replace with the `quote` block style with the four underscores (`+____+`) block delimiters or quote paragraph syntax.
+|===
+
+=== Encoding
+
+|===
+|Feature |New behavior |Action
+
+|Encode characters in email address to comply with RFC-3986
+|Previously, spaces in an email address were encoded as `%20`.
+Now, spaces are encoded as a plus sign (`{plus}`) in email addresses to comply with https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent#Description[RFC-3986].
+|This change will not affect the behavior of email links.
+|===
+
+== Semantic versioning and Asciidoctor 2
+
+Starting with Asciidoctor 2.0.0, Asciidoctor and Asciidoctor.js switched to semantic versioning.
+This allows Antora to automatically pick up the latest patch versions of Asciidoctor.js during installation without having to make a new Antora release available.
+
+NOTE: Ready to upgrade from Antora 2 to Antora {page-component-version}?
+See xref:install:upgrade-antora.adoc[] for instructions.

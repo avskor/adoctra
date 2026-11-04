@@ -1,0 +1,34 @@
+= Commits
+
+Much like the `tags` key, the `commits` key can be used to target a fixed location in the repository.
+The `commits` key accepts a list of exact commit hashes (or abbreviated hashes).
+
+[#commits-key]
+== commits key
+
+The `commits` key is optional and can be specified directly on the `content` key or on a `url` key.
+It accepts a single commit hash (typically SHA1) or a list of hashes (e.g., `1a78ca8b0c543fb47dbbb689791f2e3986f1c588`).
+The hashes may be abbreviated as permitted by git (e.g., `1a78ca8b`).
+
+.antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo-y.git
+    branches: ~
+    commits: [1a78ca8b0c543fb47dbbb689791f2e3986f1c588] # <.>
+  - url: https://git-service.com/org/repo-z.git
+    branches: ~
+    commits: c543fb47 # <.>
+----
+<.> Enclose multiple values in a set of square brackets (`+[]+`).
+Separate each value with a comma (`,`).
+<.> A single value is permitted.
+The value may be an abbreviated commit.
+
+WARNING: Setting the `commits` key does not automatically disable the xref:content-branches.adoc#default[default branches filter]!
+
+After initially cloning the repository, Antora will go back to the repository and fetch commits until it finds all commits specified.
+The relative depth of each fetch is controlled by the xref:git-fetch-depth.adoc[git.fetch_depth] key.
+If you want Antora to fetch in batches, you are strongly recommended to set the value of this key greater than the default value of `1`.

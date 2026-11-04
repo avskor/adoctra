@@ -1,0 +1,121 @@
+= Font and Image Icons
+:description: Font-based or image icons are enabled with the `icons` document attribute.
+
+Font-based or image icons are enabled with the `icons` document attribute.
+
+== icons attribute
+
+The `icons` document attribute allows you to replace the default text-based labels for admonitions with font-based icons or images.
+Setting the `icons` attribute also enables the `icon` macro.
+The `icons` attribute accepts the following values:
+
+font:: To use font-based icons for admonitions and with the icon macro, set the `icons` attribute and assign it the value `font`.
+See <<font>> for details.
+image:: To use local image files, set the `icons` attribute and assign it the value `image`.
+While the icon macro is enabled when the value is `image`, it will only produce text-based output.
+
+Alternatively, you can enable the use of fonts during PDF generation by passing the `icons` attribute to the `asciidoctor-pdf` command instead setting it in the document header.
+
+ $ asciidoctor-pdf -a icons=font -a icon-set=fas sample.adoc
+
+By setting `icons`, the xref:theme:admonition.adoc#icon-name[theme can control the icon used for each type of admonition].
+
+[#font]
+== Activate font-based icons
+
+You can enable font-based icons by setting the `icons` document attribute in the header of your document:
+
+[,asciidoc]
+----
+:icons: font
+----
+
+If you want to override the font set globally, also set the `icon-set` attribute:
+
+[,asciidoc]
+----
+:icons: font
+:icon-set: fas
+----
+
+You can use font-based icons from any of the following icon sets in your PDF document:
+
+* *fa* - https://fontawesome.com/v4.7.0/icons[Font Awesome 4] (default, deprecated)
+* *fas* - https://fontawesome.com/icons?d=gallery&s=solid[Font Awesome - Solid^]
+* *fab* - https://fontawesome.com/icons?d=gallery&s=brands[Font Awesome - Brands^]
+* *far* - https://fontawesome.com/icons?d=gallery&s=regular[Font Awesome - Regular^]
+* *fi* - http://zurb.com/playground/foundation-icon-fonts-3[Foundation Icons^]
+* *pf* - Payment font (deprecated)
+
+Use of the fa icon set is deprecated.
+Please use one of the styled FontAwesome icon sets.
+
+The pf icon set is no longer maintained.
+Prefer the brand icons either from fab or fi instead.
+
+Icon-based fonts are handled by the `prawn-icon` gem.
+To find a complete list of available icons, consult the https://github.com/jessedoyle/prawn-icon/tree/master/data/fonts[prawn-icon^] repository.
+
+[#icon-macro]
+== Insert an icon
+
+Here's an example that shows how to use the Android icon from the Foundation Icons (fi) icon set in a sentence (assuming the `icon-set` is set to `fi`):
+
+[,asciidoc]
+----
+:icons: font
+:icon-set: fi
+
+Available for icon:social-android[].
+----
+
+You can use the `set` attribute on the icon macro to override the icon set for a given icon.
+
+[,asciidoc]
+----
+:icons: font
+
+Available for icon:social-android[set=fi].
+----
+
+You can also specify the font set using the following shorthand.
+
+[,asciidoc]
+----
+:icons: font
+
+Available for icon:social-android@fi[].
+----
+
+It's a good practice to always specify the icon set in some way.
+
+In addition to the sizes supported in the HTML backend (lg, 1x, 2x, etc.), you can enter any relative value in the size attribute (e.g., 1.5em, 150%, etc.).
+
+[,asciidoc]
+----
+:icons: font
+
+icon:android[set=fab,size=40em]
+----
+
+== Customize an admonition icon
+
+When icon fonts are enabled, Asciidoctor PDF will replace the label of an admonition with a predefined icon.
+You can customize the icon per admonition type using a custom theme.
+
+Here's an example of a theme that shows how to customize the icon for a tip.
+
+.custom-theme.yml
+[,yaml]
+----
+extends: default
+admonition:
+  icon:
+    tip:
+      name: fas-lightbulb
+      stroke_color: #111111
+      size: 18
+----
+
+The name consists of an icon prefix (e.g., `fas-`) followed by the name of the icon in that icon set (e.g., `lightbulb`).
+If a category key is not specified for a particular admonition type, Asciidoctor PDF will use the predefined icon for that type.

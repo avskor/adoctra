@@ -1,0 +1,139 @@
+= URLs for Content Sources
+
+The `url` key tells Antora where to find a content source repository.
+
+[#url-key]
+== url key
+
+Antora can connect to public and private git repositories that are defined be a `url` key in a playbook.
+At least one `url` key must be specified under the `sources` key.
+You can add as many `url` keys as you need.
+Each `url` key tells Antora where to find a git repository that contains content source files.
+
+.antora-playbook.yml
+[,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo.git
+  - url: /absolute/path/to/local-repo
+----
+
+The `url` key accepts any URI that git supports, including a local filesystem path.
+
+Like with git, Antora differentiates between a local filesystem path and a remote URI based on certain characters in the value.
+If the value matches either of the two rules listed below, the value will always be handled as a remote URI, *not* a local filesystem path.
+
+* The value contains a colon that's not followed by a forward slash or backslash (`host:repo`).
+* The value contains a colon that's followed by two forward slashes (`://`).
+
+//A colon is permitted when it's part of a Windows drive letter (e.g., `c:/`).
+
+[#remote-urls]
+== Use remote content repositories
+
+All remote content repositories must be accessible via a URL (a web address that's fetched using either the basic or encrypted HTTP protocol) (i.e., http:// or https://).
+The repository location can be expressed using a URL, an SSH URI, or a git URI.
+Internally, that location is always converted to a URL.
+
+[,yaml]
+----
+content:
+  sources:
+  - url: https://git-service.com/org/repo-z.git
+  - url: git@git-service.com:org/repo-y.git
+  - url: git://git-service.com/org/repo-x.git
+----
+
+Whether the [.path]_.git_ extension is required depends on the settings of the git host.
+It's not needed for repositories hosted on GitHub, required for repositories hosted on GitLab, and forbidden for repositories hosted on Team Foundation Server (TFS) or Azure DevOps, to cite a few scenarios (and to exhibit the nature of the problem).
+That's why the xref:git-suffix.adoc[ensure_git_suffix key] is provided for you, which is enabled by default.
+
+When using a secure URL with a self-signed certificate, you will need to provide additional configuration in order for Node.js to recognize and accept that certificate.
+Refer to xref:set-up-playbook.adoc#self-signed-certificates[using self-signed certificates] to learn how.
+
+Antora can connect to private git repositories as long as a xref:private-repository-auth.adoc[supported authentication method] is specified for the private content source repositories.
+
+[#local-urls]
+== Use local content repositories
+
+Antora permits the value of `url` to be a relative or absolute filesystem path to a local repository (even if the repository has no commits).
+
+[,yaml]
+----
+content:
+  sources:
+  - url: /absolute/path/to/local-repo # <.>
+  - url: https://git-service.com/org/repo-z.git
+  - url: ./another-local-repo # <.>
+----
+<.> Absolute path to git repository
+<.> Relative path to git repository (starting from the directory of the playbook)
+
+include::partial$relative-path-rules.adoc[]
+
+[#git-worktree]
+== Use the git worktree
+
+When the URL for a content source is a local repository, and the xref:content-branches.adoc[branches filter] matches the branch that's currently checked out (aka the worktree branch), Antora reads files from the worktree (i.e., the working directory on the local filesystem) *instead of* from the git index.
+This behavior is central to the xref:author-mode.adoc[author mode] in Antora.
+It means you *don't have to commit files locally* before Antora can use them.
+
+.Use files from the worktree
+[,yaml]
+----
+content:
+  sources:
+  - url: ./demo-component-b
+    branches: main
+  - url: https://gitlab.com/antora/demo/demo-component-b.git
+    branches: v1.0, v2.0
+----
+
+Instead of specifying the name of the current branch explicitly, you can use the symbolic name `HEAD` as an alias for the current branch name.
+This saves you the trouble of having to update your playbook when you switch branches.
+
+.Use files from the worktree
+[,yaml]
+----
+content:
+  sources:
+  - url: ./demo-component-b
+    branches: HEAD
+  - url: https://gitlab.com/antora/demo/demo-component-b.git
+    branches: v1.0, v2.0
+----
+
+CAUTION: If the branches filter matches both the worktree branch and another branch that contains the same files for the same component version, Antora will fail to run because it does not permit duplicate files.
+
+== Bypassing the git worktree
+
+To ensure Antora *doesn't* use files from the worktree, even if the branch filter matches the worktree branch, you can point the URL directly at the [.path]_.git_ directory.
+This effectively hides the worktree from Antora so it won't get used.
+
+.Refers directly at the .git folder to bypass files in the worktree
+[,yaml]
+----
+content:
+  sources:
+  - url: ./demo-component-b/.git
+    branches: HEAD
+  - url: https://gitlab.com/antora/demo/demo-component-b.git
+    branches: v1.0, v2.0
+----
+
+A better way to bypass the git worktree is to set the `worktrees` key to `false`.
+
+.Sets worktrees to false to bypass files in the worktree
+[,yaml]
+----
+content:
+  sources:
+  - url: ./demo-component-b
+    branches: HEAD
+    worktrees: false
+  - url: https://gitlab.com/antora/demo/demo-component-b.git
+    branches: v1.0, v2.0
+----
+
+Keep in mind that, in this case, *all files must be committed locally* in order for Antora to use them.

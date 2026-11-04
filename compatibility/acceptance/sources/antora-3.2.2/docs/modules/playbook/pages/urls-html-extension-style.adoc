@@ -1,0 +1,95 @@
+= HTML Extension Styles
+
+Antora allows you to customize the file extension used in the URL of HTML pages.
+By default, the URL will end with [.ext]_.html_, mirroring the name of the published file.
+If you want to "`prettify`" the URL by hiding the extension for SEO or other reasons, you can configure Antora to do so.
+You either have the option to drop the extension outright or to replace the extension with forward slash (a technique known as indexify).
+When using either of these options, Antora will also drop the last URL segment if the source page is named [.path]_index.adoc_.
+This page explains how to control this setting.
+
+[#html-extension-style-key]
+== html_extension_style key
+
+The `html_extension_style` key is optional.
+It's configured under the xref:configure-urls.adoc[urls key] in a playbook.
+
+.antora-playbook.yml
+[,yaml]
+----
+urls:
+  html_extension_style: indexify
+----
+
+It accepts the following built-in values:
+
+`default`:: Published page URLs are displayed with the _.html_ extension, i.e., [.path]_\https://base-url.com/component/version/module/my-file.html_.
+Antora automatically applies this style when `html_extension_style` isn't set in the playbook or via the CLI.
+
+`indexify`:: The _.html_ extension is dropped and a forward slash (`/`) is appended to the end of the published page URLs, i.e., [.path]_\https://base-url.com/component/version/module/my-file/_.
+This is the preferred style if you don't want the _.html_ extension to appear in URLs.
+
+`drop`:: The _.html_ extension is dropped from the end of the published page URLs, i.e., [.path]_\https://base-url.com/component/version/module/my-file_.
+This style requires support from the web server and should only be used if you're comfortable applying the necessary web server configuration.
+
+[#default]
+== Using the default style
+
+Antora will automatically assign the value `default` to the `html_extension_style` key at runtime if it isn't set in the playbook or in the CLI using the xref:cli:options.adoc#html-extension[--html-url-extension-style option].
+The default style appends the _.html_ extension to the end of every published page's URL.
+For example, the resulting URL for the page [.path]_my-file.adoc_ would be displayed in a browser with _.html_ appended to the end, i.e., [.path]_\https://base-url.com/component/version/module/my-file.html_.
+
+[#indexify-style]
+== Apply the indexify style
+
+Let's assign `indexify` to the `html_extension_style` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Site Title
+  url: https://example.org
+urls:
+  html_extension_style: indexify
+----
+
+When `indexify` is applied, the site's published URLs don't end with the extension _.html_.
+Instead, a forward slash (`/`) is appended directly to the end of the page stem.
+This results in the URL for the page [.path]_my-file.adoc_ to be displayed in a browser as [.path]_\https://example.com/component/version/module/my-file/_.
+
+To locally preview all the features of a site, such as redirects and the 404 page, when `html_extension_style` is assigned `indexify`, you'll need to xref:ROOT:preview-site.adoc[run a local server].
+
+[#drop-style]
+== Apply the drop style
+
+Let's assign `drop` to the `html_extension_style` key.
+
+.antora-playbook.yml
+[,yaml]
+----
+site:
+  title: Site Title
+  url: https://example.org
+urls:
+  html_extension_style: drop
+----
+
+When `drop` is applied, the site's published URLs don't end with the extension _.html_.
+This results in the URL for the page [.path]_my-file.adoc_ to be displayed in a browser as [.path]_\https://example.com/component/version/module/my-file_.
+In order for the site to work properly when using this style, you must view the site through a web server.
+You also need to configure the web server to look for a file with the _.html_ extension.
+
+WARNING: Not all web servers have the ability to support extensionless HTML URLs.
+
+If you're using nginx, you need to add the following directive to the `location /` stanza in the configuration for your host:
+
+[,nginx]
+----
+location / {
+  # ...
+  try_files $uri $uri.html $uri/index.html = 404;
+}
+----
+
+This directive tells nginx to first look for the requested file, then look for the same file with the _.html_ extension added, then look for a file named [.path]_index.html_ in a directory that matches the requested file.
+These attempts match the layout of the published files.

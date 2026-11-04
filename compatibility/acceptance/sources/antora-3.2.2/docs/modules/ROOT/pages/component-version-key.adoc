@@ -1,0 +1,158 @@
+= Version Key
+:description: A version is resolved from the version key in a component version descriptor file (antora.yml) or inherited from a content source in the playbook.
+:mdash: &#8212;
+
+A version is defined by assigning a value to the `version` key.
+It's important to understand <<usage,how Antora uses the version>> and its related facets before committing to a versioning scheme.
+
+== What's a version?
+
+In Antora, a [.term]*version* is the value resolved from the `version` key in a component version descriptor file ([.path]_antora.yml_) or inherited from the content source in the playbook.
+A version is a semantic or named identifier that represents a unique release or instance of the documentation for a project.
+The resolved value of the `version` key, in combination with the value of the `name` key, defines a xref:component-version.adoc[component version].
+
+Although the version is typically a literal value, it can also be interpreted.
+The version can be defined as xref:component-with-no-version.adoc[empty] by assigning a tilde (`~`) to the `version` key.
+The version can be configured as the refname in which it resides by assigning `true` to the `version` key.
+The version can also be derived from the refname by assigning a map of refname projections to the `version` key.
+
+Occasionally, the value assigned to the `version` key is referred to as the [.term]*actual version* in this documentation when a distinction between version and the other version facets--xref:version-facets.adoc#prerelease[prerelease], xref:version-facets.adoc#display[display], and xref:version-facets.adoc#symbolic[symbolic]{mdash}needs to be made in a description or example.
+
+[#usage]
+=== How Antora uses version
+
+The version is fundamental to many of Antora's operations.
+Antora uses the version:
+
+* to xref:how-component-versions-are-sorted.adoc[sort component versions]
+* identify the xref:how-component-versions-are-sorted.adoc#latest-version[latest version of a component]
+* apply routing rules
+* as the xref:how-antora-builds-urls.adoc#version[version segment] in publishable resource URLs, except when:
+** the assigned value is the xref:component-with-no-version.adoc[tilde (~) that defines a component version with an empty verison]
+** a component version is identified as the latest stable or latest prerelease version and the xref:playbook:urls-latest-version-segment.adoc[latest_version_segment key] or xref:playbook:urls-latest-prerelease-version-segment.adoc[latest_prerelease_version_segment key] is set in the playbook
+* for display purposes in the reference UI xref:navigation:index.adoc#component-dropdown[component version selector] and xref:navigation:index.adoc#page-dropdown[page version selector] menus, except when:
+** the `display_version` key is set and assigned a value in the component version's [.path]_antora.yml_ file
+** the `display_version` key is set by Antora at runtime because the xref:component-prerelease.adoc#identifier[prerelease key is assigned an identifier]
+
+Content writers use the version as the xref:page:resource-id-coordinates.adoc#id-version[version coordinate in resource IDs] when referencing a resource in another component version.
+
+[#key]
+== version key
+
+The `version` key accepts a named identifier, such as `jesse`, a semantic identifier, such as `'1.5.0'`, the reserved value `true`, a map of refname projections, such as `+v/(?<version>*): $<version>+`, or the reserved value `~`.
+The `~` values defines a component version as versionless.
+To learn how to specify an empty component version, see xref:component-with-no-version.adoc[].
+
+If the `version` key is defined in the component version descriptor file for a component version, it takes precedence over a value defined on the content source in the playbook.
+If you prefer the playbook to control the value of the `version` key, don't set the `version` key in the component version descriptor file.
+// TODO: The above sentence needs to be evaluated.
+
+[#named-identifier]
+=== Named identifier as version
+
+The following example shows how to assign a named identifier to the `version` key.
+
+.antora.yml with named identifier assigned to version
+[#ex-name,yaml]
+----
+name: star
+version: rigel # <.>
+----
+<.> On a new line, type `version`, directly followed by a colon and a space (`:{sp}`).
+Then type the value you want assigned to `version`.
+
+[#semver-identifier]
+=== Semantic identifier as version
+
+A semantic identifier is either an integer or begins with an integer and contains at least one dot (`.`).
+`10`, `1.0.0`, and `5.1` are all examples of semantic identifiers.
+Although a semantic identifier looks like a number, it's actually a string.
+If the semantic identifier matches the syntax of a number (integer or decimal), like the one shown in <<ex-semver>>, you should enclose the value in a pair of single quotes (`'`), which coerces it to a string.
+
+The following example shows how to assign a semantic identifier to the `version` key.
+
+.antora.yml with semantic identifier assigned to version
+[#ex-semver,yaml]
+----
+name: colorado
+version: '5.6.0' # <.>
+----
+<.> Enclose a value that matches the syntax of a number in a pair of single quote marks (`'`).
+
+Antora recognizes semantic identifiers according to https://semver.org[semantic versioning rules].
+Semantic versioning is often referred to as semver.
+Antora allows a semantic identifier to begin with `v`.
+Although this prefix is preserved in the value, Antora will ignore it when sorting versions.
+For example, `v9.0.2` will be sorted as though the value is `9.0.2`.
+
+[#refname]
+=== refname as version
+
+Since content in Antora is retrieved from a git repository, you may want to use the git refname (branch or tag name) in which the component version descriptor is stored as the version.
+To do so, assign the reserved value `true` to the version, as shown in <<ex-refname>>.
+
+.antora.yml with true assigned to version
+[#ex-refname,yaml]
+----
+name: colorado
+version: true # <.>
+----
+<.> The value `true` tells Antora to use the refname as the value.
+
+Antora will substitute the value `true` with the refname automatically.
+The value Antora uses is always the short refname (e.g., v1.0), not the full refname (e.g., refs/heads/v1.0).
+If the short refname contains any forward slashes, Antora will replace each one with a hyphen.
+
+[#refname-projection]
+=== refname projection as version
+
+The refname may not be granular enough to use as the version.
+Furthermore, the same git tree could be passed through git references that have different naming schemes, such as feature branches.
+In these cases, you want the version to be extracted or derived from the refname rather than using the value as is.
+That's when you'd define the version using a refname projection.
+
+A refname projection is expressed as a map of patterns (the keys) and replacements (the values).
+The refname projection allows you to match the refname using a pattern, then build a version based on that match.
+The pattern tells Antora which entry to use and what parts to extract from it.
+The replacement tells Antora how to derive a version from the matched refname.
+The replacement is coerced to an empty string if null, otherwise directly to a string (e.g., `1` becomes `'1'`).
+
+The following example shows how to use a projection to compute the value of the `version` key from the refname.
+
+.antora.yml with version computed from a refname projection
+[#ex-projection,yaml]
+----
+name: colorado
+version:
+  v(?<version>+({0..9}).+({0..9})).x: $<version> # <.>
+  feature/(*)/*: $1 # <.>
+----
+<.> Matches the semantic identifier in a refname like `v2.0.x` and extracts it
+<.> Extracts the value between the first and second slash for a refname that begins with `feature/`
+
+The key in the projection is a glob pattern (a combination of extglobs, ranges, and some regex constructs).
+The pattern has the same matching capabilities as the pattern used to match branches or tags for a content source in the playbook.
+
+The characters between parentheses (i.e., round brackets) in the pattern defines a match group.
+If the opening brace begins with `?<name>`, that group is assigned to the name specified between the angle brackets.
+Otherwise, the group is assigned to a 1-based index according to the group's position in the pattern.
+
+The match groups can be referenced in the replacement.
+A match group reference is preceded by a dollar sign (`$`).
+A named group can be referenced using `$<name>`, where the name is once again specified between the angle brackets.
+An indexed group can be referenced by its number, such as `$1`.
+You can reference the entire refname using `$&`.
+
+If the match group contains any forward slashes, Antora will replace each one with a hyphen.
+
+Antora will use the value of the first pattern it matches.
+If none of the patterns match the refname, Antora will fallback to using the refname as the version.
+
+[#requirements]
+== Value requirements
+
+A literal value assigned to the `version` key can contain letters, numbers, periods (`.`), underscores (`+_+`), and hyphens (`-`).
+To ensure portability between host platforms, letters used in the `version` value should be lowercase.
+
+The value *cannot* contain spaces, forward slashes (`/`), or HTML special characters (`&`, `<`, or `>`).
+See xref:component-display-version.adoc[] to learn how to represent a version that contains spaces, uppercase letters, and other characters in the UI menus.

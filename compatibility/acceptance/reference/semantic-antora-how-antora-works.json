@@ -1,0 +1,821 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora’s site generator handles all aspects of creating a documentation site, from fetching and aggregating to converting and arranging the content to publishing the files of the generated site. This page describes that process in detail."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The default pipeline is opinionated to get you started as quickly as possible. But understand that Antora features a modular, open architecture. That means this architecture can accommodate specialized use cases by allowing custom Antora components, such as a validators, to be inserted into the pipeline at strategic points as needed. This page focuses on the core, built-in Antora components and capabilities in Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The steps listed in this section describe the operations the site generator performs. Certain operations are executed asynchronously, so some of the steps below may occur in a different order or happen simultaneously. For example, the UI is fetched and loaded while the content is being aggregated to optimize use of the network."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "playbook file is a simple configuration file"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "playbook:index.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " that can be written in YAML, JSON, or TOML. It contains information and settings such as what content to use, how the content should be processed, how the site should be generated, and where to publish the output."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Antora reads the playbook file and builds a playbook from it, which it then uses to drive the pipeline."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "When you’re ready to generate a site, you pass Antora a playbook file and tell it to run."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Build playbook"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "For each remote URL, Antora clones the remote git repository into a local cache using the built-in git client. If the repository has already been cloned, Antora fetches updates if configured to do so."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Finally, Antora determines which references (branches, tags, and start paths) to use from the specified repositories."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Using the "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "content sources"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "playbook:configure-content-sources.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " listed in the playbook, Antora loads the specified git repositories or local content folders in preparation to scan them for content files."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Load content repositories"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Starting at a "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "content source root"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "content-source-repositories.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": ", Antora identifies a group of files as being part of a component version when it finds a component version descriptor file named "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "antora.yml"
+                        }
+                      ],
+                      "kind": "emphasis",
+                      "roles": [
+                        "path"
+                      ]
+                    },
+                    {
+                      "kind": "text",
+                      "value": ". These source files can be stored in a single repository, at the root of a repository or in a subpath, or distributed across multiple repositories."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Find the content source roots"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora collects all of the files—​text, images, samples, and other supporting materials—​from each "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "content source root subtree"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "standard-directories.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": ". Then it creates a virtual file of each input file."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Transform input files into virtual file objects"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "component version descriptor"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "component-version-descriptor.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " associates the files under it with a specified component name and version, that is, a component version. This allows the files to be decoupled from the repository in which they live and makes Antora’s URL agnostic "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "cross references"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "page:xref.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " possible."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Antora assigns the descriptor information and other source metadata to the virtual files. Then it sorts each file into a virtual collection based on the assigned component version data."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "component version"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "component-version.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " typically represents a discrete and unique version of the documentation for a project, library, service, or training course."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora reads the component version descriptor ( "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "antora.yml"
+                        }
+                      ],
+                      "kind": "emphasis",
+                      "roles": [
+                        "path"
+                      ]
+                    },
+                    {
+                      "kind": "text",
+                      "value": ") files."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Assign files to component version buckets"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Using "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "site properties"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "playbook:configure-site.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " from the playbook and information assigned to the files in the previous step, Antora adds module, family, family-relative path, and other metadata values to each file. It also computes the output path (disk) and publish path (URL) information for each publishable file."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Compute additional metadata"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora further sorts the aggregated files into a content catalog that can be queried and transmitted. First, Antora creates component version objects from the component version buckets in the content aggregate. Then, Antora adds files attached to each component version to the content catalog. After the files are added for each component version, the component version start page is registered. Once the files are added for all component versions, the site start page is registered."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Organize files into a content catalog"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "The AsciiDoc files in the "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "page family"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "pages-directory.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " of the content catalog are converted to embeddable HTML with Asciidoctor.js."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Convert AsciiDoc files to embeddable HTML"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora retrieves "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "navigation files"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "navigation:index.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " from the content catalog, translates their contents into navigation items organized in a specified hierarchy (navigation trees grouped inside a navigation menu), and returns a navigation model."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Convert navigation files"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora finds the "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "UI bundle using the URL listed in the playbook"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "playbook:configure-ui.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " and fetches it. The UI bundle can be cached locally or remote."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Locate and fetch UI bundle"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora extracts the UI files in the bundle and creates a virtual file object for each file containing the file’s contents and path information."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Transform UI files into virtual file objects"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora identifies the static UI files using the UI descriptor file ("
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "ui.yml"
+                        }
+                      ],
+                      "kind": "emphasis",
+                      "roles": [
+                        "path"
+                      ]
+                    },
+                    {
+                      "kind": "text",
+                      "value": ") and sets the file type to static. It sets the type for all other files based on their location (asset, layout, helper, partial)."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Classify UI files"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "For each UI file that is publishable (of type static or asset), Antora computes its output path."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Compute UI file output paths"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "The virtual UI files are sorted into a transmittable collection."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Organize UI files into UI catalog"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Relying on a page template to produce the pages gives the site owner complete control over the construction of the pages, and thus complete control over the UI."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora determines which page template each page requests. It populates the identified UI template with the page’s embeddable HTML, site metadata, context data (component, version) for page, version, and product selectors, and navigation model information for menus and breadcrumbs."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Wrap converted AsciiDoc content in page templates"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora generates a site map that can be used as an internal report or published with the site. This sitemap is partitioned by component name (using a sitemap index). The sitemap index links to the sitemap for each component name, which is where the URLs for the individual pages can be found."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Produce sitemap"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Antora writes the generated pages to a default or "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "user-specified location"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "playbook:output-dir.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": ". The site can be published in multiple formats to multiple locations over multiple protocols using "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "built-in and custom destination providers"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "playbook:configure-output.html"
+                    },
+                    {
+                      "kind": "text",
+                      "value": "."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Publish site"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s possible to substitute the default site generator with a custom one. You first need to create a library or script that exports the function with signature "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "generateSite(args, env)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Within that script, you’re free to import core components from Antora to reassemble your own pipeline. You then activate your pipeline by passing the name of the library or script to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--generator"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Antora CLI"
+                  }
+                ],
+                "kind": "xref",
+                "target": "cli:index.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "steps-in-the-default-generator-pipeline",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Steps in the default generator pipeline"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "How Antora Works"
+      }
+    ]
+  }
+}

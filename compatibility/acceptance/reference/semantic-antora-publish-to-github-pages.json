@@ -1,0 +1,1004 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora is designed to create sites that run anywhere, whether it be on a static web host or the local filesystem. However, some hosts offer “features” that mess with Antora’s output. GitHub Pages is one of those hosts."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, GitHub Pages runs all files through another static site generator named Jekyll (even if your repository is not set up to use Jekyll). Since Antora already produces a ready-made site, there’s absolutely no need for this step. But it’s more than just the wasted effort."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Jekyll has the nasty side effect of removing all files that begin with an underscore ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "_"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). Why is this a problem? By default, Antora puts UI files in a folder named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "_"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". It also places images inside the folder named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "_images"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". When Jekyll comes through, it wipes out these folders. As a result, you get no UI and no images."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jekyll-and-underscore-files",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Jekyll and underscore files"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Fortunately, there’s a way to disable this “feature” of GitHub Pages. The solution is to add a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".nojekyll"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file to the root of the published site (i.e., the output directory configured in your playbook)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The presence of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".nojekyll"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file at the root of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gh-pages"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " branch tells GitHub Pages not to run the published files through Jekyll. The result is that your Antora-made site will work as expected."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s look at two ways to create the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".nojekyll"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file when you run Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "One way to add this file is to touch the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".nojekyll"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file in the output directory after Antora runs, but before committing the files to GitHub Pages. For example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ touch build/site/.nojekyll"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Fortunately, there’s way to do this without having to run a separate command."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "touch-the-file-manually",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Touch the file manually"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To avoid the need for the extra command, the other way to do it is to inject the file using Antora’s "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "supplemental UI"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "playbook:ui-supplemental-files.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " feature. To do so, add the following "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "supplemental_files"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " block under the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ui"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " category in your playbook file:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ui:\n  bundle:\n    url: <url-of-bundle-goes-here>\n  supplemental_files:\n  - path: ui.yml\n    contents: |\n      static_files:\n      - .nojekyll\n  - path: .nojekyll"
+                  }
+                ],
+                "language": "yaml",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "antora-playbook.yml that adds .nojekyll file using supplemental UI"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This configuration defines files from memory. The first file, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ui.yml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", tells Antora which files to promote to the root of the site (outside the UI folder) using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "static_files"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " key. The second file, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".nojekyll"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", gets written to the root of the published site. Since the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contents"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " key is absent, Antora will create an empty file (the equivalent of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "touch"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command from above)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "use-the-supplemental-ui",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Use the supplemental UI"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "nojekyll",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": ".nojekyll"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If your playbook repository is hosted on GitHub, you can configure a GitHub Actions workflow to build and publish your site to GitHub Pages. The benefit of using GitHub Actions is two-fold. First, you don’t have to worry about copying the published files to the gh-pages branch for publishing. Second, you don’t have to worry about the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".nojekyll"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file since the action handles it for you. Let’s get started!"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Example 2"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#github-actions-workflow"
+              },
+              {
+                "kind": "text",
+                "value": " shows an example of a GitHub Actions workflow that uses the latest stable release of Antora to build and publish your site to GitHub Pages. This workflow assumes that the name of the default branch of your playbook repository is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "main"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", that the name of your playbook file is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora-playbook.yml"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", and that Antora is configured to publish the files to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build/site"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " directory. If your site uses different settings, you’ll need to update the values in the workflow file accordingly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": "github-actions-workflow",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "name: Publish to GitHub Pages\non:\n  push:\n    branches: [main]\n  # Allows you to run this workflow manually from the Actions tab\n  workflow_dispatch:\nconcurrency:\n  group: github-pages\n  cancel-in-progress: false\n# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages\npermissions:\n  contents: read\n  pages: write\n  id-token: write\njobs:\n  build:\n    runs-on: ubuntu-latest\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v5\n    - name: Configure Pages\n      uses: actions/configure-pages@v5\n    - name: Install Node.js\n      uses: actions/setup-node@v5\n      with:\n        node-version: '20'\n    - name: Install Antora\n      run: npm i antora\n    - name: Generate Site\n      run: npx antora antora-playbook.yml\n    - name: Upload Artifacts\n      uses: actions/upload-pages-artifact@v4\n      with:\n        path: build/site\n    - name: Deploy to GitHub Pages\n      id: deployment\n      uses: actions/deploy-pages@v4"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": ".github/workflows/publish.yml builds the Antora site and deploys it to GitHub Pages using GitHub Actions"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Example 2"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#github-actions-workflow"
+              },
+              {
+                "kind": "text",
+                "value": " shows, you can install and invoke Antora directly from the workflow. This workflow installs a specific release of Antora (both the CLI and site generator packages) and then uses the Antora CLI in the workflow. The workflow then uses the peaceiris/actions-gh-pages action to publish the site, along with the required "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".nojekyll"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file, to GitHub Pages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To install and use a different version of Antora, append a version to the package name, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora@3.0.3"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s now take this a step further by adding the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Antora Lunr Extension"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/antora/antora-lunr-extension"
+              },
+              {
+                "kind": "text",
+                "value": " to incorporate a search widget in the built site. First, you need to update your playbook repository and UI to meet the minimum requirements of the Antora Lunr Extension as described in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "README"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/antora/antora-lunr-extension#usage"
+              },
+              {
+                "kind": "text",
+                "value": " for that project. Once that’s done, return to the GitHub Actions workflow and configure it to install the extension at the same time it installs Antora. The result is shown in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Example 3"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#github-actions-workflow-with-lunr"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": "github-actions-workflow-with-lunr",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "name: Publish to GitHub Pages with Lunr Search Extension\non:\n  push:\n    branches: [main]\n  # Allows you to run this workflow manually from the Actions tab\n  workflow_dispatch:\nconcurrency:\n  group: github-pages\n  cancel-in-progress: false\n# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages\npermissions:\n  contents: read\n  pages: write\n  id-token: write\njobs:\n  build:\n    runs-on: ubuntu-latest\n    environment:\n      name: github-pages\n      url: ${{ steps.deployment.outputs.page_url }}\n    steps:\n    - name: Checkout repository\n      uses: actions/checkout@v5\n    - name: Configure Pages\n      uses: actions/configure-pages@v5\n    - name: Install Node.js\n      uses: actions/setup-node@v5\n      with:\n        node-version: '20'\n    - name: Install Antora with the Antora Lunr Extension\n      run: npm i antora @antora/lunr-extension\n    - name: Generate Site\n      run: npx antora antora-playbook.yml\n    - name: Upload Artifacts\n      uses: actions/upload-pages-artifact@v4\n      with:\n        path: build/site\n    - name: Deploy to GitHub Pages\n      id: deployment\n      uses: actions/deploy-pages@v4"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": ".github/workflows/publish.yml includes the Antora Lunr Extension"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To install and use a different version of the Antora Lunr Extension, append a version to the package name, such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@antora/lunr-extension@1.0.0-alpha.5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "using-github-actions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using GitHub Actions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can serve your site from a different URL than the default <username>.github.io using a GitHub Pages custom domain."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re publishing your site "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using GitHub Actions"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#using-github-actions"
+              },
+              {
+                "kind": "text",
+                "value": " as the source, then you can configure your custom domain from the "
+              },
+              {
+                "font": false,
+                "item": [
+                  {
+                    "kind": "text",
+                    "value": "Pages"
+                  }
+                ],
+                "kind": "menu",
+                "menu": [
+                  {
+                    "kind": "text",
+                    "value": "Settings"
+                  }
+                ],
+                "submenus": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration screen in the GitHub web interface. No other action is required in the CI workflow."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "On the other hand, if you’re publishing your site from a branch (e.g., gh-pages), then you need to write the custom domain to a CNAME file at the root of the site. In order to do so, add the following step to your GitHub Actions workflow file (or the equivalent for whatever CI pipeline you’re using) after running Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "- name: Create CNAME file\n  run: echo my-domain-name.com > build/site/CNAME"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternately, you can use a supplemental UI to add the CNAME file, similar to how the .nojekyll file was added earlier."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ui:\n  bundle:\n    url: <url-of-bundle-goes-here>\n  supplemental_files:\n  - path: ui.yml\n    contents: |\n      static_files:\n      - CNAME\n  - path: CNAME\n    contents: |\n      my-domain-name.com"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml that adds CNAME file using supplemental UI"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This configuration defines files from memory. The first file, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ui.yml"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", tells Antora which files to promote to the root of the site (outside the UI folder) using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "static_files"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key. The second file, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CNAME"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", gets written to the root of the published site and contains the custom domain name, as required by GitHub Pages when publishing from a branch. The benefit of this approach is that it does not require an extra step in the CI workflow."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Refer to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Managing a custom domain for your GitHub Pages site"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site"
+              },
+              {
+                "kind": "text",
+                "value": " in the GitHub documentation for more information about using a custom domain and how to activate it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "using-a-custom-domain",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using a custom domain"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Publish to GitHub Pages"
+      }
+    ]
+  }
+}

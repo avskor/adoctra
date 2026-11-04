@@ -1,0 +1,208 @@
+= Block Image Category Keys
+:description: Reference list of the available block image category keys and their value types.
+:navtitle: Block Image
+:source-language: yaml
+
+[#image]
+== image
+
+The keys in the `image` category control the arrangement and style of block images.
+
+[cols="3,4,6a"]
+|===
+|Key |Value Type |Example
+
+|align
+|xref:blocks.adoc#align[Block alignment] +
+(default: `left`)
+|[source]
+image:
+  align: right
+
+|<<border-color,border-color>>
+|xref:blocks.adoc#border-color[Color] +
+(default: _not set_)
+|[source]
+image:
+  border-color: #CCCCCC
+
+|<<fit,border-fit>>
+|`content` {vbar} `auto` +
+(default: `content`)
+|[source]
+image:
+  border-fit: auto
+
+|border-radius
+|xref:blocks.adoc#radius[Measurement] +
+(default: _not set_)
+|[source]
+image:
+  border-radius: 2
+
+|border-style
+|xref:blocks.adoc#border-style[Border style] +
+(default: `solid`)
+|[source]
+image:
+  border-style: dashed
+
+|border-width
+|xref:blocks.adoc#border-width[Measurement] {vbar} xref:blocks.adoc#border-width[Measurement[\]] +
+(default: _not set_)
+|[source]
+image:
+  border-width: 0.5
+
+|float-gap
+|xref:measurement-units.adoc[Measurement] {vbar} xref:measurement-units.adoc[Measurement[side,bottom\]] +
+(default: `[12, 6]`)
+|[source]
+image:
+  float-gap: 12
+
+|<<width,width>>
+|xref:measurement-units.adoc[Measurement] +
+(default: _not set_)
+|[source]
+image:
+  width: 100%
+|===
+
+=== noborder role
+
+If the `noborder` role is present on a block image, the border is not drawn on that image even if the border-related keys are defined on the `image` category in the theme.
+
+[,asciidoc]
+----
+image::image-without-border.png[role=noborder]
+----
+
+[#border-color]
+=== border-color
+
+A border is applied to a block image if `border-color` is specified, `border-width` is specified, the value of `border-width` is greater than zero, and the `noborder` role isn't present.
+The border is drawn above the image on the inside of the box reserved for the image.
+
+[#fit]
+=== border-fit
+
+When the value `auto` is assigned to the `border-fit` key the border will expand to fit the width of the container (i.e., full width) instead of the image.
+
+[#width]
+=== width
+
+The `width` key only applies to block images that don't have either a `pdfwidth` or `scaledwidth` attribute on the image macro.
+If `width` is specified, its value takes precedence over the value of the `width` attribute on the image macro, but not over the value of the `pdfwidth` or `scaledwidth` attributes.
+The `width` key accepts the same values as the `pdfwidth` attribute.
+
+[#alt]
+== image-alt
+
+The keys in the `image-alt` category control the arrangement and style of the alt text of block images.
+
+[cols="2,5,6a"]
+|===
+|Key |Value Type |Example
+
+|<<content,content>>
+|xref:quoted-string.adoc[Quoted string] +
+(default: "%\{link}[%\{alt}]%{/link} {vbar} %\{target}")
+|[source]
+image:
+  alt:
+    content: "%{alt} (%{target})"
+
+|font-color
+|xref:color.adoc[Color] +
+(default: _inherit_)
+|[source]
+image:
+  alt:
+    font-color: #FF0000
+
+|font-family
+|xref:font-support.adoc[Font family name] +
+(default: _inherit_)
+|[source]
+image:
+  alt:
+    font-family: Courier
+
+|font-kerning
+|`normal` {vbar} `none` +
+(default: _inherit_)
+|[source]
+image:
+  alt:
+    font-kerning: none
+
+|font-size
+|xref:text.adoc#font-size[Font size] +
+(default: _inherit_)
+|[source]
+image:
+  alt:
+    font-size: 9
+
+|font-style
+|xref:text.adoc#font-style[Font style] +
+(default: `normal`)
+|[source]
+image:
+  alt:
+    font-style: italic
+|===
+
+[#content]
+=== content
+
+The `content` key accepts the placeholders `%\{alt}`, `%\{target}`, `%\{link}`, and `%{/link}`.
+These placeholders insert the alt text, image target, and link open and close tags into the content template.
+
+[#caption]
+== image-caption
+
+The keys in the `image-caption` category control the arrangement and style of the captions for block images.
+Most of the keys listed on xref:caption.adoc[] can also be nested under the `image-caption` category to further customize the image captions.
+
+[cols="3,6,6a"]
+|===
+|Key |Value Type |Example
+
+|xref:block-images.adoc#caption-align[caption-align]
+|xref:block-images.adoc#caption-align[Block alignment] {vbar} xref:block-images.adoc#caption-align[inherit] +
+(default: `$caption-align`)
+|[source]
+image:
+  caption:
+    align: inherit
+
+|xref:block-images.adoc#end[caption-end]
+|xref:block-images.adoc#end[End placement] +
+(default: `bottom`)
+|[source]
+image:
+  caption:
+    end: top
+
+|xref:block-images.adoc#caption-max-width[caption-max-width]
+|`fit-content` {vbar} `fit-content`(percentage) {vbar} `none` {vbar} xref:measurement-units.adoc[Measurement] +
+(default: `none`)
+|[source]
+image:
+  caption:
+    max-width: fit-content
+
+|xref:block-images.adoc#caption-text-align[caption-text-align]
+|xref:block-images.adoc#caption-text-align[Text alignment] {vbar} xref:block-images.adoc#caption-text-align[inherit] +
+(default: `$image-caption-align`)
+|[source]
+image:
+  caption:
+    text-align: center
+|===
+
+// DANGER! Do not describe or add extra information about the block image caption keys here! Such information, examples, etc., belongs on the block-images.adoc page. The caption max width section below will be moved there once there's time to document it.
+
+// Seriously. I've got velociraptors and green slime.

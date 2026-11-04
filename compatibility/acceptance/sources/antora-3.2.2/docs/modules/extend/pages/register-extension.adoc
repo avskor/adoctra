@@ -1,0 +1,85 @@
+= Register an Extension
+
+An extension is not active until registered with Antora.
+There are two ways to register an extension.
+You can specify it using the `--extension` CLI option or you can list it as an entry in the `extensions` key under the `antora` category key in the playbook file.
+
+Once registered, Antora invokes the xref:define-extension.adoc[register function] of the extension in the order it's listed in the playbook file or passed to the CLI.
+The extensions in the playbook file are registered before the extensions passed to the CLI, though this order can be changed by xref:enable-extension.adoc[enabling a registered extension on request].
+
+[#extension-option]
+== CLI option
+
+A quick way to register (and enable) an extension without modifying the playbook file is to specify it using the `--extension` option provided by the `antora` CLI.
+If you have more than one extension to register, you can specify this option multiple times.
+
+Here's an example of how to use this CLI option to register our extension.
+
+ --extension ./my-extension.js
+
+The `--extension` CLI option normally appends the entry to the `extensions` key in the Antora playbook at runtime.
+(In other words, the extensions listed in the playbook get registered first).
+However, if there's an extension listed in the playbook with an `id` key with a value that matches the value specified using the CLI option, then the extension's order relative to other extensions in the playbook is preserved.
+
+Using the CLI option requires you to type a longer command each time you run Antora.
+For that reason, it's often better to specify it in the playbook file, particularly if you're going to always use it.
+Later on you'll learn that even if you do add it to the playbook file, it's still possible to control when it's activated using the CLI.
+The CLI can also influence the order in which extensions are registered.
+
+[#extensions-key]
+== Playbook key
+
+An Antora extension can be registered in the playbook file using the `extensions` key.
+The `extensions` key is specified under the `antora` category key.
+The value of the `extensions` key must be an array.
+Each entry in the array is either a string or a map (key/value pairs).
+
+When the value is a string, the value is assumed to be a require request (i.e., path or module name) that resolves to the extension script.
+When the value is a map, the require request must be specified using the `require` key.
+Using a map leaves room for additional configuration keys, both predefined (like `enabled`) and custom.
+
+If you were to publish the extension to a package repository, then the require request would be the name of that package (i.e., its module name).
+In that case, ensure that the package is configured as a dependency of the playbook project so that Node.js fetches it.
+Antora doesn't download npm packages for you.
+
+=== Without configuration
+
+Let's register our extension in the playbook file so we can see it in action.
+In its simplest form, the extension entry is the require request (i.e., path) to the extension script.
+
+.antora-playbook.yml with extension
+[,yaml]
+----
+antora:
+  extensions:
+  - ./my-extension.js
+----
+
+We prefix the path with `./` to indicate that its location is relative to the playbook file.
+See the https://gitlab.com/antora/user-require-helper/blob/main/README.adoc#user-content-usage[@antora/user-require-helper usage] to learn how Antora resolves require requests in the playbook file.
+
+When you run Antora, you should now see a line like this in your terminal:
+
+[.output]
+....
+Antora is building the Example Docs.
+....
+
+=== With configuration
+
+If you need to specify configuration settings for the extension, then you must change the entry type from a string to a map.
+When making this change, the require request must now be specified on the `require` key.
+
+.antora-playbook.yml with extension specified using require key
+[,yaml]
+----
+antora:
+  extensions:
+  - require: ./my-extension.js
+    optional_behavior: true
+----
+
+By using a map, additional keys can be added as siblings of the `require` key in order to pass configuration to the extension.
+You can find an example of how to use these additional keys to configure an extension on the xref:configure-extension.adoc[] page.
+
+Our next step is to add xref:add-event-listeners.adoc[event listeners] to our extension.

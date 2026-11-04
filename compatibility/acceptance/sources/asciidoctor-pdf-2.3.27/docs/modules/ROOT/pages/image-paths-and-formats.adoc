@@ -1,0 +1,172 @@
+= Image Paths and Formats
+:description: Asciidoctor PDF can process most image formats, though some may require an extra library. Image paths can be relative to the imagesdir or absolute.
+
+Images are resolved at the time the converter runs.
+That means they need to be located where the converter can find them and be in a format it can read.
+
+[#imagesdir]
+== imagesdir attribute
+
+Relative image paths in a document are resolved relative to the value of the `imagesdir` attribute.
+This is effectively the same as how the built-in HTML converter works when the `data-uri` attribute is set.
+The `imagesdir` is blank by default, which means relative images paths are resolved relative to the input document.
+Relative images paths in the theme are resolved relative to the value of the `pdf-themesdir` attribute (which defaults to the directory of the theme file).
+The `imagesdir` attribute is not used when resolving an image path in the theme file.
+Absolute image paths are used as is.
+
+If the image is an SVG, and the SVG includes a nested raster image (PNG or JPG) with a relative path, that path is resolved relative to the directory that contains the SVG.
+
+The converter will refuse to embed an image if the target is a URI (including image references in an SVG) unless the `allow-uri-read` attribute is enabled via the CLI or API.
+
+If you use a linked image in an SVG, the width and height of that image must be specified.
+Otherwise, the SVG library will fail to process it.
+
+== Asciidoctor Diagram integration
+
+Asciidoctor PDF provides seamless integration with Asciidoctor Diagram.
+
+This integration works because Asciidoctor PDF sets the `data-uri` document attribute internally.
+When Asciidoctor Diagram detects that this attribute is set, it passes through the absolute path of the generated image, allowing Asciidoctor PDF to locate it.
+Although the generated image is written to a file as an interim step, Asciidoctor PDF still embeds that image into the generated document.
+Thus, this behavior is consistent with the definition of the `data-uri` attribute.
+
+When using Asciidoctor Diagram with Asciidoctor PDF, the input directory (`docdir`) and the output directory (`outdir` and, in turn, `imagesoutdir`) can differ and Asciidoctor PDF will still be able to find and embed the generated images.
+
+Asciidoctor Diagram builds the `imagesoutdir` from the intrinsic `outdir` attribute.
+This works if Asciidoctor PDF is writing the output to a file.
+If the output is not being written to a file, you can set the `outdir` or `imagesoutdir` attributes explicitly.
+
+You can change the display size of the image in the PDF using the xref:image-scaling.adoc#pdfwidth[pdfwidth] attribute on the diagram block or macro.
+
+== Image formats
+
+The following image types (and corresponding file extensions) are supported:
+
+* PNG (.png)
+* JPEG (.jpg)
+* SVG (.svg)
+
+CAUTION: The GIF (.gif), WebP (.webp), TIFF (.tiff), BMP (.bmp), and interlaced PNG formats are not supported unless you install prawn-gmagick.
+See <<other-image-formats>> for details.
+
+NOTE: The SVG must declare the `viewBox` attribute on the root `<svg>` element.
+Without that information, the converter does not know how to properly interpret the SVG data and portions of the image may get cut off.
+Make sure that the SVG does not define width and height attributes on the root `<svg>` element.
+(A width of 100% is particularly problematic as it can add empty space above and below the visible image).
+The width should be controlled using the `pdfwidth` attribute on the image macro instead.
+
+In order to embed an image into a PDF, Asciidoctor PDF must understand how to decode it.
+To perform this work, Asciidoctor delegates to the underlying libraries.
+{url-prawn}[Prawn^] provides support for decoding JPG and PNG images.
+{url-prawn-svg}[prawn-svg^] brings support for translating SVG images to PDF commands.
+Without any additional libraries, those are the only image file formats supported by Asciidoctor PDF.
+
+[#other-image-formats]
+=== Support for additional image file formats
+
+If you need support for additional image formats, such as GIF, TIFF, WebP, or _interlaced_ PNG--and you don't want to convert those images to a supported format like JPG--you must install the {url-prawn-gmagick}[prawn-gmagick^] Ruby gem.
+prawn-gmagick is an extension for Prawn (Linux and macOS only) that delegates image decoding to {url-graphicsmagick}[GraphicsMagick^] to add support for all image formats recognized by that library.
+
+prawn-gmagick has the additional benefit of *significantly* reducing the processing time, power, and memory necessary to generate a PDF that contains a lot of PNG images.
+For large books (such as Pro Git), you might see the conversion time drop by as much as half.
+Uncompressing PNG image data (specifically zlib inflating) requires a lot of mathematical computation, a task Ruby is not particularly efficient at performing.
+That's why adding the prawn-gmagick gem to the converter makes such a substantial difference.
+
+As an alternative to using prawn-gmagick, you could optimize the images you pass into Asciidoctor PDF, either by scaling them down or converting them to an uncompressed format like JPG.
+
+The prawn-gmagick gem uses native extensions to compile against GraphicsMagick.
+This system prerequisite limits installation to C Ruby running on Linux and macOS.
+Please refer to the {url-prawn-gmagick}[README for prawn-gmagick^] to learn how to install it.
+
+ $ gem install prawn-gmagick
+
+When this gem is installed, Asciidoctor automatically detects and loads it, then delegates all image decoding to GraphicsMagick by way of the bridge it provides.
+We highly recommend using this gem with Asciidoctor PDF if you're able to install it.
+
+==== Unregister prawn-gmagick
+
+In rare cases, GraphicsMagick (the backend library for prawn-gmagick) can misread the bit depth of certain PNG images.
+If this happens, you can instruct Asciidoctor PDF to not delegate to GraphicsMagick.
+
+You can configure Asciidoctor PDF to not delegate to GraphicsMagick when loading PNG images by requiring `asciidoctor/pdf/nopngmagick` when calling Asciidoctor PDF, as follows:
+
+ $ asciidoctor-pdf -r asciidoctor/pdf/nopngmagick doc.adoc
+
+Alternately, you can tell Asciidoctor PDF not to delegate to GraphicsMagick at all by requiring `asciidoctor/pdf/nogmagick` when calling Asciidoctor PDF, as follows:
+
+ $ asciidoctor-pdf -r asciidoctor/pdf/nogmagick doc.adoc
+
+Bypassing prawn-gmagick means you no longer get support for additional image formats that Prawn cannot handle and/or the PNG acceleration it provides.
+
+[#svg]
+== Fonts in SVG images
+
+Asciidoctor PDF uses {url-prawn-svg}[prawn-svg^] to embed SVGs in the PDF document, including SVGs generated by Asciidoctor Diagram.
+
+Actually, it's not accurate to say that prawn-svg embeds the SVG.
+Rather, prawn-svg is an SVG _renderer_.
+prawn-svg translates an SVG into native PDF text and graphic objects.
+You can think of the SVG as a sequence of drawing commands.
+The result becomes indistinguishable from other PDF objects.
+
+What that means for text is that any font family used for text in the SVG _must_ be registered in the Asciidoctor PDF theme file (and thus with Prawn).
+Otherwise, Prawn will fall back to using the closest matching built-in (afm) font from PDF (e.g., sans-serif becomes Helvetica).
+Recall that afm fonts only support basic Latin.
+As we like to say, PDF is xref:theme:font-support.adoc#built-in[bring your own font].
+
+If you're using Asciidoctor Diagram to generate SVGs to embed in the PDF, you likely need to specify the default font the diagramming tool uses.
+Let's assume you are making a plantuml diagram.
+
+To set the font used in the diagram, first create a file named [.path]_plantuml.cfg_ and populate it with the following content:
+
+----
+skinparam defaultFontName Noto Serif
+----
+
+TIP: You can choose any font name that is registered in your Asciidoctor PDF theme file.
+When using the default theme, your options are "Noto Serif", "M+ 1mn", and "M+ 1p Fallback".
+
+Next, pass that path to the `plantumlconfig` attribute in your AsciiDoc document (or set the attribute via the CLI or API):
+
+----
+:plantumlconfig: plantuml.cfg
+----
+
+Clear the cache of your diagrams and run Asciidoctor PDF with Asciidoctor Diagram enabled.
+The diagrams will be generated using Noto Serif as the default font, and Asciidoctor PDF will know what to do.
+
+An alternative approach is to remap the font family that the diagram tool selects.
+For example, in your theme file, you might override the definition of the `sans-serif` font.
+
+[,yaml]
+----
+extends: default
+font:
+  catalog: 
+    merge: true
+    sans-serif: GEM_FONTS_DIR/mplus1p-regular-fallback.ttf
+----
+
+The bottom line is this:
+If you're using fonts in your SVG, and you want those fonts to be preserved, those fonts must be defined in the Asciidoctor PDF theme file.
+
+== Remote images
+
+In order to generate a PDF, the converter must read all image files in order to embed the image data in the PDF.
+This is a requirement of the PDF format.
+The task that the PDF converter must perform is roughly equivalent to the `data-uri` mode of the HTML converter.
+
+By default, Asciidoctor will not read images from a URI.
+Therefore, if the target of one or more images in the document is a URI, you must also set the `allow-uri-read` attribute when calling Asciidoctor PDF from the CLI or API.
+For example:
+
+ $ asciidoctor-pdf -a allow-uri-read document.adoc
+
+When this attribute is not set, you may enounter the following warning:
+
+[.output]
+....
+asciidoctor: WARNING: cannot embed remote image: https://example.org/image.png (allow-uri-read attribute not enabled)
+....
+
+Since `allow-uri-read` is a secure attribute, setting it in the document has no impact.

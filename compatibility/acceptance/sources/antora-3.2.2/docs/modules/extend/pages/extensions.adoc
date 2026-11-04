@@ -1,0 +1,105 @@
+= Antora Extensions
+
+Antora provides an event-based extension facility you can tap into to augment or influence the functionality of the generator.
+This extension facility is designed for users of all experience levels.
+This page provides a high-level summary of how the extension facility works and introduces you to the concepts and terminology you need to know to create or use extensions.
+Subsequent pages step you through creating your first extension.
+
+== Generator events
+
+As described in xref:ROOT:how-antora-works.adoc[], Antora's site generator is a sequence of discrete, functional steps that progressively work to generate a static site.
+This pipeline of steps begins with reading the playbook and gathering the source material.
+It ends with publishing the HTML files and web assets to the output destination.
+Antora's extension facility, which is implemented by Antora's site generator, provides a way to hook custom code into the generator's build process.
+
+Antora's extension facility is event-driven, meaning it works by emitting events.
+Events are emitted (aka fired) to notify extension code (i.e., event listeners) of interesting transitions that occur during site generation (i.e., the execution of Antora).
+Specifically, once each discrete step in the generator is complete, and at other key transition points, Antora emits a named event (e.g., `contentAggregated`).
+
+Events are handled by functions called listeners, which must be registered with that event.
+To hook your code into the operation of Antora, you register extensions that listen to one or more of these events.
+These listeners are defined in the register function of the extension.
+An extension's event handler gets called in the order the extension is registered (so one extension will receive the event after another extension that listens for the same event if the other extension is registered first, and vice versa).
+
+The listeners of an event can be synchronous or asynchronous, but are called synchronously and in sequence.
+Any value returned by an event listener is ignored.
+Once all the listeners for an event have finished running, the generator proceeds to the next step.
+
+In brief, Antora extensions register listeners that respond to transition events emitted by the site generator.
+Subsequent pages go into detail about how to set up listeners, which events those listeners can observe, and how to access context variables.
+
+== The generator context
+
+The extension facility in Antora is loosely based on the EventEmitter in Node.js.
+Antora uses an abstraction over this eventing system called the GeneratorContext, which adapts the EventEmitter for this use case.
+
+When the generator starts, it creates an instance of the GeneratorContext, called the [.term]*generator context*.
+This object is then bound to each extension and its event listeners.
+The generator context is responsible for keeping track of event listeners, storing the generator functions, managing context variables as they flow through the generator, notifying listeners of an event, and providing helpers to make writing extensions easier.
+It's, quite literally, the context of the generator's execution.
+
+Most of the time, you'll interact with the `on` method provided by the generator context to bind your event listener to an event.
+You can also use the generator context to provide custom generator functions.
+
+== What's an event listener?
+
+An [.term]*event listener* is a callback function that's invoked (i.e., notified) when an event is emitted.
+This callback mechanism provides a way to insert code between any two discrete steps of the generator.
+Antora will wait for the listener to run to completion, even if it's async, before proceeding.
+
+A listener can modify the state of in-scope variables in the generator, add new variables, or replace existing variables.
+More times than not, a listener will add additional files to one or more of the catalogs for processing or publishing.
+
+Listeners of the same event (from the same or different extensions) are invoked in sequence (i.e., the sequence in which the extension is registered).
+This strategy prevents the listeners from interfering with one another.
+
+== What's a generator function?
+
+Generator functions are the predefined, discrete steps the generator performs.
+Although most extensions will listen for generator events, an extension can also replace one or more of these generator functions.
+This capability is used when you want to alter the built-in behavior in Antora, such as how the navigation is built.
+As with event listeners, generator functions are configured on the generator context.
+To hook your own generator functions into the operation of Antora, you register an extension that assigns those functions to the generator context.
+
+== What are context variables?
+
+An extension wouldn't be much use if it couldn't access any of the configuration, content, or other data being processed by the generator.
+That's where context variables come in.
+
+The [.term]*context variables* provide access to the in-scope objects flowing through the generator.
+These variables are stored on the generator context, hence the name context variables.
+
+A listener can pick any of those variables out of the generator context and work with them.
+In fact, a listener can read the same variables that the generator itself can read.
+The listener can also push new or replacement variables into the context, as long as those variables are not locked.
+
+== What can an extension do?
+
+To give you an idea of the kinds of extensions you can write and what's possible, here's a glimpse at the things an extension can do to affect the operation of the generator:
+
+* Modify the configuration (i.e., playbook)
+* Change the state of a context variable, such as adding a new file to a catalog
+* Push a new variable into the context
+* Replace or proxy context variables
+* Replace or proxy generator functions
+* Introduce new steps (in a listener or custom generator function)
+* Raise custom events
+* Log messages
+* Require user code
+* Postprocess content, such as replacing strings in HTML files
+* Publish new files
+* Unpublish files
+* Stop processing
+
+In general, an extension taps into the generator and tunes its behavior rather than doing a wholesale replacement of it.
+There are some limitations with this approach, but it's a trade-off for providing something that's broadly accessible.
+
+== What can't an extension do?
+
+An extension can't change the order of steps (i.e., generator functions) that the generator performs.
+It also can't make the generator skip steps.
+However, it can replace an existing step with an empty or custom function.
+
+The most drastic thing an extension can do is to stop the processing early.
+This action is useful if the work of an extension is complete and no additional processing is necessary.
+For example, an extension may only need to report on the content in the site, in which case it can stop the generator before the publishing step.

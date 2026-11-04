@@ -1,0 +1,163 @@
+= What's New in Antora {page-component-version}
+:description: The new features, changes, and bug fixes included in Antora {page-component-version} and its patch releases.
+:doctype: book
+:route: New
+//:page-toclevels: 0
+:leveloffset: 1
+:url-releases-asciidoctor: https://github.com/asciidoctor/asciidoctor/releases
+:url-releases-asciidoctorjs: https://github.com/asciidoctor/asciidoctor.js/releases
+:url-gitlab: https://gitlab.com
+:url-issues: {url-repo}/issues
+:url-milestone-3-2-0: {url-issues}?scope=all&state=closed&label_name%5B%5D=%5BVersion%5D%203.2.0
+:url-mr: {url-repo}/merge_requests
+
+= Antora 3.2.0
+
+_**Release date:** 2026.08.28 | *Issue label:* {url-milestone-3-2-0}[3.2.0^]_
+
+The primary focus of Antora {page-component-version} is to enhance the extension facility and to provide and refine certain API methods and endpoints to support the development of Antora extensions.
+
+This release also adds full support for using a linked worktree or submodule of a locally-cloned repository as a content source.
+It adds syntax for the inclusion and exclusion matching of worktrees, a commits filter, control over the fetch depth, the ability to use the `ref` placeholder in the `edit_url` key, the implicit ROOT module, and the file property and `resourceResource` helper to the UI model.
+This version of Antora requires at least Node.js 20.
+
+Although this release represents a new minor version, this release line has been tested in production by many users for years.
+Being a minor version, it maintains meaningful backwards compatibility with previous releases.
+For these reasons, you should feel confident when upgrading to it from Antora 3.1.x.
+
+You can find a summary of the issues resolved in this release below.
+
+== Resolved issues
+
+=== Added
+
+Issue {url-issues}/1015[#1015^]::
+* Emit `componentsRegistered` event after all components and versions have been registered (site-generator).
+* Store raw files, nav, and startPage data on partially constructed component version until fully processed (content-classifier).
+* Add readable property named `files` to component version in `ContentCatalog#registerComponentVersionStartPage` to get files for component version on access (content-classifier).
+* Add readable property named `startPage` to component version in `ContentCatalog#registerComponentVersionStartPage` to look up start page for component version on access (content-classifier).
+* Update `ContentCatalog#registerComponentVersionStartPage` to return start page (content-classifier).
+Issue {url-issues}/1127[#1127^]:: Support implicit ROOT module layout if modules directory is absent (content-classifier).
+Issue {url-issues}/535[#535^]:: Allow linked worktree to be used as content source; automatically resolve main repository location and remap HEAD reference in branches (content-aggregator).
+Issue {url-issues}/1016[#1016^]:: Add syntax to match current branch of specific worktrees in branches pattern (for inclusion or exclusion) (e.g., `HEAD@5.8.x`) (content-aggregator).
+Issue {url-issues}/1208[#1208^]:: Allow using submodule of locally-cloned repository as content source root (content-aggregator).
+Issue {url-issues}/1013[#1013^]:: Add support for `ref` placeholder to insert full name of git ref (e.g., `refs/heads/v4.0.x`) in value of `edit_url` key on content source (content-aggregator).
+Issue {url-issues}/1008[#1008^]:: Add `addSplatAlias` method to `ContentCatalog` for adding a splat (i.e., directory) alias (content-classifier).
+Issue {url-issues}/1021[#1021^]:: Discover implicit site start page in component version promoted to site root (content-classifier).
+Issue {url-issues}/1090[#1090^]:: Add `git.fetch_depth` key to control how many recent commits Antora fetches from a remote repository (playbook-builder).
+Issue {url-issues}/1165[#1165^]:: Add file property to UI model of page (i.e., `page.file` in UI template) (page-composer).
+Issue {url-issues}/1167[#1167^]:: Add built-in resolveResource UI helper to complement resolvePage UI helper (page-composer).
+Issue {url-issues}/1106[#1106^]:: Allow component name and version to be referenced by attributes defined in antora.yml (content-classifier).
+Issue {url-issues}/1006[#1006^]::
+* Use value of `versionSegment` property on component version in place of version in output path and URL of pages (content-classifier).
+* Set dynamic `activeVersionSegment` property on component version to indicate which version segment is in use (content-classifier).
+Issue {url-issues}/831[#831^]:: Allow content source to be filtered by commits (playbook model only, not playbook file) (content-aggregator).
+Issue {url-issues}/976[#976^]:: Allow extension to be switched off from CLI by negating value (playbook-builder).
+Issue {url-issues}/1203[#1203^]:: Add `buildAlternateNavigation` function for building navigation for component version from an à la carte collection of nav files (navigation-builder).
+Issue {url-issues}/1092[#1092^]:: Preserve order of extension from playbook when enabled from CLI if order is `fixed` (playbook-builder).
+Issue {url-issues}/1153[#1153^]:: Allow file to be explicitly marked as private; not private bypasses underscore check; explicitly mark underscore file as private otherwise (content-classifier).
+Issue {url-issues}/1220[#1220^]:: Don't compute and assign pub property when adding file to content catalog if `pub` property is falsy (content-classifier).
+Issue {url-issues}/1221[#1221^]:: Add `createFile` method to content catalog to create file without adding it to content catalog; set `module` to ROOT if not set; set `contents` to Buffer if string; compute and assign `path` property if not set if input not a Vinyl instance (content-classifier).
+Issue {url-issues}/1221[#1221^]:: Add `create` as second argument to `addFile` method on content catalog to require file to be created first (default `true`); use `false` to skip create step if file is already fully created (content-classifier).
+Issue {url-issues}/1219[#1219^]:: Add `publishableFamilies` setting on content catalog to allow custom family (e.g., export) to be marked as publishable (content-classifier).
+Issue {url-issues}/1225[#1225^]:: Update `ContentCatalog#getFiles` to accept a predicate (i.e., filter function) to filter files (content-classifier).
+Issue {url-issues}/1231[#1231^]:: Modify `ContentCatalog#getComponentVersion` to return latest component version if version is unspecified (content-classifier).
+Issue {url-issues}/1236[#1236^]:: Add `antoraVersion` property to playbook to provide access to Antora core version (playbook-builder).
+Issue {url-issues}/1228[#1228^]:: Pass `standalone` option through to Asciidoctor#load API (asciidoc-loader).
+Issue {url-issues}/1241[#1241^]:: Add `antoraResourceRefs` option to control whether Antora resource ref integration is enabled (asciidoc-loader).
+Issue {url-issues}/1235[#1235^]:: Update `publishFiles` to accept an array of files as alternative to array of catalogs (file-publisher).
+
+=== Changed
+
+Issue {url-issues}/1211[#1211^]:: Propagate roles on text entry in navigation to entry in navigation model (navigation-builder).
+Issue {url-issues}/1175[#1175^]:: Propagate roles and additional link properties on xref entry in navigation to entry in navigation model (navigation-builder).
+Issue {url-issues}/1009[#1009^]:: Remove invalid trailing slash from value of `site.url` when building playbook and from value of `site.url` after `playbookBuilt` event (i.e., when it's provided by an extension) (playbook-builder).
+Issue {url-issues}/1026[#1026^]:: Don't recompute resource ID on file from content aggregate if `src.family` is set (content-classifier).
+Issue {url-issues}/1012[#1012^]:: Always assign the value `auth-required` to `origin.private` if the server requests credentials, even when the credentials are embedded in content source URL (content-aggregator).
+Issue {url-issues}/298[#298^]:: Use worktree from local repository even if repository has no commits (content-aggregator).
+Issue {url-issues}/1136[#1136^]:: Prefix name of all built-in modules with `node:`.
+Issue {url-issues}/1135[#1135^]:: Monkey patch pako module to use zlib.inflate to inflate git objects (content-aggregator).
+Issue {url-issues}/1166[#1166^]:: Allow `resolvePage` and `resolvePageURL` UI helpers to accept no args (page-composer).
+Issue {url-issues}/1125[#1125^]:: Allow site URL to be unset using `--url` CLI option or URL environment variable (playbook-builder).
+Issue {url-issues}/1181[#1181^]:: Classify attachments that don't have a file extension (content-classifier).
+Issue {url-issues}/1187[#1187^]:: Use symbolic name `.` to refer to current worktree and `/.` to refer to main worktree on `worktrees` key (content-aggregator).
+Issue {url-issues}/1191[#1191^]:: Use value of require key on extension in playbook as default ID if id key not specified (playbook-builder).
+Issue {url-issues}/1205[#1205^]:: Format generic merging objects using YAML-like structure instead of JSON (logger).
+Issue {url-issues}/995[#995^]:: Assign unique origins as set to `origins` property on component version; use empty set if no origins specified (content-classifier).
+Issue {url-issues}/1111[#1111^]:: Skip check for local branches in managed repository (content-aggregator).
+Issue {url-issues}/1191[#1191^]:: Use value of require key on extension in playbook as default ID if id key not specified (playbook-builder).
+Issue {url-issues}/1145[#1145^]:: Don't apply camelCase transformation to descendant keys of the `ext` key in component version descriptor (content-aggregator).
+Issue {url-issues}/1215[#1215^]:: Automatically set READABLE_STREAM environment variable on process to force use of Node.js APIs (content-aggregator).
+Issue {url-issues}/1216[#1216^]:: Change exit code to 2 when log failure threshold is exceeded and add hint to site generation completion message (site-generator, cli).
+Issue {url-issues}/1217[#1217^]:: Strip xref from navigation entry if mixed with other content (navigation-builder).
+Issue {url-issues}/1222[#1222^]:: Skip Asciidoctor extension if it has non-compliant exports; assume it self registers (asciidoc-loader).
+Issue {url-issues}/1223[#1223^]:: Cite specific reason why include is unresolved when target is an absoluate file path or URL (asciidoc-loader).
+Issue {url-issues}/484[#484^]:: URI decode resource reference if it contains % (asciidoc-loader).
+Issue {url-issues}/1226[#1226^]:: Convert contents to Buffer if contents is string for file passed to `createFile` method on content catalog (content-classifier).
+Issue {url-issues}/1227[#1227^]:: Map `--stacktrace` CLI option to `runtime.stacktrace` property on playbook; pass `--stacktrace` CLI argument to `buildPlaybook` generation function (playbook-builder, cli).
+Issue {url-issues}/1233[#1233^]:: Allow collection keys (array or map) in playbook to be null (playbook-builder).
+Issue {url-issues}/1232[#1232^]:: Always prefix docname with family segment if family is not page (asciidoc-loader).
+Issue {url-issues}/1237[#1237^]:: Assign pathname property to navigation entry with internal url when url has a hash (navigation-builder).
+Issue {url-issues}/1234[#1234^]:: Don't output site if output dir is null; still allow destinations to be null (file-publisher).
+Issue {url-issues}/1238[#1238^]:: Only allow primary output dir to set path for fs destination if first entry and path key is not set (file-publisher).
+Issue {url-issues}/1240[#1240^]:: Honor empty output destinations; require entry for primary fs destination if destinations key is set (file-publisher).
+(No issue)::
+* Set Node.js 20 as minimum required version of Node.js.
+* Replace use of `String#substr` (deprecated) and `String#slice` with `String#substring` for more optimal string operations.
+* Removed numerous runtime dependencies, including pino-pretty, sonic-boom, require-from-string, and yargs-parser.
+* Upgrade js-yaml to 5.4.x; see https://github.com/nodeca/js-yaml/blob/HEAD/docs/migrate_v4_to_v5.md
+* Don't assign fallback value to `url` property on component version if property is already set (content-classifier).
+* Print site URL instead of file URI in completion message if CI=true (site-generator).
+* Update description for `extension` CLI option to clarify it may be specified multiple times (playbook-builder).
+* Include `-` segment in edit URL for file hosted on gitlab.com to avoid redirct (content-aggregator).
+* Move internal second argument to `ContentCatalog#addFile` to transient data on `src` property (content-classifier).
+* Honor `clean: false` set on output destination when default clean value is `true` (file-publisher).
+* Use value of src.abspath (absolute path) as file path in log message, if available, even if origin is not set (logger).
+* Log original error message when Antora extension is suspected to be Asciidoctor extension (site-generator).
+
+=== Fixed
+
+Issue {url-issues}/1007[#1007^]:: Set `src.version` to original version segment and `src.rel.version` to actual version on splat alias file (content-classifier).
+Issue {url-issues}/1115[#1115^]:: Require YAML tag on attribute or site key value to enable YAML parsing; don't strip quotes around value (playbook-builder).
+Issue {url-issues}/1207[#1207^]:: Parse arguments from CLI into an options map without modifying the values (playbook-builder).
+(No issue)::
+* Use consistent formatting for error messages in playbook builder (playbook-builder).
+
+[#thanks-3-2-0]
+== Thank you!
+
+Most important of all, a huge *thank you!* to all the folks who helped make Antora even better.
+The {url-chat}[Antora community] has provided invaluable feedback and testing help during the development of Antora {page-component-version}.
+
+We also want to call out the following people for making contributions to this release:
+
+Martin Mattel ({url-gitlab}/mmattel[@mmattel^]):: Add example of async function usage inside async event listener, add CI and FORCE_SHOW_EDIT_PAGE_LINK env vars to reference table, and document how to configure Antora to support the use of secure URLs that have a self-signed certificate.
+Raphael ({url-gitlab}/reitzig[@reitzig^]):: Fixed an error in the edit URL documentation ({url-mr}/940[!940^]).
+{url-gitlab}/stoobie[@stoobie^]:: Documented how to uninstall Antora globally ({url-issues}/1014[#1014^]).
+Michael Bar-Sinai ({url-gitlab}/michbarsinai[@michbarsinai^]):: Updated documentation for using Antora in GitHub Actions ({url-issues}/1073[#1073^]).
+Jake Cahill ({url-gitlab}/JakeSCahill1[@JakeSCahill1^]):: Add extension use case to docs for resolving attribute references in attachments.
+Sturt Ison ({url-gitlab}/sturtison[@sturtison^]):: Add git branch names recommendation ({url-issues}/1062[#1062^]).
+Carsten Pfeiffer ({url-gitlab}/cgpfeiffer[@cgpfeiffer^]):: Document image link=self attribute introduced by {url-issues}/735[#735^].
+Robert ({url-gitlab}/rltbennett[@rltbennett^]):: Add instructions about how to use the ROOT component and add more explanation of the relationship between the `ui.bundle.snapshot` and `runtime.fetch` keys.
+Takashi Sakamoto ({url-gitlab}/takaswie[@takaswie^]):: Fulfill missing `gitlab` entry in table of available redirect_facility key.
+Sebastian Davids ({url-gitlab}/sebastiandavids[@sebastiandavids^]):: Add docs on how to enable soft wrapping for source blocks.
+
+////
+Gautier de Saint Martin Lacaze ({url-gitlab}/jabby[@jabby^])
+Alexander Schwartz ({url-gitlab}/ahus1[@ahus1^])::
+Andreas Deininger ({url-gitlab}/deining[@deining^])::
+Ben Walding ({url-gitlab}/bwalding[@bwalding^])::
+Daniel Mulholland ({url-gitlab}/danyill[@danyill^])::
+Ewan Edwards ({url-gitlab}/eedwards[@eedwards^])::
+George Gastaldi ({url-gitlab}/gastaldi[@gastaldi^])::
+Germo Görtz ({url-gitlab}/aisbergde[@aisbergde^])::
+Guillaume Grossetie ({url-gitlab}/g.grossetie[@g.grossetie^])::
+Hugues Alary ({url-gitlab}/sturtison[@sturtison^])::
+Jared Morgan ({url-gitlab}/jaredmorgs[@jaredmorgs^])::
+Juracy Filho ({url-gitlab}/juracy[@juracy^])::
+Marcel Stör ({url-gitlab}/marcelstoer[@marcelstoer^])::
+Paul Wright ({url-gitlab}/finp[@finp^])::
+Raphael Das Gupta ({url-gitlab}/das-g[@das-g^])::
+Sturt Ison ({url-gitlab}/sturtison[@sturtison^])::
+Vladimir Markiev ({url-gitlab}/Grolribasi[@Grolribasi^])::
+////

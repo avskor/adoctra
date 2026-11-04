@@ -1,0 +1,87 @@
+= Network Proxy
+
+The purpose of network proxy-related keys in the playbook is to allow Antora to be used behind an HTTP/HTTPS proxy, such as in a typical corporate environment.
+The requests these keys impact, at present, include those made by the git client in the content aggregator and the HTTP client in the UI loader.
+
+== Automatic configuration
+
+By default, Antora respects the industry-standard `http_proxy`, `https_proxy`, and `no_proxy` environment variables, if set.
+That means Antora may automatically proxy network requests, even if these keys are not set in the playbook file.
+This reflects a noteworthy change in behavior from Antora 2.
+
+The `http_proxy` and `https_proxy` environment variables specify a URL through which Antora should route HTTP and HTTP requests, respectively.
+The `no_proxy` environment variable allows for requests to certain domains or subdomains to bypass the proxy (i.e., exclusions).
+
+NOTE: It's not possible to configure different proxies for different URLs using this approach.
+The only URL-specific configuration is to disable the proxy for certain domains or subdomains using `no_proxy`.
+
+By honoring these environment variables, Antora is fulfilling the standard contract in network programming for working with proxies without having to modify the settings at the application level.
+This is the contract by which network-based software is developed.
+If the connection still cannot be made when these environment variables are set, it's an IT issue.
+
+If it's necessary to configure the proxy settings without the use of environment variables, then, and only then, do you need to specify them in the playbook file.
+If that's the case, read on.
+
+[#http-proxy]
+== http_proxy key
+
+The `http_proxy` key accepts a URL through which to route HTTP requests.
+The URL should only contain the protocol (http or https), domain (root domain or subdomain), and a port.
+When set, all HTTP requests made by Antora will be routed through this URL.
+
+.antora-playbook.yml
+[,yaml]
+----
+network:
+  http_proxy: http://localhost:3128
+----
+
+The protocol of the proxy URL does not have to match the protocol of the original URL.
+
+[#https-proxy]
+== https_proxy key
+
+The `https_proxy` key accepts a URL through which to route HTTPS requests.
+The URL should only contain the protocol (http or https), domain (root domain or subdomain), and a port.
+When set, all HTTPS requests made by Antora will be routed through this URL.
+
+.antora-playbook.yml
+[,yaml]
+----
+network:
+  https_proxy: http://localhost:3128
+----
+
+The protocol of the proxy URL does not have to match the protocol of the original URL.
+
+[#no-proxy]
+== no_proxy key
+
+The `no_proxy` key specifies proxy exclusions.
+These exclusions are expressed as a comma-separated list of domains or subdomains.
+If the URL of a request matches one of these values, it will not be routed through the proxy, even if a proxy is configured for the protocol of the URL (http or https).
+
+.antora-playbook.yml
+[,yaml]
+----
+network:
+  no_proxy: gitlab.com,github.com
+----
+
+To turn off the proxy for all requests, set this value to `*`.
+
+.antora-playbook.yml
+[,yaml]
+----
+network:
+  no_proxy: '*'
+----
+
+Antora 2 didn't honor the `http_proxy` and `https_proxy` environment variables.
+If you're migrating from Antora 2 to Antora 3, and you encounter a network error (Bad response: 503), the automatic proxy support in Antora 3 may be the culprit.
+If the proxy is standing in the way of Antora connecting to an endpoint, you may need to bypass the proxy using the `no_proxy` key.
+If you want to avoid modifying your playbook, you can specify this key using a CLI option:
+
+ $ antora --noproxy '*' antora-playbook.yml
+
+However, if this is necessary, you may want to understand why the proxy is failing to route the request.

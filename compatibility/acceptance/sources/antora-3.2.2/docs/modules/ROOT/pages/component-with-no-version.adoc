@@ -1,0 +1,51 @@
+= Define a Component with No Version
+
+Sometimes the project or process you're documenting isn't versioned.
+For example, hosted technology services and team handbooks may only need their content to represent how the service or process works as of right now.
+This is where the reserved version value of a tilde, `~`, comes into play.
+
+== Assign ~ to the version key
+
+To define a component version that doesn't have a version, assign a tilde, `~`, to the `version` key.
+The `~` is shorthand for the value `null`, which has the same effect.
+
+.antora.yml for a versionless component version
+[,yaml]
+----
+name: component-name
+version: ~ # <.>
+----
+<.> On a new line, type the key `version`, directly followed by a colon and a blank space (`:{sp}`).
+Then enter the value `~`.
+
+Antora doesn't apply the same behavior and output rules to an versionless component version that it does to a component version with a named or semantic version.
+For example, Antora doesn't include the version segment in the publishable resource URLs of an versionless component version (e.g., [.path]_/component-name/module-name/page-name.html_).
+
+[#usage]
+== Behavior and output
+
+The `version` key is required for a component version since versioning is central to how Antora works.
+The behavior and output rules that are influenced by the version are described in xref:component-version-key.adoc#usage[How Antora uses version].
+However, Antora accounts for the fact that some components are versionless or have an empty component version co-located with non-empty component versions.
+When the `version` key is assigned `~`, defining the component version as versionless, Antora:
+
+* sorts the versionless component version above xref:how-component-versions-are-sorted.adoc[other versions that belong to the same component]
+* identifies it as the xref:how-component-versions-are-sorted.adoc#latest-version[latest version of a component] or, if the `prerelease` key is set, as the latest prerelease version of a component
+* assigns the fallback value `default` to the `display_version` key at runtime for display purposes in the UI menus, except when:
+** the `display_version` key is assigned a value in [.path]_antora.yml_, or
+** the xref:component-prerelease.adoc#identifier[prerelease key is assigned an identifier] and the `display_version` key isn't set in [.path]_antora.yml_; at runtime, Antora assigns the identifier to the `display_version` key
+* doesn't add a xref:how-antora-builds-urls.adoc#version[version segment] to the versionless component version's publishable resource URLs, even if the xref:playbook:urls-latest-version-segment.adoc[latest_version_segment key] or xref:playbook:urls-latest-prerelease-version-segment.adoc[latest_prerelease_version_segment key] is set in the playbook, unless the `latest_version_segment_strategy` is `redirect:from`
+
+[TIP]
+.UI and extension developers
+====
+When a component version is defined as versionless:
+
+* the reserved version value, `~` or `null`, is coerced into and stored as an empty string internally
+* a version segment isn't added to `pub.url` or `out.path`
+====
+
+== Reference a versionless resource
+
+Because a versionless component version is typically the only version (or, at least, the latest component version) in a component, Antora automatically routes any incoming references that originate from other components that don't specify a version coordinate to it.
+However, in rare cases, such as when referencing a versionless prerelease from another component version, you can use the reserved keyword `+_+` (an underscore) as the xref:page:resource-id-coordinates.adoc#id-version[version coordinate in the resource ID] (e.g., `\xref:_@component:module:file.adoc[]`) to reference a versionless component version.

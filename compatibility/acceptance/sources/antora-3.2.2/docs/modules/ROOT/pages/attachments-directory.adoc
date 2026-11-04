@@ -1,0 +1,50 @@
+= Attachments Directory and Files
+
+[#attachments-dir]
+== Attachments family directory
+
+A module directory can contain a xref:family-directories.adoc[family directory] named [.path]_attachments_.
+
+[listing]
+----
+📂 modules
+  📂 ROOT <.>
+    📂 attachments <.>
+      📄 attachment-source-file.ext <.>
+    📁 images
+    📁 pages
+    📄 nav.adoc
+----
+<.> A ROOT module directory.
+<.> An [.path]_attachments_ family directory.
+Antora classifies source files stored in an [.path]_attachments_ directory as attachments.
+<.> An attachment source file.
+
+The [.path]_attachments_ directory is optional.
+Antora applies preset behavior to the files stored in an [.path]_attachments_ directory when it generates a site.
+
+[#attachments]
+== Attachment files
+
+An attachment is typically a file a site visitor views or downloads using their browser, such as a PDF or the ZIP archive of a sample project.
+
+At runtime, Antora automatically:
+
+* Loads each file from an [.path]_attachments_ directory into the Antora content catalog, except for files xref:standard-directories.adoc#hidden-files[marked as hidden or missing a file extension]
+* Assigns each loaded attachment file to the attachment family
+* Assigns each loaded attachment a xref:page:resource-id.adoc[unique resource ID] for source-to-source referencing
+* Publishes each loaded attachment file as an individual page in a site, except for files xref:standard-directories.adoc#unpublished[marked as unpublished]
+
+Using an attachment's resource ID, you can xref:page:attachments.adoc[cross reference an attachment] from other pages, resources, or navigation files in your site.
+Antora uses the family directory, __attachments__-relative directory path (if present), filename, and file extension of the attachment when xref:how-antora-builds-urls.adoc[building the URL of an attachment].
+
+=== Binaries and other large files
+
+If your content includes large attachment files, such as sample project binaries, libraries, or PDFs, we don't recommend storing them in a regular git repository.
+Instead, host them in a binary repository such as S3, or use git LFS (Large File Storage).
+
+include::partial$assets-directory.adoc[]
+
+== Learn more
+
+* xref:page:attachments.adoc[]

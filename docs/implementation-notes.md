@@ -2818,3 +2818,22 @@ a separate rule (inside `:is()` it raised specificity and broke hdlist
 terms), `fit-content:not(.stretch)`, and `pre` inherits `overflow-wrap`
 (table `normal` lets a literal cell widen the table). golden.rs container
 normalizers map an item's leading `<p>` to the `li` text on both sides.
+
+**Short labels do not convert titles** (2026-11-04, found by the full Antora
+docs, `playbook/content-edit-url`): Ruby's `AbstractBlock#xreftext` /
+`Section#xreftext` with `xrefstyle=short` build a captioned block's or
+numbered section's label from the signifier and number alone, so the target
+title is not converted (nor memoized) while the label is produced. adoctra's
+`Execution::xreftext` converted it first, so a forward short reference to a
+block whose title holds its own reference memoized that title with the inner
+reference as `[id]` (Ruby's `@resolving_xref`). `resolve::styled_uses_title`
+mirrors Ruby's branches; `full`, `basic`, no style and uncaptioned/unnumbered
+targets still convert the title inside the label (and show `[id]`, as Ruby).
+Test `a_short_label_does_not_convert_the_target_title`.
+The same import added the full Asciidoctor PDF (96 pages) and Antora (205)
+docs: body 651, structure 625, semantics 611 (+151 upstream = 762), Rouge
+3164 listings / 651 docs. `import_docs.py` reuses a page's existing body id
+in every manifest. A verbatim block in a list item keeps its `strong`
+spacing (`li pre strong { letter-spacing: inherit }`; Ruby's rule is
+`p strong`), golden lists/verbatim_quotes.
+visual-v1: 1886 of 1886 match (943 cases).

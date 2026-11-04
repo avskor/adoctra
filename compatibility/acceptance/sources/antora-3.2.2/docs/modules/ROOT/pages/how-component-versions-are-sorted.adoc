@@ -1,0 +1,142 @@
+= How Component Versions are Sorted
+
+On this page, you'll learn:
+
+* [x] How Antora sorts components and component versions.
+* [x] How Antora selects the latest version of a component.
+
+Understanding how Antora sorts xref:component-version.adoc[component versions] is important when choosing your versioning scheme and its potential presentation and routing results in your site's UI.
+
+[#sort-docs-components]
+== Docs component sort order
+
+Antora groups component versions into xref:component-version.adoc#docs-component[documentation components].
+The sort order of components in the content catalog is not deterministic.
+However, when the docs components are accessed through the UI model (`site.components`), they are sorted in alphabetical order by title.
+The title of a component is defined by the xref:component-title.adoc[title key] defined in each component version's [.path]_antora.yml_ file.
+If the `title` key isn't set, Antora falls back to the xref:component-name-key.adoc[name key] when sorting the component.
+In each component, the versions are sorted according to the <<version-sorting-rules,component version sorting rules>>.
+
+This sorted list of components is typically used by the UI to present a menu widget that the reader can use to navigate between different components and versions.
+Antora's default UI provides such a widget.
+In the default UI, the list of versions for a given component is shown beneath each component's title.
+
+Antora does not require that components and versions be displayed in this order.
+If you want them to be shown in a different order, you need to customize the UI template that generates this list.
+When customizing Antora's default UI, you would need to edit the partial named `nav-explore` located at [.path]_src/partials/nav-explore.hbs_ in the UI project.
+The key fragment of that template is the iteration over `site.components`:
+
+[,hbs]
+----
+{{#each site.components}}
+...
+{{/each}}
+----
+
+Antora's default UI uses the order in which components are stored in the UI model.
+You can modify this order by passing the list of components to a custom helper function that you must also provide:
+
+[,hbs]
+----
+{{#each (rearrange site.components 'component-b,component-a'}}
+...
+{{/each}}
+----
+
+You also have the choice of manually creating a menu entry for each component you want displayed.
+This strategy would also allow you to exclude certain components.
+
+[#version-schemes]
+== Versioning schemes
+
+Antora only considers the value of the `version` key when sorting the component versions of a docs component.
+The xref:component-version-key.adoc[value assigned to the version key] determines what versioning scheme, and therefore what order, a component version is placed in under its component title or name in the xref:navigation:index.adoc#component-dropdown[component version selector menu].
+The reserved values `~` and `null` define a xref:component-with-no-version.adoc[component version with an empty version] (i.e., versionless).
+
+[cols="1,4,1"]
+|===
+|Scheme |Valid Identifiers |Example
+
+|Semantic
+a|[%hardbreaks]
+Integer
+String that starts with a number and contains at least one dot (`.`) character
+String that starts with `v`, followed by a number, and contains at least one dot (`.`) character
+a|[%hardbreaks]
+`30`
+`2.4`
+`v90.3`
+
+|Named
+|All values that don't match the semantic scheme or the reserved version values (`~`, `null`)
+a|[%hardbreaks]
+`edge`
+`z4`
+
+|Versionless
+|`~` +
+`null`
+|`~`
+|===
+
+[#version-sorting-rules]
+== Component version sorting rules
+
+Antora applies the following rules when sorting the component versions of a component:
+
+. A versionless component version is displayed in the component version selector menu before named versions if both are present.
+. Named versions of a component are displayed in the component version selector menu before semantic versions if both are present.
+. Named versions of a component are sorted in reverse alphabetical order (e.g., `z4`, `wish`, `lester`).
+.. Version identifiers with uppercase letters aren't recommended in URLs and can prevent portability between web servers.
+If you use uppercase letters, they come before lowercase letters (e.g., `A`, `a`).
+. Semantic versions of a component are displayed in the component version selector menu after named versions if both are present.
+. Semantic versions of a component are sorted in descending order
+.. The leading `v` in a semantic identifier is ignored and versions are sorted according to the first number after the `v`.
+.. The https://semver.org[semantic versioning ordering rules] are applied.
+
+[#determine-version-order]
+=== Determine the version order of a component
+
+Let's assume that the component _RoseyDB_ contains several component versions.
+Some versions use the semantic scheme: `v2.5`, `4.0`, and `3.9`.
+Some are named: `utopia` and `vivid`.
+According to Antora's sorting rules, the _RoseyDB_ component versions will be displayed in the reference UI in the order listed below.
+
+.Sorted RoseyDB component versions
+....
+vivid
+utopia
+4.0
+3.9
+v2.5
+....
+
+Bear in mind that if the xref:component-display-version.adoc[display_version key] is defined in a component version's [.path]_antora.yml_ file, the value of `display_version` is shown instead of the `version` key's value.
+Regardless of whether or not `display_version` is set, the component version is *always sorted according to the value assigned to its `version` key*.
+Thus, to the reader's eyes, the versions may not appear to be sorted in the order described.
+
+For instance, if the `utopia` version of _RoseyDB_ is assigned a `display_version` value of `3.0`, the _RoseyDB_ versions will still be sorted in the same order.
+The `utopia` version is just labeled as `3.0` in the reference UI.
+
+....
+vivid
+3.0
+4.0
+3.9
+v2.5
+....
+
+Antora also determines the <<latest-version,latest component version>> of each component.
+The latest version for _RoseyDB_ would be `vivid` because it's the first version in the sorted list and not defined as a prerelease.
+
+[#latest-version]
+== Latest component version
+
+In addition to sorting the component versions, Antora identifies the most recent, stable component version of each component.
+The [.term]*latest component version*, also called the [.term]*latest version*, is the first version in the sorted list that's not a xref:component-prerelease.adoc[prerelease].
+If all versions are prereleases, then the first prerelease version in the list is selected.
+A xref:component-with-no-version.adoc[component version with an empty version] is always considered the latest version or latest prerelease version (if `prerelease` is set).
+
+Antora uses the latest version of a component when qualifying an incoming resource ID reference from another component if the version coordinate wasn't specified or can't otherwise be determined.
+
+TIP: The latest version is available as the property `latest` in the xref:antora-ui-default::templates.adoc#site[UI model].

@@ -1,0 +1,63 @@
+= File and Line Number Information
+// Sourcemap
+// Sourcemap Information
+// AsciiDoc File and Line Number Information
+// Report AsciiDoc File and Line Number Information
+// File and Line Information with Sourcemap
+
+The `sourcemap` key, when activated, provides additional file and line number information about AsciiDoc blocks to Antora's logger and Asciidoctor extensions.
+
+== What is the sourcemap?
+
+The sourcemap is an AsciiDoc processor feature that tracks and stores the file and line number for each parsed AsciiDoc block.
+Some Asciidoctor extensions rely on this information to run successfully or return the correct output.
+Antora's logger uses this information to add line number and include directive source file location context to the error, warning, and info messages it logs that concern the AsciiDoc syntax.
+For example, when the AsciiDoc processor's sourcemap is turned on (activated), Antora's logger can provide the line number where an unresolved xref is located in a file.
+If the sourcemap is turned off, the logger can only provide the location of the page file that contains the broken xref.
+
+The sourcemap feature is turned on by activating the `sourcemap` key in your playbook or using the <<sourcemap-option,--asciidoc-sourcemap option>>.
+
+////
+When the `sourcemap` key is activated (turned on), the AsciiDoc processor computes and stores additional file and line number information about AsciiDoc blocks during the generation of your site.
+Some Asciidoctor extensions rely on this information being available while processing your source content.
+It also provides more context about AsciiDoc syntax errors when they're logged.
+For example, when `sourcemap` is turned on, error messages about unresolved xrefs include the line number where the broken xref is located in a file's content.
+////
+
+[#default]
+== Default sourcemap value
+
+The `sourcemap` key is set to `false` by default.
+That is, it's deactivated (turned off) at runtime unless activated in the playbook or from the CLI using the <<sourcemap-option,--asciidoc-sourcemap option>>.
+
+=== Why isn't sourcemap turned on by default?
+
+Antora doesn't activate the `sourcemap` key by default because it adds additional processing and object allocation to the build process.
+This may increase the time it takes to generate your site.
+
+[#sourcemap-key]
+== sourcemap key
+
+The optional `sourcemap` key is mapped to the xref:configure-asciidoc.adoc[asciidoc key].
+
+.antora-playbook.yml
+[,yaml]
+----
+asciidoc:
+  sourcemap: true
+----
+
+To activate the `sourcemap` key, assign it the value `true` in the playbook file.
+
+[#sourcemap-option]
+== AsciiDoc sourcemap option
+
+You don't have to modify the playbook file directly to activate or deactivate this key.
+To activate the sourcemap from the CLI, use the xref:cli:options.adoc#sourcemap[--asciidoc-sourcemap option].
+
+ $ antora --asciidoc-sourcemap antora-playbook.yml
+
+The `--asciidoc-sourcemap` option overrides a value assigned to the `sourcemap` key in the playbook file.
+
+When the `sourcemap` key is activated in a playbook file, it cannot be deactivated from the command line.
+The CLI can only activate it.

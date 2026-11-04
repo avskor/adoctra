@@ -1,0 +1,35 @@
+= Attachment Xrefs in Navigation Files
+:navtitle: Attachment Xrefs and Link Text
+
+To xref:page:attachments.adoc[reference an attachment], use the AsciiDoc xref macro and the resource ID of the attachment.
+The `attachment$` family coordinate must be specified in the attachment's resource ID.
+
+.nav.adoc
+[#ex-base]
+----
+* xref:attachment$filename.pdf[Our Brochure] <.>
+* xref:version@component:module:attachment$filename.epub[Our Book] <.>
+----
+<.> Xref targeting an attachment that belongs to the same component version and module as the navigation file.
+<.> Xref where the resource ID specifies an attachment that is in a different component version than the navigation file.
+
+If you don't specify link text in an xref macro that targets an attachment, Antora displays the URL of the attachment as the link in the component version's page menu.
+
+.nav.adoc
+[#ex-no-text]
+----
+* xref:attachment$sample-project.zip[]
+----
+
+The computed URL resulting from <<ex-no-text>>, _+https://docs.example.com/component/version/module/_attachments/sample-project.zip+_, would display as a link in the page menu.
+
+You can specify link text by entering it between the square brackets of the xref macro.
+
+.nav.adoc
+[#ex-text]
+----
+* xref:attachment$sample-project.zip[Practice Project]
+----
+
+Using <<ex-text>>, Antora would display the text _Practice Project_ as a link in the page menu.
+When a visitor clicks on the link, their browser will download or display the published attachment depending on the file format of the attachment and their browser's settings.

@@ -1,0 +1,1157 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GitLab"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com"
+              },
+              {
+                "kind": "text",
+                "value": " is a DevOps platform that provides everything you need to publish your Antora-based documentation to the web. On this page, we’ll explore how to use GitLab to publish your first documentation site using Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each GitLab project provides code hosting (a git repository), continuous integration (GitLab CI), and static web hosting with "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "redirect support"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gitlab.com/ee/user/project/pages/redirects.html"
+              },
+              {
+                "kind": "text",
+                "value": " (GitLab Pages). GitLab is thus suitable to manage your entire Antora-based documentation site end-to-end, from source to published site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To use GitLab CI/CD for publishing an Antora site, you need:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A playbook project, which starts as a local git repository that stores the Antora playbook file."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Zero or more content projects, each with a git repository that hosts the content files."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A file named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".gitlab-ci.yml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the root of the git repository in your playbook project, which provides the CI/CD configuration."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before proceeding, we recommend studying core "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CI/CD concepts"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gitlab.com/ee/ci/introduction/"
+              },
+              {
+                "kind": "text",
+                "value": " and the overview of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".gitlab-ci.yml file"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gitlab.com/ee/ci/yaml/gitlab_ci_yaml.html"
+              },
+              {
+                "kind": "text",
+                "value": " in the GitLab documentation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "gitlab-overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "GitLab overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Begin by creating a new project on GitLab to host your playbook project. Follow the instructions on that page to push your local git repository to GitLab. If your playbook refers to other content source repositories, make sure to push those to GitLab as well."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, you’ll need to configure CI/CD. You only need to set up GitLab CI/CD in the default branch of your playbook repository. Antora will fetch content from other repositories that are declared in your playbook automatically."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We’ll start with a basic GitLab CI/CD configuration file that uses the Antora Docker image to build a site with Antora and publish it to GitLab Pages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "image:\n  name: antora/antora\npages:\n  stage: deploy\n  interruptible: true\n  script:\n  - antora --fetch --redirect-facility gitlab --to-dir public antora-playbook.yml\n  artifacts:\n    paths:\n    - public"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": ".gitlab-ci.yml to build and deploy an Antora site"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Commit the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".gitlab-ci.yml"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file to git and push it to the remote repository. That will trigger the first CI/CD pipeline. If the pipeline succeeds, your site will be accessible at the URL listed on the Pages settings page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, GitLab Pages automatically enables the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Use unique domain"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option, which adds a unique number to the URL where the site is hosted. Chances are, this is not what you want. It’s not only an obscure URL, it can disrupt the use of a custom domain. Follow these steps to correct it:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Navigate to the "
+                  },
+                  {
+                    "font": false,
+                    "item": [
+                      {
+                        "kind": "text",
+                        "value": "Pages"
+                      }
+                    ],
+                    "kind": "menu",
+                    "menu": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy"
+                      }
+                    ],
+                    "submenus": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " menu option from the project repository."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "De-select the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Use unique domain"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Click "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Save changes"
+                      }
+                    ],
+                    "kind": "button"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The URL for the GitLab Pages site will now follow this pattern:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "https://<group-name>.gitlab.io/<project-name>"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The site will be public even if the project is private."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can refer to the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "playbook project"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://gitlab.com/antora/demo/docs-site"
+              },
+              {
+                "kind": "text",
+                "value": " for the Antora demo to see another example of building and publishing an Antora site using GitLab Pages that taps into a few additional capabilities of GitLab CI/CD."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "get-started",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Get started"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "So far, we’ve relied on the Antora Docker image to run Antora in CI/CD. The Antora Docker image only provides the Antora core components. It does not include any extensions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "While using the Antora Docker image is a convenient way to get up and running quickly, we strongly recommend declaring the dependencies of your site within your playbook project (or extending the Docker image). By doing so, you keep your build self-contained and portable. This is especially important if you rely on additional packages such as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@antora/lunr-extension"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor-kroki"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s assume you have the following "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package.json"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file in your playbook project that declares a dependency on Antora, the Antora Lunr Extension, and Asciidoctor Kroki. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "overrides"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key is necessary to pin the version of Asciidoctor.js to the version used by Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n  \"name\": \"my-docs-site\",\n  \"description\": \"My Docs Site\",\n  \"private\": true,\n  \"devDependencies\": {\n    \"antora\": \"latest\",\n    \"@antora/lunr-extension\": \"1.0.0-alpha.13\",\n    \"asciidoctor-kroki\": \"latest-0\"\n  },\n  \"overrides\": {\n    \"asciidoctor-kroki\": {\n      \"@asciidoctor/core\": \"~2.2\"\n    }\n  }\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "package.json"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You’ll first want to run "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "npm i"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to generate the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package-lock.json"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " file and commit both files."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With that configuration in place, you can modify your GitLab CI/CD configuration to be based on "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "node:26-alpine"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the base image used by Antora Docker. You’ll then need to fetch the dependencies on each build since the base image does not provide Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "image:\n  name: node:26-alpine "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nvariables:\n  ANTORA_CACHE_DIR: .cache/antora "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n  NODE_OPTIONS: --max-old-space-size=4096 "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\nbefore_script:\n- npm ci "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-4",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\npages:\n  stage: deploy\n  interruptible: true\n  rules:\n  - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-5",
+                "kind": "callout",
+                "number": "5",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n  cache:\n    paths:\n    - .cache "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-6",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n  script:\n  - npx antora --fetch --redirect-facility gitlab --to-dir public antora-playbook.yml "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-7",
+                "kind": "callout",
+                "number": "6",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n  artifacts:\n    paths:\n    - public "
+              },
+              {
+                "guard": "# ",
+                "icons": null,
+                "id": "CO1-8",
+                "kind": "callout",
+                "number": "7",
+                "src": "",
+                "xml": false
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": ".gitlab-ci.yml"
+              }
+            ]
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The base image used by Antora Docker, which you can use if you’re installing packages locally to the playbook project."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2",
+                  "CO1-6"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Stores the repository and UI bundle cache between runs."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-3"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "(optional) Increases the memory reserved for the Node.js to allow Antora to process heavier builds."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-4"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Installs dependencies defined in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "package-lock.js"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file. Using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "npm ci"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "npm i"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " ensures that the versions of your dependencies remain stable between runs."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-5"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Only run on the default branch for this repository."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-7"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Call Antora using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "npx"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which will locate and run the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "antora"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command installed within the project. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--fetch"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " flag ensure Antora fetches updates into the cache saved from a previous run. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--redirect-facility"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option makes use of the server-side facility provided by GitLab Pages for performing URL redirects. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--to-dir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option ensures the site is published to the location where GitLab Pages looks for files to deploy."
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-8"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directory is the predefined folder for publishing as site to GitLab Pages. Note that this value must match the value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--to-dir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option passed to the Antora CLI."
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If any of your content repositories are private, you can define a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GIT_CREDENTIALS"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CI/CD variable that holds the credentials to give Antora access to those repositories in this environment. You can set up "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "deploy tokens"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.gitlab.com/ee/user/project/deploy_tokens/"
+              },
+              {
+                "kind": "text",
+                "value": " in your content repository to give the CI/CD pipeline in your playbook project (and thus Antora) read-only access to those repositories."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want Antora to fail the CI/CD pipeline if there are any warnings or non-fatal errors, add "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--log-failure-level warn"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command. Alternately, you can set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "runtime.log.failure_level"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key in the playbook to make it a permanent setting."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "customize-the-build",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Customize the build"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Publish to GitLab Pages"
+      }
+    ]
+  }
+}

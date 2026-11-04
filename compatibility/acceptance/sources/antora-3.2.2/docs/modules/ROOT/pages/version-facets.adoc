@@ -1,0 +1,135 @@
+= Version Facets
+
+[#actual]
+== Actual version
+
+The [.term]*actual version* is an identifier, that when combined with a component name, creates a unique identity for a collection of content and source files that are directly related to one another.
+This collection of source files is a xref:component-version.adoc[component version].
+A component version always has an actual version.
+Even a xref:component-with-no-version.adoc[versionless component version] has an actual version, defined as an empty string, for internal sorting and routing purposes.
+
+A component version's actual version is assigned to the xref:component-version-key.adoc[version key] in its component version descriptor (_antora.yml_).
+Alternatively, the actual version is extracted by Antora from a git refname based on the pattern assigned to the `version` key in [.path]_antora.yml_ or on a content source in a playbook.
+
+Content writers use the actual version to reference pages and assets in other component versions.
+Antora uses the actual version:
+
+* to sort component versions
+* to identify the latest version of a component
+* to apply routing rules
+* for display purposes in the UI, except when the component version has an empty version
+* as the version segment in the published URLs, except when the component version has an empty version
+
+Each version facet--prerelease, display, and symbolic--described in the following sections, overrides a default behavior where Antora would otherwise use the actual version.
+
+[#prerelease]
+== Prerelease version
+
+A version of a project or product that is made available before its final release is often called a [.term]*prerelease version*.
+Organizations use semantic versioning identifiers, such as `-alpha.1`, or special names, such as `M1` or `Snapshot`, to communicate that a version is a prerelease to end users.
+To compliment a prerelease version of a project, a component version can be designated as a prerelease using the `prerelease` key.
+
+A component version is designated as a prerelease when the `prerelease` key is assigned an xref:component-prerelease.adoc#identifier[identifier] or the reserved value xref:component-prerelease.adoc#true[true] in its [.path]_antora.yml_ file.
+Using the `prerelease` key has the following benefits:
+
+* While the component version is a prerelease, Antora won't route incoming page and resource ID references from other component versions to the prerelease version if the version coordinate wasn't specified or can't be determined.
+Instead, Antora routes such references to the latest stable version of the component.
+* The `prerelease` key allows the actual version (`version`) of the component version to represent the stable version from the inception of the component version.
+In other words, the prerelease does not change the actual version.
+It only modifies its meaning so Antora doesn't classify it as a stable version.
+Therefore, the published URLs of the component version and inbound references from other component versions that specifically target the component version aren't affected when the component version graduates from a prerelease to a stable release.
+* Unless the `display_version` key is assigned a value or `prerelease` is assigned `true`, the prerelease identifier is appended to the actual version and displayed in the UI menus, showing end users that the component version is a prerelease.
+** If the component version has an empty version, only the prerelease identifier is displayed in the UI menus.
+
+[#display]
+== Display version
+
+An actual version can't contain spaces, uppercase letters, or certain characters that cause processing or portability errors.
+However, the actual version, when displayed in the UI menus, may not provide the appropriate experience if end users are expecting the version to be displayed with spaces, uppercase letters, or other symbols.
+In these circumstances, a display version should be assigned to a component version.
+
+A [.term]*display version* is an identifier that is only used for presentation purposes in the UI menus.
+Unlike the actual version, the display version can contain spaces, uppercase letters, and other symbols or characters.
+The display version is specified using the xref:component-display-version.adoc[display_version key] in a component version's [.path]_antora.yml_ file.
+The display version is used by the UI where the version is displayed, including the xref:navigation:index.adoc#component-dropdown[component version selector] and xref:navigation:index.adoc#page-dropdown[page version selector].
+The display version is never used in page or resource IDs, for component version routing and sorting, or in the version segment of URLs.
+
+[#symbolic]
+== Symbolic version and symbolic prerelease version
+
+A [.term]*symbolic version* or [.term]*symbolic prerelease version* is a value that replaces the actual version in the version segment of a URL.
+The symbolic version or prerelease version are only applied to the URLs of the xref:ROOT:how-component-versions-are-sorted.adoc[latest component version or latest prerelease], respectively.
+The symbolic version or prerelease version never applies to component versions with an empty version.
+Because the symbolic version and symbolic prerelease version apply to all of the latest component versions or prerelease versions in a site, these values are assigned in your playbook, not in an individual component version's [.path]_antora.yml_ file.
+The symbolic version is assigned to the xref:playbook:urls-latest-version-segment.adoc[latest_version_segment key] in the playbook.
+The symbolic prerelease version is assigned to the xref:playbook:urls-latest-prerelease-version-segment.adoc[latest_prerelease_version_segment key] in the playbook.
+
+== Summary of version facets
+
+[%header,cols="h,1,2,2,1"]
+|===
+|Facet
+|Page and resource IDs
+|Sorting order and routing
+|Menus in reference UI
+|Version segment in URLs
+
+|<<actual,Actual>>
+|Yes
+|Yes
+|Yes
+
+_Exceptions:_
+
+If a value is assigned to `display_version`, the display version is shown instead of the actual version.
+
+If `prerelease` is assigned an identifier and `display_version` isn't set, Antora automatically computes a value for `display_version` by appending the identifier to the actual version.
+This computed value is shown instead of the actual version.
+
+If the component version has an empty version, the actual version is never shown.
+Instead, the display version, prerelease identifier, or fallback _default_ label is shown depending on the version facets specified in its [.path]_antora.yml_ file.
+|Yes
+
+_Exceptions:_
+
+If the component version has an empty version, the page and asset URLs don't contain a version segment.
+
+If a value is assigned to `latest_version_segment`, the actual version is replaced by the symbolic version.
+This behavior only applies to the URLs of the latest component versions that aren't versionless or marked as prereleases.
+
+|<<prerelease,Prerelease>>
+|No
+|Yes
+|Yes
+
+_Exceptions:_
+
+If a value is assigned to `display_version`, the display version is shown instead of the computed prerelease version or fallback value.
+
+If `prerelease` is assigned `true` and `display_version` isn't set, the actual version or, if the component version has an empty version, the fallback label _default_ is displayed.
+
+|No
+
+_Exception:_
+
+If a value is assigned to `latest_prerelease_version_segment`, the actual version is replaced by the symbolic prerelease version.
+This behavior only applies to the URLs of the latest prerelease version of a component that doesn't have an empty version.
+
+|<<display,Display>>
+|No
+|No
+|Yes
+|No
+
+|<<symbolic,Symbolic>>
+|No
+|No
+|No
+|Only applies to the latest version of a component; doesn't apply to component versions that have an empty version.
+
+|<<symbolic,Symbolic prerelease>>
+|No
+|No
+|No
+|Only applies to the latest prerelease version of a component; doesn't apply to component versions that have an empty version and are also marked as prereleases.
+|===

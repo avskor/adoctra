@@ -1,0 +1,100 @@
+= Latest Prerelease Version Segment
+
+The `latest_prerelease_version_segment` key replaces the actual version in the URL of resources in the latest prerelease with a symbolic prerelease version.
+
+WARNING: In order for a version be classified as a prerelease, the component must also have at least one non-prerelease version.
+If a component only has prerelease versions, the latest version is not classified as a prerelease even if the `prerelease` key is set in the component descriptor.
+When a component only has prerelease versions, then the value of the `latest_version_segment` is used instead.
+This behavior may change in the future.
+
+[#key]
+== latest_prerelease_version_segment key
+
+The `latest_prerelease_version_segment` key is configured in the playbook under the `urls` key.
+
+.antora-playbook.yml
+[#ex-replace,yaml]
+----
+urls:
+  latest_prerelease_version_segment: unstable
+----
+
+The value assigned to the `latest_prerelease_version_segment` key is the [[symbolic]][.term]*symbolic prerelease version*.
+Antora replaces the xref:ROOT:version-facets.adoc#actual[actual version] in the version segment of the latest prerelease component versions`' URLs with the symbolic prerelease version.
+A component version must be xref:ROOT:component-prerelease.adoc[designated as a prerelease] and Antora must determine that it is the xref:ROOT:how-component-versions-are-sorted.adoc[latest prerelease of a component] for the value assigned to the `latest_prerelease_version_segment` key to be applied to its page and asset URLs.
+Depending on the strategy assigned to the xref:urls-latest-version-segment-strategy.adoc[latest_version_segment_strategy key], Antora may apply additional redirect rules when routing to or from symbolic and actual version URLs.
+
+=== Value requirements
+
+The same requirements that apply to the value of the `version` key also apply to the `latest_prerelease_version_segment` key.
+The value can contain letters, numbers, periods (`.`), underscores (`+_+`), and hyphens (`-`).
+To ensure portability between host platforms, use lowercase letters.
+
+The value of the `latest_prerelease_version_segment` key *cannot* contain spaces, forward slashes (`/`), or HTML special characters (`&`, `<`, or `>`).
+The value can only be empty if the value of `latest_version_segment_strategy` is `redirect:to` or `replace`.
+The value *cannot* be empty if the value of `latest_version_segment_strategy` is `redirect:from`.
+This restriction is due to the fact that redirecting from the parent folder could prevent access to other versions.
+
+== Specify a latest prerelease version segment
+
+This section explores the results of assigning a symbolic prerelease version to the `latest_prerelease_version_segment` key.
+The examples in this section use the component version defined by the component version descriptor file shown in <<ex-actual>>.
+<<ex-actual>> defines a component version with the name `colorado` and version `6.0`.
+
+.Component version descriptor (antora.yml file) defining the colorado 6.0 component version
+[#ex-actual,yaml]
+----
+name: colorado
+version: '6.0' # <.>
+prerelease: -beta.2 # <.>
+----
+<.> The `version` key in [.path]_antora.yml_ defines the component's actual version as `6.0`.
+<.> The `prerelease` key and assigned identifier, `-beta.2`, informs Antora that the component version is a prerelease.
+
+The _colorado 6.0_ component version has a page named [.path]_tour.adoc_ that belongs to the module _get-started_.
+First, let's review the URL Antora makes by default.
+That is, when the `latest_prerelease_version_segment` key isn't set in the playbook.
+By default, Antora uses the actual version in the version segment of page and asset URLs, even when the component version is a xref:ROOT:component-prerelease.adoc#identifier[prerelease with an identifier].
+<<result-default>> shows the default URL for the [.path]_tour.adoc_ page that belongs to the `colorado 6.0` component version.
+
+.URL for colorado 6.0 tour.adoc page
+[listing#result-default]
+----
+https://docs.example.com/colorado/6.0/get-started/tour.html
+----
+
+Now, let's assign a symbolic prerelease version to the latest prerelease component versions in this site.
+The `latest_prerelease_version_segment` key is configured in the playbook file, not the component version descriptor files, because it applies to all of the latest prerelease component versions in a site.
+<<ex-playbook>> shows a truncated playbook file with the `latest_prerelease_version_segment` key defined.
+
+.Playbook (antora-playbook.yml file) defining a symbolic prerelease version
+[#ex-playbook,yaml]
+----
+site:
+  title: The Ranges
+  url: https://docs.example.com
+urls:
+  latest_prerelease_version_segment: next # <.>
+content:
+  # ...
+----
+<.> The `latest_prerelease_version_segment` is set under the `urls` key and assigned the value `next`.
+
+Let's assume that, according to its xref:ROOT:how-component-versions-are-sorted.adoc#version-schemes[semantic and named version sorting rules], Antora determines that _colorado 6.0_ is the latest prerelease version of the _colorado_ component.
+Using information from the playbook and the component version's [.path]_antora.yml_ file, Antora constructs the following URL for the [.path]_tour.adoc_ page.
+
+Now, in <<result-latest>>, the version segment contains the symbolic prerelease version, _next_.
+
+.URL for colorado 6.0 tour.adoc page when latest_prerelease_version_segment is set
+[listing#result-latest]
+----
+https://docs.example.com/colorado/next/get-started/tour.html
+----
+
+The actual version with appended prerelease identifier, _6.0-beta.2_, is still displayed in the reference UI menus.
+The symbolic prerelease version, _next_, is only used in the URLs.
+To customize the value displayed in the reference UI menus, use the xref:ROOT:component-display-version.adoc[display_version key].
+
+The examples in this section assumed the `latest_version_segment_strategy` key wasn't set.
+Therefore, when Antora detected the `latest_prerelease_version_segment` key, it automatically set the `latest_version_segment_strategy` key and assigned it the `replace` strategy at runtime.
+See xref:urls-latest-version-segment-strategy.adoc[] to learn how the `redirect:to` and `redirect:from` strategies work with the `latest_prerelease_version_segment` key.

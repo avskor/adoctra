@@ -1,0 +1,73 @@
+= GeneratorContext API Reference
+:url-event-emitter: https://nodejs.org/api/events.html#events_class_eventemitter
+
+The GeneratorContext API is the main point of access into Antora's extension facility.
+Antora creates an instance of the GeneratorContext, called the generator context, and binds it to the register function of an extension as well as any listeners it adds.
+This object is shared across all extensions and event listeners.
+The generator context provides a way to add those event listeners.
+It also provides a handful of context-aware helpers that make writing extensions easier.
+
+The GeneratorContext class extends the Node.js {url-event-emitter}[EventEmitter^] type.
+All methods on the EventEmitter are inherited by and available on the generator context.
+However, you should never call the `emit` object to emit one of Antora's own events.
+
+In addition to the methods on EventEmitter, the following table describes the methods provided by the GeneratorContext API.
+
+// Q: should we document all methods, including the ones contributed by EventEmitter?
+.Additional methods provided by the GeneratorContext
+[cols="1,1,2"]
+|===
+|Method name | Parameter(s) | Description
+
+|getFunctions
+|_none_
+|Returns the object of generator functions.
+A generator function is defined as any of the discrete steps in the generator, as well as key utility functions those steps use.
+The built-in generator functions are not available until the `contextStarted` event is emitted.
+This object is read only.
+
+|getLogger
+|String
+|Creates an instance of the specified named logger.
+If an argument is specified, and the value is not falsy, the method returns a child logger with the specified name.
+If an argument is specified, and the value is empty, the method returns the root logger.
+If an argument is specified, and the value is null, the method returns the root logger or undefined if the logger hasn't been configured.
+If no argument is specified, the method returns a logger with the name `antora`.
+The logger is always created, if needed, unless the argument value is null.
+
+|getVariables
+|_none_
+|Returns the object of context variables.
+This object is read only.
+
+|lockVariable
+|String
+|Locks the specified context variable and returns its value.
+
+|replaceFunctions
+|Object
+|Binds the specified functions to the generator context and uses them to replace existing functions on the generator context.
+If this method is called before the `contextStarted` event, the corresponding built-in generator functions will not be required and registered.
+
+|removeVariable
+|String
+|Removes the specified context variable if the variable is not locked and returns its value.
+An error is thrown if the variable is locked.
+
+|require
+|String, Function
+|Requires the name of a module in the context of the Antora generator.
+If the module cannot be resolved there, it's resolved using the specified function, if provided, or the global `require` function otherwise.
+This method can be used to require Antora internals without having to declare the Antora component as a dependency.
+
+|stop
+|_none_
+|Stops the operation of the generator (using an orderly shut down by emitting the `contextStopped` and `contextClosed` events) and exits using the specified exit code.
+If an exit code is not specified, the process will use the exit code set on the process, or 0 if no exit code is set.
+
+|updateVariables
+|Object
+|Adds or replaces the context variables with the specified variables.
+|===
+
+Since the GeneratorContext is an EventEmitter, you not only can use it to register listeners, but to get a list of registered listeners, unregister listeners, and reregister listeners in a different order.

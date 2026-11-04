@@ -1,0 +1,756 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The GeneratorContext API is the main point of access into Antora’s extension facility. Antora creates an instance of the GeneratorContext, called the generator context, and binds it to the register function of an extension as well as any listeners it adds. This object is shared across all extensions and event listeners. The generator context provides a way to add those event listeners. It also provides a handful of context-aware helpers that make writing extensions easier."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The GeneratorContext class extends the Node.js "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "EventEmitter"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://nodejs.org/api/events.html#events_class_eventemitter"
+          },
+          {
+            "kind": "text",
+            "value": " type. All methods on the EventEmitter are inherited by and available on the generator context. However, you should never call the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "emit"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " object to emit one of Antora’s own events."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In addition to the methods on EventEmitter, the following table describes the methods provided by the GeneratorContext API."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "getFunctions"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "none"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Returns the object of generator functions. A generator function is defined as any of the discrete steps in the generator, as well as key utility functions those steps use. The built-in generator functions are not available until the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextStarted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " event is emitted. This object is read only."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "getLogger"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Creates an instance of the specified named logger. If an argument is specified, and the value is not falsy, the method returns a child logger with the specified name. If an argument is specified, and the value is empty, the method returns the root logger. If an argument is specified, and the value is null, the method returns the root logger or undefined if the logger hasn’t been configured. If no argument is specified, the method returns a logger with the name "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "antora"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The logger is always created, if needed, unless the argument value is null."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "getVariables"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "none"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Returns the object of context variables. This object is read only."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "lockVariable"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Locks the specified context variable and returns its value."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "replaceFunctions"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Object"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Binds the specified functions to the generator context and uses them to replace existing functions on the generator context. If this method is called before the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextStarted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " event, the corresponding built-in generator functions will not be required and registered."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "removeVariable"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Removes the specified context variable if the variable is not locked and returns its value. An error is thrown if the variable is locked."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "require"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "String, Function"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Requires the name of a module in the context of the Antora generator. If the module cannot be resolved there, it’s resolved using the specified function, if provided, or the global "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "require"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " function otherwise. This method can be used to require Antora internals without having to declare the Antora component as a dependency."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "stop"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "none"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Stops the operation of the generator (using an orderly shut down by emitting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextStopped"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contextClosed"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " events) and exits using the specified exit code. If an exit code is not specified, the process will use the exit code set on the process, or 0 if no exit code is set."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "updateVariables"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Object"
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "paragraphs": [
+                [
+                  {
+                    "kind": "text",
+                    "value": "Adds or replaces the context variables with the specified variables."
+                  }
+                ]
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Table 1. "
+          }
+        ],
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "25"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "25"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": null,
+            "valign": "top",
+            "width": "50"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "none",
+        "grid": "rows",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Method name"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Parameter(s)"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": null,
+        "options": [],
+        "roles": [],
+        "stripes": null,
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional methods provided by the GeneratorContext"
+          }
+        ],
+        "width": 100
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Since the GeneratorContext is an EventEmitter, you not only can use it to register listeners, but to get a list of registered listeners, unregister listeners, and reregister listeners in a different order."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "GeneratorContext API Reference"
+      }
+    ]
+  }
+}

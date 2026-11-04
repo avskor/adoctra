@@ -1,0 +1,84 @@
+= Git Keys
+
+The playbook keys configured under `git` control the behavior of the git client used by Antora.
+
+[#git-key]
+== git key
+
+The `git` key holds all the git-related playbook keys, such as the git credentials, automatic URL suffix, and plugins.
+
+.antora-playbook.yml
+[,yaml]
+----
+git: # <.>
+  fetch_concurrency: 3 # <.>
+  fetch_depth: 0 # <.>
+  ensure_git_suffix: false # <.>
+  credentials: # <.>
+    path: ./.git-credentials # <.>
+  plugins: # <.>
+    credential_manager: ./system-git-credential-manager.js # <.>
+  read_concurrency: 5 # <.>
+----
+<.> Optional `git` category key
+<.> Optional `fetch_concurrency` key to limit number of concurrent fetch operations
+<.> Optional `fetch_depth` key to control how many recent commits Antora fetches from a repository
+<.> Optional `ensure_git_suffix` key
+<.> Optional `credentials` category key
+<.> `path` key to specify the location of optional credentials; mutually exclusive with the `contents` key
+<.> Optional `plugins` category key
+<.> Optional `credential_manager` key
+<.> Optional `read_concurrency` key to limit number of concurrent read operations (after repositories are fetched)
+
+The `git` category key and the child keys it accepts are all optional.
+When the `git` key isn't present in the playbook, Antora falls back to using the default configuration for the git client.
+
+[#git-reference]
+== Available git keys
+
+[cols="3,6,1"]
+|===
+|Git Keys |Description |Required
+
+|xref:git-credentials-path-and-contents.adoc[credentials.contents]
+|Accepts git credentials data matching the format used by the git credential store.
+|No
+
+|xref:git-credentials-path-and-contents.adoc[credentials.path]
+|Accepts a filesystem path to a git credentials file matching the format used by the git credentials store.
+|No
+
+|xref:git-fetch-concurrency.adoc[fetch_concurrency]
+|`1` by default.
+Accepts any positive integer or zero.
+When non-zero, limits the number of concurrent fetch operations to the specified value.
+When zero, does not limit the number of concurrent fetch operations.
+|No
+
+|xref:git-fetch-depth.adoc[fetch_depth]
+|`1` by default (latest commit).
+Accepts any positive integer or zero.
+When non-zero, limits the preferred number of recent commits that are fetched to the specified value.
+When zero, fetches all commits.
+|No
+
+|xref:git-plugins.adoc#credential-manager[plugins.credential_manager]
+|Accepts a require request that specifies the location of the code that provides a custom credential manager.
+|No
+
+|xref:git-plugins.adoc#http[plugins.http]
+|Accepts a require request that specifies the location of the code that provides a custom HTTP request handler.
+|No
+
+|xref:git-suffix.adoc[ensure_git_suffix]
+|`true` by default.
+When `true`, this key instructs the git client to automatically append [.path]_.git_ to content sources repository URLs if absent.
+|No
+
+|xref:git-read-concurrency.adoc[read_concurrency]
+|`0` by default (effectively no limit).
+Accepts any positive integer or zero.
+When non-zero, limits the number of read operations to the specified value.
+When zero, does not limit the number of read operations.
+|No
+|===

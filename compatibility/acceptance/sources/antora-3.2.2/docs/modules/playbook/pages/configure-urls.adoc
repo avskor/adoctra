@@ -1,0 +1,61 @@
+= URLs Keys
+
+The playbook keys configured under `urls` manage the site's published URLs and redirects.
+
+[#urls-key]
+== urls key
+
+The global properties of your site's published URLs and redirect facility are defined under the `urls` key in a playbook file.
+
+[,yaml]
+----
+urls: # <.>
+  html_extension_style: drop # <.>
+  redirect_facility: nginx # <.>
+  latest_version_segment_strategy: redirect:to # <.>
+  latest_version_segment: stable # <.>
+  latest_prerelease_version_segment: unstable # <.>
+----
+<.> Optional `urls` key
+<.> Optional `html_extension_style` key
+<.> Optional `redirect_facility` key
+<.> Optional `latest_version_segment_strategy` key
+<.> Optional `latest_version_segment` key
+<.> Optional `latest_prerelease_version_segment` key
+
+Antora uses the default values for the `html_extension_style` and `redirect_facility` keys if they're not specified.
+The `html_extension_style` and `redirect_facility` keys are also configurable from the xref:cli:options.adoc[Antora CLI].
+
+[#urls-reference]
+== Available urls keys
+
+[cols="3,6,1"]
+|===
+|URLs Keys |Description |Required
+
+|xref:urls-html-extension-style.adoc[html_extension_style]
+|Specifies the user-facing URL extension used for HTML pages.
+Accepts the values `default`, `drop`, and `indexify`.
+|No
+
+|xref:urls-latest-prerelease-version-segment.adoc[latest_prerelease_version_segment]
+|Symbolic prerelease version that Antora uses to replace the actual version in the version segment of page and asset URLs.
+Only applies to the latest prerelease component version.
+|No
+
+|xref:urls-latest-version-segment.adoc[latest_version_segment]
+|Symbolic version that Antora uses to replace the actual version in the version segment of page and asset URLs.
+Only applies to the latest component version.
+|No
+
+|xref:urls-latest-version-segment-strategy.adoc[latest_version_segment_strategy]
+|Controls the replacement and redirect direction between URLs containing the actual version and URLs containing the symbolic version.
+Only applies to the latest component version or latest prerelease component version.
+Accepts the values `replace`, `redirect:to`, and `redirect:from`.
+|No
+
+|xref:urls-redirect-facility.adoc[redirect_facility]
+|Specifies whether Antora generates redirects as static HTML refresh pages or redirect configuration files.
+Accepts the values `disabled`, `gitlab`, `httpd`, `netlify`, `nginx`, and `static`.
+|No
+|===

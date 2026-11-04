@@ -1,0 +1,412 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fetch_concurrency"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key tells Antora how many concurrent fetch operations to allow when retrieving content from remote git repositories. This covers both the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fetch"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "clone"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " operations (since "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "clone"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " first does a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fetch"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). When the number of concurrent operations reaches this limit, Antora will wait for an active operation to complete before adding another one to queue."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git-read-concurrency.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "git-read-concurrency.html"
+              },
+              {
+                "kind": "text",
+                "value": " to learn how to control how many repositories Antora reads from at once."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, Antora limits the fetch concurrency to 1, which means it will only fetch from one repository at a time. If you want to allow Antora to fetch all the repositories at once, you can change this value to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "0"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Fetching a lot of repositories at once can put a heavy burden on the network. Additionally, some git hosting services place a quota on concurrent requests, especially anonymous ones (called rate limiting). That may lead to the git client being throttled (or even barred) by the git server. In the worst case, the server may hang up on the network connection, which will cause Antora to fail. To alleviate this situation, Antora allows you to tune the fetch concurrency limit."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "default-fetch-concurrency",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Default fetch concurrency"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The optional "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fetch_concurrency"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key is set under the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git category"
+                  }
+                ],
+                "kind": "xref",
+                "target": "configure-git.html"
+              },
+              {
+                "kind": "text",
+                "value": " in the playbook. This key accepts a positive integer value or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "0"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for no limit."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "git:\n  fetch_concurrency: 5"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "antora-playbook.yml"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The purpose of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fetch_concurrency"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key is to allow you to control (i.e., limit) how many network connections are being made at once by the content aggregator, thus circumventing the problem of rate limiting enforced by the git host. If the git server is extremely aggressive with resetting paused connections, such as the case with GitHub, you’re advised to set this value to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "1"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may find that by limiting the number of concurrent operations, it reduces the time it takes the fetch operations to complete. Presumably, this is because the git server does not throttle the requests. However, fetching repositories in serial could also increase the amount of time it takes to fetch the repositories in total. You will need to experiment with this value to find the setting that works best for your site."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For interactive terminals, limiting the fetch concurrency also limits the number of progress bars that appear at once in the terminal."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "fetch-concurrency-key",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "fetch_concurrency key"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once a repository is fetched, or if a fetch is not required, Antora puts the repository into a pool to be scanned. By default, Antora does not place a limit on how many repositories are scanned concurrently. You can control this behavior using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "git-read-concurrency.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "git-read-concurrency.html"
+              },
+              {
+                "kind": "text",
+                "value": " key. Antora only starts reading from repositories once all fetch (or clone) operations are complete. The limit is only applied to the fetch step."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Antora fetches content from a remote repository if it has not previously cloned the repository or the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "runtime.fetch key"
+                  }
+                ],
+                "kind": "xref",
+                "target": "runtime-fetch.html"
+              },
+              {
+                "kind": "text",
+                "value": " is set."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "relationship-to-repository-scanning",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Relationship to repository scanning"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Git Fetch Concurrency Limit"
+      }
+    ]
+  }
+}

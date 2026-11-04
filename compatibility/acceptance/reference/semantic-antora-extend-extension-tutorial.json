@@ -1,0 +1,1218 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you understand how Antora extensions work, and have a solid grasp of the concepts, this page offers an end-to-end tutorial that walks you through an in-depth example to give you a full view and help you get the most out of this feature of Antora."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this tutorial, we’ll create an extension that locates unlisted pages, which are pages not accessible from the navigation. The extension will first retrieve the navigation tree for each component version. It will then iterate through the pages in that component version and locate any pages that are not found in that navigation tree. If it finds any unlisted pages, it will log a warning for each. If configured to do so, it will also add those pages under a dedicated category in the navigation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This example gives you an opportunity to use much of the functionality available to extensions. We’ll create the extension, register it in the playbook, configure it, and finally run Antora with it enabled. Let’s get started."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To begin, you first need to create the extension. Let’s name the extension file "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unlisted-pages-extension.js"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " and place it in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "lib/"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " folder adjacent to the playbook so it’s neatly organized in the playbook repository."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Populate the extension file with the source code shown in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Example 1"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#ex-ext"
+              },
+              {
+                "kind": "text",
+                "value": ". The next section will analyze what this code is doing."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": "ex-ext",
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function ({ config }) {\n  const { addToNavigation, unlistedPagesHeading = 'Unlisted Pages' } = config\n  const logger = this.getLogger('unlisted-pages-extension')\n  this\n    .on('navigationBuilt', ({ contentCatalog }) => {\n      contentCatalog.getComponents().forEach(({ versions }) => {\n        versions.forEach(({ name: component, version, navigation: nav, url: defaultUrl }) => {\n          const navEntriesByUrl = getNavEntriesByUrl(nav)\n          const unlistedPages = contentCatalog\n            .findBy({ component, version, family: 'page' })\n            .filter((page) => page.out)\n            .reduce((collector, page) => {\n              if ((page.pub.url in navEntriesByUrl) || page.pub.url === defaultUrl) return collector\n              logger.warn({ file: page.src, source: page.src.origin }, 'detected unlisted page')\n              return collector.concat(page)\n            }, [])\n          if (unlistedPages.length && addToNavigation) {\n            nav.push({\n              content: unlistedPagesHeading,\n              items: unlistedPages.map((page) => {\n                const title = 'navtitle' in page.asciidoc\n                  ? page.asciidoc.navtitle\n                  : (page.src.module === 'ROOT' ? '' : page.src.module + ':') + page.src.relative\n                return { content: title, url: page.pub.url, urlType: 'internal' }\n              }),\n              root: true,\n            })\n          }\n        })\n      })\n    })\n}\n\nfunction getNavEntriesByUrl (items = [], accum = {}) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum[item.url.split('#')[0]] = item\n    getNavEntriesByUrl(item.items, accum)\n  })\n  return accum\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "lib/unlisted-pages-extension.js"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s pause to break down what this extension does, step by step."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "create-the-extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Create the extension"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension starts by exporting the register function, which Antora calls immediately after requiring the extension file. The register function is bound to the generator context, which it can use to add listeners. The function accepts the config object for the extension (via object destructuring) as the sole argument. It goes on to pull several configuration keys out of the config object to customize its behavior."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "module.exports.register = function ({ config }) {\n  const { addToNavigation, unlistedPagesHeading = 'Unlisted Pages' } = config\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Next, the extension creates a named logger that it can use for reporting unlisted pages. It does so by calling "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getLogger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on the context to create a named logger. This method, in turn, requires the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@antora/logger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module provided by Antora, then passes the name to its default function to create the child logger."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const logger = this.getLogger('unlisted-pages-extension')"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To add context to the log message, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{ file: file.src, source: file.src.origin }"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is typically passed as the merging object."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension then adds a listener for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "navigationBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event. Since the extension needs access to the navigation, this is the right opportunity in the generator to examine the navigation trees. To access the navigation and the pages, the listener retrieves the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "contentCatalog"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " object from the context variables using object destructuring. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "navigationBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event is emitted after the pages have been converted, which provides access to the navtitle for each page."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "this\n  .on('navigationBuilt', ({ contentCatalog }) => {\n  })"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When called, the listener for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "navigationBuilt"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " event retrieves the navigation tree for each component version from the content catalog, as well as some information about the component version for locating its pages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "contentCatalog.getComponents().forEach(({ versions }) => {\n  versions.forEach(({ name: component, version, navigation: nav, url: defaultUrl }) => {\n  })\n})"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To make it easier to find pages in the navigation, the extension provides a helper to create a lookup table for each entry in the navigation by URL, ignoring any duplicates."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "function getNavEntriesByUrl (items = [], accum = {}) {\n  items.forEach((item) => {\n    if (item.urlType === 'internal') accum[item.url.split('#')[0]] = item\n    getNavEntriesByUrl(item.items, accum)\n  })\n  return accum\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension then uses this helper to create that lookup table for each navigation:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const navEntriesByUrl = getNavEntriesByUrl(nav)"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now the real work begins. The extension returns to the content catalog to find all pages in the current component version, filtering that list to find only the publishable pages (i.e., pages which have an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "out"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property). It then checks to see if the page is found in the navigation by comparing resource URLs. If it can’t find a match, it logs a warning using the logger and adds the page to the collector being returned."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "const unlistedPages = contentCatalog\n  .findBy({ component, version, family: 'page' })\n  .filter((page) => page.out)\n  .reduce((collector, page) => {\n    if ((page.pub.url in navEntriesByUrl) || page.pub.url === defaultUrl) return collector\n    logger.warn({ file: page.src, source: page.src.origin }, 'detected unlisted page')\n    return collector.concat(page)\n  }, [])"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s have a closer look at that warning message."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "logger.warn({ file: page.src, source: page.src.origin }, 'detected unlisted page')"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that we’re passing an object as the first argument and the message as the second. The keys of the object passed as the first argument get merged into the structured log message. Antora’s logger provides a custom formatter for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keys when outputting a pretty log message. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key should point to an object with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "path"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key and, if applicable, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "abspath"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key. The simplest way to provide this content is to pass the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "src"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property of the virtual file, which has all the necessary information about where the file is located. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "origin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key should point to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "src.origin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property on the virtual file, which provides information about the content source. (Note that the information stored in in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "origin"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property is meant to be read-only). You can also pass in an optional line number using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "line"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key. The custom formatter will compile all this information into a formatted message to help the user locate the relevant file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, if the extension finds unlisted pages, it adds them to a new category in the navigation with the special heading if configured to do so."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "if (unlistedPages.length && addToNavigation) {\n  nav.push({\n    content: unlistedPagesHeading,\n    items: unlistedPages.map((page) => {\n      const title = 'navtitle' in page.asciidoc\n        ? page.asciidoc.navtitle\n        : (page.src.module === 'ROOT' ? '' : page.src.module + ':') + page.src.relative\n      return { content: title, url: page.pub.url, urlType: 'internal' }\n    }),\n    root: true,\n  })\n}"
+              }
+            ],
+            "language": "js",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "addToNavigation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " variable comes from the configuration key "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add_to_navigation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on the extension entry. Antora automatically converts configuration key names to camelCase to make them consistent with variable naming conventions in JavaScript."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Instead of adding unlisted pages to the navigation, you could instead remove them from the site. This would be one way of limiting which pages get published."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unlistedPages.forEach((page) => contentCatalog.removeFile(page))"
+                  }
+                ],
+                "language": "js",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you go this route, you’ll probably want to remove the warning for unlisted pages, or downgrade it to the info or debug severity level."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "sidebar",
+            "id": "remove-unlisted",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Remove unlisted pages"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that the extension is written, and you understand what it does, it’s time to register it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "how-the-extension-works",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "How the extension works"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To register the extension, you add a require request entry for it in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora.extensions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key in the playbook. In our case, the require request is the relative path from the playbook file to the extension file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "antora:\n  extensions:\n  - ./lib/unlisted-pages-extension.js"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension will be called the next time you run Antora. However, since this extension is configurable, we’ll want to use the more formal entry format to make room for those configuration keys."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "register-the-extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Register the extension"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To register an extension with configuration, you add a map entry for it in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "antora.extensions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key in the playbook. In doing so, you’ll define the require request in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key, making way for the other configuration keys."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "antora:\n  extensions:\n  - require: ./lib/unlisted-pages-extension.js\n    add_to_navigation: true\n    unlisted_pages_heading: Orphans"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want the extension to only be used when specified using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--extension"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option, you’ll need to set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "enabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keys as well."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "antora:\n  extensions:\n  - id: unlisted-pages\n    enabled: false\n    require: ./lib/unlisted-pages-extension.js\n    add_to_navigation: true\n    unlisted_pages_heading: Orphans"
+              }
+            ],
+            "language": "yaml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now the extension will only run if you pass "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--extension unlisted-pages"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to Antora when you run it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When an extension accepts configuration, it’s always wise to register it in the playbook, even if you don’t want it to be enabled by default."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "configure-the-extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configure the extension"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All that’s left is to use the extension when you run Antora. If the extension is enabled (as it is by default), all you need to do is run Antora and pass the playbook file, as you normally would:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ antora antora-playbook"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the extension is not enabled, you need to enable it when you run Antora using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--extension"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ antora --extension unlisted-pages antora-playbook.yml"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you have unlisted pages in your playbook, you’ll see a warning message similar to this one:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[12:02:02.532] WARN (unlisted-pages-extension): detected unlisted page\n    source: /path/to/worktree (refname: main <worktree>, start path: docs)\n    file: modules/ROOT/pages/name-of-page.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [
+              "output"
+            ],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "add_to_navigation"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " key is true, you’ll also find the page listed in the unlisted pages category at the bottom of the navigation tree."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To fix the problem of an unlisted page, find the appropriate nav file and add an entry for the unlisted page, then run Antora again to check your work."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Congratulations! You’ve made your first Antora extension."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "use-the-extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Use the extension"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Extension Tutorial"
+      }
+    ]
+  }
+}
