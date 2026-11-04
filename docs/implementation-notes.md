@@ -1737,7 +1737,12 @@ cover fields use raw attribute values (`doctitle` unsubstituted, no subtitle
 split) until stage 2; `revision` is Ruby's HTML details line (`version-label`
 lowercased). The CLI wraps the backend (`Docx` in `main.rs`) to print its
 warnings; binary output and `<docname>.docx` already worked. Validation:
-`scripts/docx_check.py` (stdlib; `--render` via LibreOffice).
+`scripts/docx_check.py` (stdlib; `--render` via LibreOffice; `--corpus DIR…`
+converts every `.adoc` as article and book with the CLI and checks the
+packages — CI's `offline` job runs it on the golden/acceptance corpora and
+`examples`, 868 packages, since 2026-11-04). Images, SVG included, are opaque
+media (copied byte for byte; Word opens golden `svg/incomplete` with the PNG
+fallback), so only OOXML parts must be well-formed XML.
 Stage 2 done 2026-11-04: `writer.rs` walks blocks on an explicit stack of
 `Task`s (a quote's attribution is a deferred task after its blocks);
 `inline.rs` writes runs recursively over inline nesting (syntax-bounded,

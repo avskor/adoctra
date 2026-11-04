@@ -3,7 +3,9 @@
 
 Standard library only. For every file:
 
-* every part is well-formed XML (or a known binary media type);
+* every part is well-formed XML (or a media type: images, SVG included,
+  are the document's own files copied byte for byte, so a malformed SVG
+  is the author's, and Word opens such a package with the PNG fallback);
 * every part is declared in [Content_Types].xml (Default or Override) and
   every Override names an existing part;
 * every internal relationship target exists, relationship ids are unique;
@@ -14,10 +16,17 @@ With --render, each file is also converted to PDF by headless LibreOffice
 (`soffice`, or the path in $SOFFICE); a failed or empty conversion is an
 error. Exit status 1 lists every problem.
 
+With --corpus, every .adoc under the given directories is first converted
+by the CLI (--cli, default target/debug/adoctra) as both an article and a
+book; a failed conversion is a problem too. CI runs this on the golden and
+acceptance corpora.
+
     python3 scripts/docx_check.py out/*.docx [--render]
+    python3 scripts/docx_check.py --corpus crates/adoctra-html/tests/golden
 """
 
 import argparse
+import concurrent.futures
 import os
 import posixpath
 import shutil
@@ -58,7 +67,7 @@ def check(path):
     trees = {}
     for name in names:
         ext = name.rsplit(".", 1)[-1].lower()
-        if ext in BINARY and ext != "svg":
+        if ext in BINARY:
             continue
         try:
             trees[name] = ElementTree.fromstring(zf.read(name))
@@ -134,11 +143,63 @@ def render(path, soffice):
     return []
 
 
+DOCTYPES = ("article", "book")
+
+
+def corpus_inputs(dirs):
+    return sorted(
+        os.path.join(root, name)
+        for top in dirs
+        for root, _, files in os.walk(top)
+        for name in files
+        if name.endswith(".adoc")
+    )
+
+
+def convert(cli, source, doctype, out):
+    """Convert one input; returns the problems of the conversion itself."""
+    try:
+        result = subprocess.run(
+            [cli, source, "--to", "docx", "-a", f"doctype={doctype}", "-o", out, "-S", "unsafe"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+    except subprocess.TimeoutExpired:
+        return ["conversion timed out"]
+    if result.returncode != 0 or not os.path.exists(out):
+        lines = result.stderr.strip().splitlines()
+        return [f"conversion failed ({result.returncode}): {lines[-1] if lines else ''}"]
+    return []
+
+
+def check_corpus(cli, dirs, render_with=None):
+    """Convert and check every input of `dirs`; returns (count, problems)."""
+    jobs = [(src, dt) for src in corpus_inputs(dirs) for dt in DOCTYPES]
+    with tempfile.TemporaryDirectory() as out:
+
+        def one(job):
+            index, (source, doctype) = job
+            target = os.path.join(out, f"{index}.docx")
+            problems = convert(cli, source, doctype, target) or check(target)
+            if render_with and not problems:
+                problems = render(target, render_with)
+            return [f"{source} ({doctype}): {p}" for p in problems]
+
+        with concurrent.futures.ThreadPoolExecutor(os.cpu_count() or 2) as pool:
+            found = [p for ps in pool.map(one, enumerate(jobs)) for p in ps]
+    return len(jobs), found
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("files", nargs="+")
+    parser.add_argument("files", nargs="*")
     parser.add_argument("--render", action="store_true", help="convert to PDF with LibreOffice")
+    parser.add_argument("--corpus", nargs="+", metavar="DIR", help="convert every .adoc under DIR")
+    parser.add_argument("--cli", default=os.path.join("target", "debug", "adoctra"))
     args = parser.parse_args()
+    if not args.files and not args.corpus:
+        parser.error("give .docx files or --corpus DIR")
     soffice = os.environ.get("SOFFICE") or shutil.which("soffice") or shutil.which("libreoffice")
     if args.render and not soffice:
         parser.error("--render needs soffice on PATH or $SOFFICE")
@@ -152,6 +213,12 @@ def main():
         failed |= bool(problems)
         if not problems:
             print(f"{path}: ok")
+    if args.corpus:
+        count, problems = check_corpus(args.cli, args.corpus, soffice if args.render else None)
+        for problem in problems:
+            print(problem)
+        print(f"corpus: {count} packages, {len(problems)} problems")
+        failed |= bool(problems)
     sys.exit(1 if failed else 0)
 
 
