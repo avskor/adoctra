@@ -1,0 +1,1212 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor can produce the DocBook 5 XML output format from an AsciiDoc document. Although DocBook XML is not a publishable format, it can be used to tie into an existing publishing toolchain that processes DocBook. This page explains how to use Asciidoctor to convert AsciiDoc to DocBook."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor’s built-in DocBook converter is registered for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docbook"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docbook5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " backends. The DocBook converter generates XML that adheres to the DocBook XML schema. There’s a corresponding DocBook tag for each AsciiDoc element."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "docbook"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": ", "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "docbook5"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Backend names"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor::Converter::DocBook5Converter"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Converter class"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "XML"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Output format"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": ".xml"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Output file extension"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_backend_and_converter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Backend and converter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": "ex-my-doc",
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "link:html-backend:example$my-document.adoc[role=include]"
+                      }
+                    ],
+                    "language": "asciidoc",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "my-document.adoc"
+                      }
+                    ]
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To follow along with the steps below, use your own AsciiDoc file or copy the contents of "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Example 1"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#ex-my-doc"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " into a new plain text file."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Make sure to save the file with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".adoc"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file extension."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ asciidoctor -b docbook my-document.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To convert the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my-document.adoc"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " document to DocBook 5.0 format, call the processor with the backend flag set to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "docbook"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "literal",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "$ ls\nmy-document.adoc  my-document.xml"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Here’s a snippet of the XML generated by the DocBook converter."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<?asciidoc-toc?>\n<?asciidoc-numbered?>\n<article xmlns=\"http://docbook.org/ns/docbook\" xmlns:xl=\"http://www.w3.org/1999/xlink\" version=\"5.0\" xml:lang=\"en\">\n<info>\n<title>The Dangers of Wolpertingers</title>\n<date>2020-12-08</date>\n</info>\n<simpara>Don&#8217;t worry about gumberoos or splintercats.\nSomething far more fearsome plagues the days, nights, and inbetweens.\nWolpertingers.</simpara>\n<section xml:id=\"_origins\">\n<title>Origins</title>\n<simpara>Wolpertingers are <link xl:href=\"https://en.wikipedia.org/wiki/Wolpertinger\">ravenous beasts</link>.</simpara>\n</section>\n</article>"
+                          }
+                        ],
+                        "language": "xml",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "XML generated from AsciiDoc"
+                          }
+                        ]
+                      }
+                    ],
+                    "context": "open",
+                    "id": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A new XML document, named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my-document.xml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", will now be present in the current directory."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ yelp my-document.xml"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "On Linux, you can view the DocBook file with "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Yelp"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://wiki.gnome.org/action/show/Apps/Yelp"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The DocBook converter produces output that is compliant to the DocBook 5.0 specification."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A summary of the differences are as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "XSD declarations are used on the document root instead of a DTD"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<info>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " elements for document info instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<articleinfo>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<bookinfo>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "elements that hold the author’s name are wrapped in a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<personname>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "the id for an element is defined using an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "xml:id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<link>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is used for links instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<ulink>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "the URL for a link is defined using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "xl:href"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re using the Asciidoctor API, you can generate a DocBook document directly from your application."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor.convert_file 'my-document.adoc', backend: 'docbook'"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Generate DocBook output from the API"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need to output DocBook 4.5, you may find the community-supported "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DocBook 4.5 Converter"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/asciidoctor/asciidoctor-docbook45"
+              },
+              {
+                "kind": "text",
+                "value": " useful."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_generate_docbook",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Generate DocBook"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although the Asciidoctor project provides "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor PDF"
+                  }
+                ],
+                "kind": "xref",
+                "target": "pdf-converter::index.html"
+              },
+              {
+                "kind": "text",
+                "value": " for performing direct AsciiDoc to PDF conversion, you may opt instead to convert to PDF via DocBook. The DocBook to PDF conversion is handled by the DocBook toolchain."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The DocBook toolchain can prove to be a challenge to set up. This section provides several suggestions for how to use the DocBook toolchain, though this list is by no means exhaustive. If you already have a working DocBook toolchain, then these instructions are not for you."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re using a Linux distribution, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "xmlto"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package might be an option for you. "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "xmlto"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://pagure.io/xmlto"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is a simple shell script for converting XML files to various formats using the DocBook toolchain. Among those formats supported is DocBook as an input format and PDF as an output format."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To install xmlto, look for the package by the same name and use your package manager to install it (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dnf install xmlto fop"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "apt-get install xmlto fop"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Once you have installed the package, you can use it to generate PDF from DocBook with Apache FOP as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ xmlto --skip-validation --with-fop pdf doc.xml"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re using an RPM-based Linux distribution, you may be able to use the dblatex backend to generate the PDF instead:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ xmlto --skip-validation pdf doc.xml"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The AsciiDoc processor adds several XML processing instructions to support features not provided by DocBook, such as a thematic break and a page break. When using the Apache FOP backend, you need to provide an XSL stylesheet fragment that modifies the default XSL stylesheet to support these processing instructions. You can also use this stylesheet as an opportunity to customize the PDF that Apache FOP produces."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example of an XSL stylesheet fragment to get you started:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<?xml version=\"1.0\"?>\n<xsl:stylesheet version=\"1.0\"\n    xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\"\n    xmlns:fo=\"http://www.w3.org/1999/XSL/Format\">\n  <xsl:param name=\"hyphenate\">false</xsl:param>\n  <xsl:param name=\"runinhead.default.title.end.punct\"/>\n  <xsl:param name=\"generate.toc\">\n    <xsl:choose>\n      <xsl:when test=\"/processing-instruction('asciidoc-toc')\">\narticle toc,title\nbook toc,title,figure,table,example,equation\n      </xsl:when>\n      <xsl:otherwise>\narticle nop\nbook nop\n      </xsl:otherwise>\n    </xsl:choose>\n  </xsl:param>\n  <xsl:param name=\"section.autolabel\">\n    <xsl:choose>\n      <xsl:when test=\"/processing-instruction('asciidoc-numbered')\">1</xsl:when>\n      <xsl:otherwise>0</xsl:otherwise>\n    </xsl:choose>\n  </xsl:param>\n  <xsl:template match=\"processing-instruction('asciidoc-br')\">\n    <fo:block/>\n  </xsl:template>\n  <xsl:template match=\"processing-instruction('asciidoc-hr')\">\n    <fo:block space-after=\"1em\">\n      <fo:leader leader-pattern=\"rule\" rule-thickness=\"0.5pt\" rule-style=\"solid\" leader-length.minimum=\"100%\"/>\n    </fo:block>\n  </xsl:template>\n  <xsl:template match=\"processing-instruction('asciidoc-pagebreak')\">\n     <fo:block break-after='page'/>\n  </xsl:template>\n</xsl:stylesheet>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "custom.xsl"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Pass this stylesheet to xmlto as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ xmlto --skip-validation --with-fop -m custom.xsl pdf doc.xml"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To get more ideas of how to customize the stylesheet, refer to XSL stylesheet from the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fopub"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/asciidoctor/asciidoctor-fopub/blob/main/src/dist/docbook-xsl/fo-pdf.xsl"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " project."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_xmlto",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "xmlto"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A similar alternative to xmlto is "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fopub"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/asciidoctor/asciidoctor-fopub"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". fopub uses Java and the Gradle build tool to wrap the DocBook toolchain. The only prerequisite to perform the DocBook to PDF conversion using fopub is a Java Development Kit (JDK), which provides the Java runtime."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Please note that the fopub project is archived. However, it still may prove useful."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To get fopub, you must clone the repository. Once you have done so, you can run the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fopub"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " script in that repository to convert a DocBook file to PDF."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ ./fopub README.xml"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The benefit of fopub is that it’s preconfigured to convert DocBook with AsciiDoc processing instructions. The stylesheet it provides also smooths out some of the rough edges of the visual styling provided by the DocBook toolchain. However, the project is no longer actively maintained, so keep that in mind when deciding whether to use it. As an alternative, you may give "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "db-toolchain"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/aanno/db-toolchain"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", which positions itself as a successor to fopub (albeit more complex)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_fopub",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "fopub"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you are using Maven to build your docs, then you might consider using either the docbkx plugin to generate PDF from DocBook. You can find an example projects in the Asciidoctor Maven example repository:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docbkx"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/asciidoctor/asciidoctor-maven-examples/tree/main/docbook-pipeline-docbkx-example"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The typical way to use these plugins is in a processing pipeline starting with the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Asciidoctor Maven plugin"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "maven-tools::index.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The Asciidoctor Maven plugin uses Asciidoctor to generate the DocBook file(s)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_maven_plugins",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Maven plugins"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_convert_docbook_to_pdf",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Convert DocBook to PDF"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Generate DocBook from AsciiDoc"
+      }
+    ]
+  }
+}

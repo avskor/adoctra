@@ -1,0 +1,150 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Create a block macro named "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "gist"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " for embedding a gist."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Purpose"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".My Gist\ngist::123456[]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_sample_with_gist_macro_adoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "sample-with-gist-macro.adoc"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class GistBlockMacro < Asciidoctor::Extensions::BlockMacroProcessor\n  use_dsl\n\n  named :gist\n\n  def process parent, target, attrs\n    title_html = (attrs.has_key? 'title') ?\n        %(<div class=\"title\">#{attrs['title']}</div>\\n) : nil\n\n    html = %(<div class=\"openblock gist\">\n#{title_html}<div class=\"content\">\n<script src=\"https://gist.github.com/#{target}.js\"></script>\n</div>\n</div>)\n\n    create_pass_block parent, html, attrs, subs: nil\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_gistblockmacro",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "GistBlockMacro"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  block_macro GistBlockMacro if document.basebackend? 'html'\nend\n\nAsciidoctor.convert_file 'sample-with-gist.adoc', safe: :safe"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Usage"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Block Macro Processor Extension Example"
+      }
+    ]
+  }
+}

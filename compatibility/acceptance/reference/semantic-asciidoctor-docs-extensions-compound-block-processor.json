@@ -1,0 +1,182 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "dlist",
+        "id": null,
+        "items": [
+          {
+            "description": {
+              "blocks": [
+                {
+                  "context": "ulist",
+                  "id": null,
+                  "items": [
+                    {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "an example block with the collapsible option enabled"
+                        }
+                      ]
+                    },
+                    {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "the original listing block"
+                        }
+                      ]
+                    },
+                    {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "the listing block is promoted to a source block if a language is specified using the second positional attribute."
+                        }
+                      ]
+                    }
+                  ],
+                  "roles": [],
+                  "style": null,
+                  "title": null
+                }
+              ],
+              "checkbox": null,
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Register a custom block named "
+                },
+                {
+                  "id": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "collapsible"
+                    }
+                  ],
+                  "kind": "monospace",
+                  "roles": []
+                },
+                {
+                  "kind": "text",
+                  "value": " that transforms a listing block into a compound block composed of the following:"
+                }
+              ]
+            },
+            "terms": [
+              [
+                {
+                  "kind": "text",
+                  "value": "Purpose"
+                }
+              ]
+            ]
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": ".Show JSON\n[collapsible,json]\n----\n{\n   \"foo\": \"bar\"\n}\n----"
+          }
+        ],
+        "language": "asciidoc",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "sample-with-collapsible-block.adoc"
+          }
+        ]
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "class CollapsibleBlock < Asciidoctor::Extensions::BlockProcessor\n  enable_dsl\n  on_context :listing\n  positional_attributes 'language'\n\n  def process parent, reader, attrs\n    lang = attrs.delete 'language'\n    attrs['title'] ||= 'Show Listing'\n    example = create_example_block parent, [], attrs, content_model: :compound\n    example.set_option 'collapsible'\n    listing = create_listing_block example, reader.readlines, nil\n    if lang\n      listing.style = 'source'\n      listing.set_attr 'language', lang\n      listing.commit_subs\n    end\n    example << listing\n    example\n  end\nend\n\nAsciidoctor::Extensions.register do\n  block CollapsibleBlock, :collapsible\nend"
+          }
+        ],
+        "language": "ruby",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "collapsible-block.rb"
+          }
+        ]
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ asciidoctor -r ./collapsible-block.rb sample-with-collapsible-block.adoc"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Usage"
+          }
+        ]
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This extension mimics the builtin "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "collapsible"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " option on the example block, but consolidates it to a single block. The purpose of this extension is to show how to assemble a compound block in an extension."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Compound Block Processor Example"
+      }
+    ]
+  }
+}

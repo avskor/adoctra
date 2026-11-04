@@ -1,0 +1,1197 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using Ruby packaging entails making use of commands provided by Ruby ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gem"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") to install gems. A gem is a packaged Ruby application or library, often retrieved from "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RubyGems.org"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://rubygems.org/gems"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The benefit of using Ruby packaging to install Asciidoctor is that it’s universal. Provided you have configured Ruby correctly, Ruby packaging works the same way across all Ruby runtimes and operating systems. This page explains how to use Ruby packaging to install Asciidoctor from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " gem."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unless you’re running in a container (Docker, podman, OCI), "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "never"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " install gems using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gem install"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the root user. Doing so will almost certainly interfere with, and possibly corrupt, the Ruby installation on your system. We strongly advise you to use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Bundler"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#_bundler"
+              },
+              {
+                "kind": "text",
+                "value": " to manage your gems within a project (or an RVM gemset to scope the install to your user/home directory). The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gem install"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instructions are provided for when you’re running in a container or when your using RVM (ideally with a gemset)."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The best way to ensure Ruby is configured to use Ruby packaging is to install Ruby using a Ruby version manager. We recommend that you set up "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "RVM"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://rvm.io"
+              },
+              {
+                "kind": "text",
+                "value": " and use it to install Ruby in your home directory (i.e., user space). Once that is done, you can safely use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gem"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " commands to install or update the Asciidoctor gem, or any other gem for that matter. When using Ruby managed by RVM, gems are installed in a location isolated from the system (so you don’t need root/administrator access)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_configure_ruby_packaging",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configure Ruby packaging"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once you’ve installed Ruby using RVM, and you have activated it using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "rvm use 3.3"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", open a terminal and type:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ gem install asciidoctor"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the gem installed successfully, Asciidoctor’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "command line interface (CLI)"
+                  }
+                ],
+                "kind": "xref",
+                "target": "cli:index.html"
+              },
+              {
+                "kind": "text",
+                "value": " will be available on your PATH. To confirm that Asciidoctor is available, execute:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor --version"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You should see information about the Asciidoctor version and your Ruby environment printed in the terminal."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor 2.0.23 [https://asciidoctor.org]\nRuntime Environment (ruby 3.3.0 [x86_64-linux]) (lc:UTF-8 fs:UTF-8 in:- ex:UTF-8)"
+              }
+            ],
+            "language": null,
+            "roles": [
+              "output"
+            ],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To install a prerelease version of Asciidoctor (e.g., a release candidate), include the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--pre"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option when running the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem install"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ gem install asciidoctor --pre"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--pre"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option will select the prerelease version of Asciidoctor instead of the latest stable version. Note that it’s possible that the prerelease version is older than the latest stable version if no recent prerelease version is available."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "pre-release",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Install a prerelease version"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "gem-install",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "gem install"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Bundler creates a virtual environment that scopes the installation of gems to the current project. Here’s how you can use it to install and run Asciidoctor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ bundle init"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Create a Gemfile in the root folder of your project (or the current directory):"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem 'asciidoctor'\n# or specify the version explicitly\n# gem 'asciidoctor', '2.0.23'"
+                      }
+                    ],
+                    "language": "ruby",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Add the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "asciidoctor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem to the bottom of your Gemfile as follows:"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Save the Gemfile"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ bundle"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Open a terminal and install the gem using:"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To upgrade the gem, specify the new version in the Gemfile and run "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " again. Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle update"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (without specifying a gem) is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " recommended as it will also update other gems, which may not be the desired result."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once you install using Bundler, you must run any executables provided by the gems (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") from the directory where "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Gemfile"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " is located and also prefix the executable name with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle exec"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle exec asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle exec"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " prefix tells Ruby to use the gems defined in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Gemfile"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to understand more about Bundler and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "bundle exec"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and when to use them, see the article "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Understanding Bundler"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.ombulabs.com/blog/ruby/learning/understanding-bundler.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_bundler",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Bundler"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You’re advised against using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem update"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command to update a gem managed by the package manager. Doing so puts the system into an inconsistent state as the package manager can no longer track the files (which get installed under "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/usr/local"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Simply put, system gems should only be updated by the package manager."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to use a version of Asciidoctor that is newer than what is installed by the package manager, you should use "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RVM"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://rvm.io"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to install Ruby in your home directory (i.e., user space). Then, you can safely use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command to install or update the Asciidoctor gem. When using RVM, gems are installed in a location isolated from the system."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "caution"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can upgrade Asciidoctor using the gem "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "update"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ gem update asciidoctor"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you accidentally use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem install"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem update"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", then you’ll end up with both versions installed. To remove the older version, use the following "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ gem cleanup asciidoctor"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "gem-update",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Upgrade using gem update"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can uninstall Asciidoctor using the gem "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "uninstall"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ gem uninstall -x asciidoctor"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-x"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option silences the confirmation to remove the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " executable, instead removing it automatically. In other words, it enables a complete uninstall."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you have multiple versions of Asciidoctor installed, you will be prompted to specify which version you want to uninstall."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Select gem to uninstall:\n 1. asciidoctor-2.0.15\n 2. asciidoctor-2.0.16\n 3. All versions\n>"
+              }
+            ],
+            "language": null,
+            "roles": [
+              "output"
+            ],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can uninstall a specific version, or all versions. Type one of the numbers at the prompt ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ">"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and press kbd:[Enter]."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "gem-uninstall",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Uninstall using gem uninstall"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Install Using Ruby Packaging"
+      }
+    ]
+  }
+}

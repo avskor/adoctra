@@ -1,0 +1,5296 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All output produced by Asciidoctor is customizable. One way to customize the output is to use a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom converter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom.html"
+              },
+              {
+                "kind": "text",
+                "value": ". Converter templates offer a simpler way."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The built-in converters, and others that have the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "supports_templates"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " trait enabled, allow you to replace the convert handler for any convertible context with a template. The goal of this mechanism is to make it easier to customize the output of a converter (e.g., HTML) without having to develop, register, and use a custom converter. In other words, you can customize the output of a converter à la carte without having to write code (aside from what’s in the template)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page explains how the converter template mechanism works in Asciidoctor and how you can make use of it to customize the output of a converter that supports it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A template is a type of source file that’s focused on producing output. When we use the term "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "template"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "term"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " in this context, we’re specifically referring to the source file for a Ruby template engine."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can think of template as source code in which the output text forms the primary structure and the programming logic is weaved in between. If you come from a programming background, it’s as though the program logic and strings are flipped."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you write a template, you begin with static text. Then you intersperse logic around regions of that text. This logic allows you to either conditionally select text or repeat it based on information provided by a backing data model. The syntax of that interspersed logic is the template language."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The most common template engine in Ruby is ERB because it’s built into the language. Here’s an example of an ERB template that outputs a paragraph element using the content provided by the backing data model:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<p><%= content %></p>"
+              }
+            ],
+            "language": "erb",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "paragraph.html.erb"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Some template languages, such as Slim and Haml, are more structured. Here’s the previous example written in Slim:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "p =content"
+              }
+            ],
+            "language": "slim",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "paragraph.html.slim"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "and in Haml:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "%p =content"
+              }
+            ],
+            "language": "haml",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "paragraph.html.haml"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice there are no angled brackets in these templates. That’s because Slim and Haml assume that the start of each statement is the name of an XML element (Haml requires a leading "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "%"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The equals sign tells Slim and Haml to evaluate the Ruby expression that follows and insert the result into the output. In this case, the template is reading the variable "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "content"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", technically a property of the backing data model. Slim and Haml use indentation to infer nesting in the HTML structure (much like in YAML)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "At runtime, the template engine transforms the template into runnable code and invokes it. We refer to this operation as invoking the template. Effectively, this operation invokes the logic and expands variable references in the template to produce the resolved output."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that you’re familiar with the basic concept of a template, let’s look at how templates are used in Asciidoctor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_what_is_a_template",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "What is a template?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Templates are used in Asciidoctor to customize the output generated by a converter (as long as the converter has the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "supports_templates"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " trait enabled). We refer to these as converter templates. Converter templates work in conjunction with the converter over which they are applied."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can reuse the same set of templates you develop for Asciidoctor with AsciidoctorJ, making the templates portable between the two runtimes. Asciidoctor.js provides its own "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "template converter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "asciidoctor.js:extend:converter/template-converter.html"
+              },
+              {
+                "kind": "text",
+                "value": ", which means you have to develop a different set of templates if you’re using Asciidoctor.js."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are three keys points to understand about using converter templates in Asciidoctor:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "How Asciidoctor selects the template engine to use."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "What backing data model Asciidoctor passes to the template."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The available template names."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s study templates through the lens of Asciidoctor, then explore common APIs, helpers, and debugging."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor uses "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Tilt"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://github.com/rtomayko/tilt"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to load and invoke templates. Tilt is a generic interface to multiple Ruby template engines and is provided by the required "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tilt"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can compose templates in any template language that’s supported by Tilt. If you use a template engine that requires additional libraries (i.e., gems), you must install them first. For example, to use templates written in Haml, you must install the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "haml"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Tilt examines the file extension of the template, matches it to a registered and available template engine, and passes the template to the engine to be invoked. If the file extension is not recognized, or the template engine is not installed, this process will fail."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A template has a double file extension (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".html.haml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). The outer file extension is the file extension of the template. In other words, it identifies the template language. The inner file extension is the file extension of the output file. In other words, it identifies the output format."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s assume you have a template named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph.html.haml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ".haml"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file extension tells Tilt to delegate to Haml. The remaining part of the filename (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph.html"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") would be used as the output file. However, in Asciidoctor, the result of the template isn’t output to a file. Instead, it is combined with the rest of the output of the converter. But the file extension should still match the file extension of the output file that Asciidoctor produces."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can find a list of template engines that Tilt supports, along with any required libraries, in the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Tilt README"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://github.com/rtomayko/tilt#readme"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The most popular template engines for this purpose are "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Slim"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://slim-template.github.io"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", Haml, and ERB. We strongly recommend using Slim. ERB is also a solid choice since it’s built into the Ruby language and thus doesn’t have any dependencies. You’re encouraged to read the documentation for the template engine of your choice to understand how to use that particular template language."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_template_engine_selection",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Template engine selection"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When we talk about the name of a template, we’re talking about the basename of the template minus the double file extension. For example, the name of the template "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph.html.slim"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This name is significant because it maps 1-to-1 with the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "convertible contexts"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "contexts-ref.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in Asciidoctor (excluding the leading colon). The convertible contexts are roughly the nodes in the parsed AsciiDoc document."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If the name of a template matches the name of a convertible context, Asciidoctor will use that template to produce the output for any node with that context when the convert method is called on that node. You can create a template for as many or as few contexts as you like. If Asciidoctor is unable to locate a template for a convertible context, it will fall back to using the handler provided by the converter. By using templates, you can customize some or all of the output produced by a converter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Recall that templates can only be used if supported by the converter. All built-in converters in Asciidoctor support the use of templates to customize the converter."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The outer template is either named document or embedded, depending on whether or not the document is being converted in standalone mode. Asciidoctor doesn’t walk the document tree itself and invoke the corresponding templates. Rather, it’s up to the template to trigger the other templates by invoking the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method on block nodes. So, if you replace the document or embedded template, and don’t invoke the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, that explains why no other templates get called."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s look at the backend data model to understand the logic that can be used in a template."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_available_template_names",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Available template names"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The backing data model for a template in Asciidoctor is always the node being converted (specifically an "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "AbstractNode"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/AbstractNode"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). (A node in the Asciidoctor document model is similar to an XML DOM node). For example, when writing a template for a paragraph, the backing data model is an instance of "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Block"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Block"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " with the context "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":paragraph"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can access the node itself using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "self"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " keyword."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "- puts self"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In a Slim template, a line that starts with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " executes a Ruby statement. An expression that starts with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "="
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (either at the start of the line or following a tag name) invokes a method and inserts the return value into the template."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Within the template, you can access all the instance variables and methods of the node using the name of that member, just as you would inside a method call (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "title"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). (You can think of the template as a method call on the node object). When referencing an accessor method, the name of the member is synonymous with a template variable."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Accessing instance variables of the node from the template (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") is generally discouraged as it tightly couples your template to the internal model. It’s better to stick with using public accessors and methods."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "caution"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To access the converted content of the node, you use the template variable "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "p =content"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The syntax "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "=content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " invokes the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " accessor method on the node and inserts the result into the template."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can access the document for all nodes from the template using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "document"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property. The document is most commonly used for looking up document attributes, as shown here:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "p lang=(document.attr 'lang') =content"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also use the document object to lookup other nodes in the document using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Document#find_by"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s look at a complete example of a paragraph template that mimics the output of the built-in HTML converter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "div id=id class=['paragraph', role]\n  - if title?\n    .title =title\n  p =content"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "paragraph.html.slim"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Assuming id is \"hello\", title is \"Hello, World!\", role is nil, and content is \"Your first template!\", this template will produce the following HTML:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<div id=\"hello\" class=\"paragraph\">\n  <div class=\"title\">Hello, World!</div>\n  <p>Your first template!</p>\n</div>"
+                  }
+                ],
+                "language": "html",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This template uses the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "role"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "title"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " properties, as well as the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "title?"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method. You may notice that Slim infers some logic for you. If the role is not set, it will drop that entry from the array, join the remaining entries on a space, and output the class attribute. If the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property were nil instead of \"hello\", the template will not output the id attribute."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To help you understand what properties and methods are available on a node, you can print them using the following expression:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "- pp (public_methods - Object.instance_methods).reject {|it| it.end_with? '=' }"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All properties are reported as methods, which is why this statement uses "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public_methods"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can inspect all the attributes available on the current node and current document as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "- pp attributes\n- pp document.attributes"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To discover more about these properties and methods, and what they return, refer to the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "API docs"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/AbstractNode"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Also refer to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debugging"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#_debugging"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to learn more about how to inspect the backing data model."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_backing_data_model",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Backing data model"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Each node shares a common set of properties, such as id, role, attributes, context, its parent node, and the document node. Block and inline nodes have additional properties that are specific to their purpose. For example, a block node has a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "content"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property to access its converted content, a list node has an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "items"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property to access the list items, and an inline node has a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "text"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property to access the converted text."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Each template has access to any API in the document model that is accessible from the node being converted. The following table provides a list of the APIs you’ll likely use most often."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "document"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- if document.attr 'icons', 'font'"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A reference to the current document (and all of its nodes)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "content"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "=content"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Converts the children of this block node (if any) and returns the result."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "items"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- items.each do |item|"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Provides access to the items in a list node. Note that the list template must process its own items."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "text"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "=text"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Returns the converted text of this inline node."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "target"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "=target"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Returns the converted target of this inline node, if applicable (e.g., anchor, image)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "id"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "div id=id"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "The id assigned to the block or nil if no id is assigned."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "role"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "div class=role"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A convenience method that returns the role attribute for the block, or nil if the block does not have a role."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "role?"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "if role? 'lead'"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A convenience method to check whether the block has the role attribute."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "attr"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "div class=(attr 'toc-class', 'toc')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Retrieves the value of the specified attribute on the element, using the name as a key. If the name is written as a symbol, it will be automatically converted to a string before lookup. The second argument is a fallback value if the attribute is not set."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "attr?"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- if attr? 'icons'"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Checks whether the specified attribute exists on the element, using the name as the key. If the name is written as a symbol, it will be automatically converted to a string before lookup. If the second argument is provided (a match), it additionally checks whether the attribute value matches the specified value."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "style"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- if style == 'source'"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Retrieves the style (qualifier) for a block node. If the block does not have a style, nil is returned."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "title"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "=title"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Retrieves the title of the block with normal substitutions (escape XML, render links, etc) applied."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "title?"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- if title?"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Checks whether a title has been assigned to this block. This method does not have side effects (e.g., checks for existence only, does not apply substitutions)"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "captioned_title"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "=captioned_title"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Retrieves the title of the block with caption and normal substitutions (escape XML, render links, etc) applied."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "option?"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "video autoplay=(option? 'autoplay')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A convenience method to check whether the specified option attribute (e.g., autoplay-option) is present."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "type"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "- if type == :xref"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Returns the node variant for inline nodes that have variants (e.g., anchor, quoted, etc)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "image_uri"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "img src=(image_uri attr 'target')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Converts the path into an image URI (reference or embedded data) to be used in an HTML img element. Applies security restrictions, cleans path and can embed image data if :data-uri: attribute is enabled on document. Always use this method when dealing with image references. Relative image paths are resolved relative to document directory unless overridden using :imagesdir:"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "icon_uri"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "img src=(icon_uri attr 'target')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Same as image_uri except it specifically works with icons. By default, it will look in the subdirectory images/icons, unless overridden using :iconsdir:"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "media_uri"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "audio src=(media_uri attr 'target')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Similar to image_uri, except it does not support embedding the data into the document. Intended for video and audio paths."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "normalize_web_path"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "link href=(normalize_web_path attr 'stylesheet')"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "monospaced",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Joins the path to the relative_root and normalizes parent and self references. Access to parent directories may be restricted based on safe mode setting."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "monospaced",
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "25"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Name"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Example (Slim)"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_common_apis",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Common APIs"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As previously stated, the backing data model for a template primarily consists of the properties and methods of the node being converted. Helpers provided by the template engine are also available as top-level functions in the template. Refer to the documentation for the template engine for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you find yourself putting a lot of logic in the template, you may want to extract that logic into custom helper functions. When using Haml or Slim, you can define these helper functions in the file "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "helper.rb"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " located in the same folder as the templates. These helper functions can simplify reoccurring elements that appear across multiple templates."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The helper file must define the Ruby module "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Haml::Helpers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Slim::Helpers"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", depending on which template engine your templates target. Every method defined in that module becomes a top-level function in the template. The method is effectively mixed into the node, so the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "self"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " reference in the function is the node itself."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Helpers provided by the template engine are also available as top-level functions. For example, Haml provides the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "html_tag"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " helper for creating an HTML element dynamically. Refer to the documentation for the template engine for details."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s assume that we’re creating a template for sections, and we want to output the section title with the section number, but only if automatic section numbering is enabled. We can create a helper function for this purpose:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "module Slim::Helpers\n  def section_title\n    if caption\n      captioned_title\n    elsif numbered && level <= (document.attr :sectnumlevels, 3).to_i\n      if level < 2 && document.doctype == 'book'\n        case sectname\n        when 'chapter'\n          %(#{(signifier = document.attr 'chapter-signifier') ? signifier.to_s + ' ' : ''}#{sectnum} #{title})\n        when 'part'\n          %(#{(signifier = document.attr 'part-signifier') ? signifier.to_s + ' ' : ''}#{sectnum nil, ':'} #{title})\n        else\n          %(#{sectnum} #{title})\n        end\n      else\n        %(#{sectnum} #{title})\n      end\n    else\n      title\n    end\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "helpers.rb"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can now use this helper in your section template as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "*{ tag: %(h#{level + 1}) } =section_title "
+                  },
+                  {
+                    "guard": null,
+                    "icons": null,
+                    "id": "CO1-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n=content "
+                  },
+                  {
+                    "guard": null,
+                    "icons": null,
+                    "id": "CO1-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "section.html.slim"
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "We’re leveraging a special syntax in Slim to create the HTML heading element dynamically."
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "It’s necessary to invoke the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "content"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method to convert the child nodes of a node that contains other nodes."
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you prefer your helpers to be pure functions, you can pass in the node as the first argument and only use that reference to access properties of the backing data model."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "module Slim::Helpers\n  def section_title node = self\n    if node.caption\n      node.captioned_title\n    elsif node.numbered && node.level <= (node.document.attr :sectnumlevels, 3).to_i\n      ...\n    else\n      node.title\n    end\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "helpers.rb using pure functions"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Which style you use to write your helpers is up to you. But if you find that you need to reuse a function for different scenarios, you might find the investment in pure functions to be worthwhile."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_helpers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Helpers"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are two approaches to debug a template by exploring the backing model:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "print messages and return values to STDOUT using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "puts"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "pp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jump into the context of the template using an interactive debugger"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To print the current node in string form to STDOUT, you can use the following statement in your template:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "- puts self"
+                      }
+                    ],
+                    "language": "slim",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can print structured information about the current node using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "pp"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "- pp self"
+                      }
+                    ],
+                    "language": "slim",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "However, since a node has circular references, that output can be extremely verbose. You might find it more useful to print more specific information."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can see what attributes are available on the current node and document using these statements:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "- pp attributes\n- pp document.attributes"
+                      }
+                    ],
+                    "language": "slim",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can see what properties and methods are available on a node using the following expression:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "- pp (public_methods - Object.instance_methods).reject {|it| it.end_with? '=' }"
+                      }
+                    ],
+                    "language": "slim",
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Using print statements, you have to update the template and rerun Asciidoctor each time you want to further your inspection. A more efficient approach is to use an interactive debugger."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_print_debugging_information",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Print debugging information"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Pry"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "http://pry.github.io"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is a powerful debugger for Ruby that features syntax highlighting, tab-completion, and documentation and source code browsing. You can use it to interactively discover the object hierarchy of the backing model available to an Asciidoctor template."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To use Pry, you first need to install it, either using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "gem install"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ":"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ gem install pry"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "or by adding it to your "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Gemfile"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": [
+                          "path"
+                        ]
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and running "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "bundle"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In order to be dropped into the debugger at a specific point in a template, add the following two lines to the template you want to inspect:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "- require 'pry'\n- binding.pry"
+                      }
+                    ],
+                    "language": "slim",
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph.html.slim"
+                      }
+                    ]
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "When you run Asciidoctor, it will pause in the template and give you an interactive console."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "From: /path/to/templates/html5/paragraph.html.slim:7 self.__tilt_800:\n\n    1: - require 'pry'\n => 2: - binding.pry\n\n[1] pry(#<Asciidoctor::Block>)>"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [
+                      "output"
+                    ],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "From there, you can inspect the objects in the backend model."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[1] pry(#<Asciidoctor::Block>)> attributes"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [
+                      "output"
+                    ],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can also query Asciidoctor’s API documentation:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[1] pry(#<Asciidoctor::Block>)> ? find_by"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [
+                      "output"
+                    ],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Type exit to leave the interactive console:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[1] pry(#<Asciidoctor::Block>)> exit"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [
+                      "output"
+                    ],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To learn more about what you can do with Pry, we recommend watching the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "introductory screencast"
+                          }
+                        ],
+                        "kind": "link",
+                        "metadata": {
+                          "rel": "noopener",
+                          "window": "_blank"
+                        },
+                        "target": "http://vimeo.com/26391171"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". Refer to the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Pry wiki"
+                          }
+                        ],
+                        "kind": "link",
+                        "metadata": {
+                          "rel": "noopener",
+                          "window": "_blank"
+                        },
+                        "target": "https://github.com/pry/pry/wiki"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for details about how to use it."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_use_an_interactive_debugger",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Use an interactive debugger"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "_debugging",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Debugging"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_templates_in_asciidoctor",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Templates in Asciidoctor"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Now that you know what templates are and how to make them, let’s look at how to use them in Asciidoctor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You should group templates for a specific backend together in a single folder. In that folder, each template file should be named using the pattern "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<context><output-ext><template-ext>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", where "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "context"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the name of a "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "convertible context"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "contexts-ref.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "output-ext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the file extension of the output file, and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "template-ext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the file extension for the template language (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "paragraph.html.slim"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Those are the only requirement you have to follow in order for Asciidoctor to discover and load your templates."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re creating templates for multiple backends, you may decide to further group your templates in folders named after the backend (and perhaps even an additional folder for the template language, not shown here)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "📒 templates "
+                  },
+                  {
+                    "guard": null,
+                    "icons": null,
+                    "id": "CO2-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n  📂 html5 "
+                  },
+                  {
+                    "guard": null,
+                    "icons": null,
+                    "id": "CO2-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n    📄 paragraph.html.slim "
+                  },
+                  {
+                    "guard": null,
+                    "icons": null,
+                    "id": "CO2-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The folder containing the templates for various backends."
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The folder containing the templates for the html5 backend."
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The converter template for paragraphs."
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re only targeting a single backend, you can simply name the folder "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "templates"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "📒 templates\n  📄 paragraph.html.slim"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Recall that the backend is a moniker for the expected output format, and in turn, the converter that produces it."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_organize_your_templates",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Organize your templates"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use converter templates, you must always install the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tilt"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem. If you’re using a template engine that has one or more required libraries, you must first install those libraries. Once the library is installed, Asciidoctor will use Tilt to load it on demand."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you write your templates in ERB, no additional libraries are required."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s assume you’re writing your templates in Slim (which the template engine we most recommend). You will need both the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tilt"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "slim"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gems installed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re using Bundler, you install gems first by declaring them in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Gemfile"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "gem 'tilt'\ngem 'slim'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Gemfile"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Then, you install the gems using Bundler:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ bundle"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re not using Bundler, and you have configured Ruby to install gems in your user/home directory, then you can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command instead:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ gem install tilt slim"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Either way, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tilt"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "slim"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gems must be available on the load path when running Asciidoctor in order to use templates written in the Slim template language."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_install_the_template_engine",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Install the template engine"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Instructing Asciidoctor to apply your templates is the easiest part. You only need to tell Asciidoctor where the templates are located and which template engine you’re using. (Technically, you don’t need to specify the template engine. But, by doing so, it makes the scan more efficient and deterministic.)"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re using the CLI, you specify the template directory using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-T"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option (longhand: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--template-dir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") and the template engine using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-E"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option (longhand: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "--template-engine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -T /path/to/templates -E slim doc.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re using the API, you specify the template directory (or directories) using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":template_dirs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option and the template engine using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":template_engine"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor.convert_file 'doc.adoc', safe: :safe,\n  template_dirs: ['/path/to/templates'], template_engine: 'slim'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notice that we didn’t specify the segment "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "html5"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the path where the templates are located. That’s because Asciidoctor automatically looks for a folder that matches the backend name when scanning for templates (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/path/to/templates/html5"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). However, you can include the segment for the backend in the path if you prefer."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_apply_your_templates",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Apply your templates"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can distribute templates for a single backend across multiple directories. For example, you may have a set of common templates for all projects (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/path/to/common-templates"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") and a set of specialized templates that supplement and/or override those templates for a particular project (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/path/to/specialized-templates"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To load templates from multiple directories when using the CLI, you can pass each directory to Asciidoctor by specifying the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-T"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option multiple times:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -T /path/to/common-templates -T /path/to/specialized-templates -E slim doc.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When using the API, you add all the template directories to the array value of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":template_dirs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor.convert_file 'doc.adoc', safe: :safe,\n  template_dirs: ['/path/to/common-templates', '/path/to/specialized-templates'], template_engine: 'slim'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In both cases, if the same template is found in more than one location, the template discovered in the directory listed later in the list will be used."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_use_multiple_template_directories",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Use multiple template directories"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_how_to_use_templates",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "How to use templates"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This section provides a tutorial you can follow to quickly learn how to write and use your first converter template. In this tutorial, you’ll create a converter template to customize the HTML produced by the built-in HTML converter for unordered lists. You’ll compose the template in the Slim template language. You’ll then observe the result of this customization by using the template when converting the AsciiDoc document to HTML with Asciidoctor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You first need to install the required libraries (i.e., gems) for the template engine. Since you’ll be using Slim, you need to install the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "slim"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem. You also need to install the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tilt"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem, which provides Tilt, the generic interface for Ruby template engines that Asciidoctor uses to load and invoke templates. Although not required, Asciidoctor will prompt you to also install the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "concurrent-ruby"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " gem to properly implement the template cache."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The preferred way of installing a gem is to add it to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Gemfile"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in your project."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source 'https://rubygems.org'\n\ngem 'asciidoctor'\n# ...any other gems you are using\ngem 'tilt'\ngem 'slim'\ngem 'concurrent-ruby'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Gemfile"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Run Bundler to install the gems into your project."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ bundle"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you’re not using Bundler, and you have configured Ruby to install gems in your user/home directory, then you can use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "gem"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command instead:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ gem install tilt slim concurrent-ruby"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now that you’ve installed Tilt and the Slim template engine, you can get started writing templates."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_add_and_install_required_gems",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Add and install required gems"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Next, create a new folder named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "templates"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to store your templates. We also recommend creating a nested folder named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "html5"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to organize the templates by backend."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ mkdir -p templates/html5"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can further organize templates into folders by engine, though that’s not required."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_create_templates_folder",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Create templates folder"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s compose the template to customize the HTML for unordered lists. Since the context for unordered lists is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":ulist"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "contexts-ref.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "contexts-ref.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "), you’ll name the template "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ulist.html.slim"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "- if title?\n  figure.list.unordered id=id\n    figcaption=title\n    ul class=[style, role]\n      - items.each do |_item|\n        li\n          span.primary=_item.text\n          - if _item.blocks?\n            =_item.content\n- else\n  ul id=id class=[style, role]\n    - items.each do |_item|\n      li\n        span.primary=_item.text\n        - if _item.blocks?\n          =_item.content"
+                  }
+                ],
+                "language": "slim",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "ulist.html.slim"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "_compose_a_template",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Compose a template"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The final step is to use the templates when you invoke Asciidoctor. Create an AsciiDoc file named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "doc.adoc"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that contains an unordered list."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "* cats\n* dogs\n* birds"
+                  }
+                ],
+                "language": "asciidoc",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "doc.adoc"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can now instruct Asciidoctor to convert this list using your template by passing the directory containing the templates using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-T"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option and the name of the template engine using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "-E"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option. If you used Bundler to install gems, run Asciidoctor as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ bundle exec asciidoctor -T templates -E slim doc.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Otherwise, you can drop the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "bundle exec"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " prefix:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -T templates -E slim doc.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now that you’ve created your first converter template, you’re well on your way to customizing the HTML that Asciidoctor produces to suit your own needs!"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_apply_the_templates",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Apply the templates"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s a quick review for how to start using templates written in Slim to customize the output of the built-in HTML 5 converter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Install the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "tilt"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "slim"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "concurrent-ruby"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " gems using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "bundle"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "gem install"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create a folder named "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "templates/html5"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": [
+                          "path"
+                        ]
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to store the templates."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create a template named "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "paragraph.html.slim"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": [
+                          "path"
+                        ]
+                      },
+                      {
+                        "kind": "text",
+                        "value": " in that folder."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "p id=id role=role =content"
+                          }
+                        ],
+                        "language": "slim",
+                        "roles": [],
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "paragraph.html.slim"
+                          }
+                        ]
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Populate the template with your own template logic. Here’s a simple example:"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "literal",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "$ bundle exec asciidoctor -T path/to/templates -E slim doc.adoc"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "or"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "literal",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "$ asciidoctor -T path/to/templates -E slim doc.adoc"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Load the templates using the -T flag from the CLI:"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When invoking Asciidoctor via the API, you load the templates by passing the path to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":templates"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " option."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We hope you’ll agree that using templates makes it easy to customize the output that Asciidoctor produces."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_a_quick_review",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "A quick review"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_tutorial_your_first_converter_template",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Tutorial: Your first converter template"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Converter Templates"
+      }
+    ]
+  }
+}

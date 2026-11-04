@@ -1566,10 +1566,19 @@ fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
             // is tangential content — carrying `sidebarblock` plus the block's
             // id/roles. asciidoctor nests `<div class="sidebarblock"><div
             // class="content">`; adoctra keeps the no-wrapper convention (one
-            // element), and the `.Title` renders just inside it, as for an example.
+            // element). Without Ruby's wrapper a child block's title is a direct
+            // child too, so the sidebar's own `.Title` is the aside's `<header>`
+            // (Ruby's `.sidebarblock>.content>.title`).
             let class = class_attr(&["sidebarblock"], &block.roles);
             out.push_str(&format!("<aside{class}{id}>\n"));
-            render_title(&block.title, &caption_html(block), out);
+            if let Some(inlines) = &block.title {
+                out.push_str("<header class=\"title\">");
+                if let Some(caption) = caption_html(block) {
+                    out.push_str(&caption);
+                }
+                render_inlines(inlines, out);
+                out.push_str("</header>\n");
+            }
             render_body(block, blocks, out);
             out.push_str("</aside>\n");
         }
@@ -5493,10 +5502,28 @@ mod tests {
         let html = render(".My note\n****\nhi\n****");
         assert!(
             html.contains(
-                "<aside class=\"sidebarblock\">\n<div class=\"title\">My note</div>\n<p>hi</p>\n</aside>"
+                "<aside class=\"sidebarblock\">\n<header class=\"title\">My note</header>\n<p>hi</p>\n</aside>"
             ),
             "got: {html}"
         );
+    }
+
+    #[test]
+    fn sidebar_child_block_title_stays_a_block_title() {
+        // Without Ruby's content wrapper a child's title is a direct child of the
+        // aside too; only the sidebar's own title is its `header`, so the
+        // stylesheet styles them apart (an untitled sidebar starting with a
+        // titled listing has no `header`).
+        let html = render("****\n.Listing title\n----\ncode\n----\n****");
+        assert!(
+            html.contains(
+                "<aside class=\"sidebarblock\">\n<div class=\"title\">Listing title</div>"
+            ),
+            "got: {html}"
+        );
+        assert!(!html.contains("<header"), "got: {html}");
+        let css = render_standalone("Hello.");
+        assert!(css.contains(".sidebarblock > header.title {"), "got: {css}");
     }
 
     #[test]

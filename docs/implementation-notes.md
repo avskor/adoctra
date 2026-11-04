@@ -2790,3 +2790,31 @@ sections/layout_ids). This also closed golden-block-subs: Chrome reconstructs
 the unclosed raw `<i>` around adoctra's `<footer>` (`I > FOOTER`), which lost
 `body > #footer`. visual-v1: 752 of 752 match.
 
+
+**Full documentation corpus** (2026-11-04): `scripts/import_docs.py` imports
+every `docs/modules/*/pages/**/*.adoc` of a pinned Antora checkout (verified
+against the origin's revision) with its transitive Antora includes
+(`example$`/`partial$`/`page$`, optional `module:` prefix; unresolvable ones
+— `{partialsdir}`, missing files — stay unregistered so both processors warn
+alike) and appends cases to cases/structure/semantics/visual manifests with
+the origin's existing host attributes; prior entries are never rewritten.
+Asciidoctor docs 78 pages, asciidoc-lang 202. `validate_resources` accepts
+`:` in resource names except a drive prefix (`[A-Za-z]:`). Seven
+asciidoc-lang pages are outside the semantic schema (floating_title,
+thematic_break, bibref, diagnostics, raw markup; pinned in
+test_documentation_corpus.py). Performance workloads are pinned by case id
+(`WORKLOAD_CASES`), not origin, so corpus growth does not change reports.
+Results: body 362, structure 336, semantics 321 (472 with upstream), Rouge
+1918 listings / 362 docs, visual 1306/1306 after fixing seven CSS gaps
+(see visual.adoc): qanda (no bold question, no first-block gap: its `p`s are
+Ruby's own; last `p` zeroed in example/sidebar), dl ending example/sidebar
+(`> dl:last-child > dd:last-child > p:last-child` zeroed; a nested list
+keeps its margin), attached paragraph keeps `li p` margin
+(`li:last-child > :last-child:not(p)`), sidebar first-block gap 0.625rem,
+list items in quotes take `.quoteblock p` metrics, sidebar title is now
+`<header class="title">` (child block titles stay `div.title`; normalized in
+compatibility.py and golden.rs), `.sidebarblock .admonition-content` 1em as
+a separate rule (inside `:is()` it raised specificity and broke hdlist
+terms), `fit-content:not(.stretch)`, and `pre` inherits `overflow-wrap`
+(table `normal` lets a literal cell widen the table). golden.rs container
+normalizers map an item's leading `<p>` to the `li` text on both sides.

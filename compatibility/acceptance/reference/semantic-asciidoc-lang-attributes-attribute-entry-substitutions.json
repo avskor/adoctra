@@ -1,0 +1,662 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The AsciiDoc processor automatically applies substitutions from the header substitution group to the value of an attribute entry prior to the assignment, regardless of where the attribute entry is declared in the document. The header substitution group, which replaces "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "special characters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:special-characters.html"
+              },
+              {
+                "kind": "text",
+                "value": " followed by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "attribute references"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:attributes.html"
+              },
+              {
+                "kind": "text",
+                "value": ", is applied to the values of attribute entries, regardless of whether the entries are defined in the header or in the document body. This is the same group that gets applied to metadata lines (author and revision information) in the document header."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "That means that any inline formatting in an attribute value isn’t interpreted because:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inline formatting is not applied when the AsciiDoc processor sets an attribute, and"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inline formatting is not applied when an attribute is referenced since the relevant substitutions come before attributes are resolved."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want the value of an attribute entry to be used "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "as is"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (not subject to substitutions), or you want to alter the substitutions that are applied, you can enclose the value in the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inline pass macro"
+                  }
+                ],
+                "kind": "xref",
+                "target": "pass:pass-macro.html"
+              },
+              {
+                "kind": "text",
+                "value": " (i.e., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pass:[]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The inline pass macro accepts a list of zero or more substitutions in the target slot, which can be used to control which substitutions are applied to the value. If no substitutions are specified, no substitutions will be applied."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order for the inline macro to work in this context, it must completely surround the attribute value. If it’s used anywhere else in the value, it will be ignored."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how to prevent substitutions from being applied to the value of an attribute entry:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":cols: pass:[.>2,.>4]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This might be useful if you’re referencing the attribute in a place that depends on the unaltered text, such as the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cols"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute on a table."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how we can apply the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quotes substitution"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:quotes.html"
+              },
+              {
+                "kind": "text",
+                "value": " to the value of an attribute entry:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":app-name: pass:quotes[MyApp^2^]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Internally, the value is stored as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MyApp<sup>2</sup>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". You can inspect the value stored in an attribute using this trick:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[subs=attributes+]\n------\n{app-name}\n------"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also specify the substitution using the single-character alias, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "q"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":app-name: pass:q[MyApp^2^]"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The inline pass macro kind of works like an attribute value preprocessor. If the processor detects that an inline pass macro completely surrounds the attribute value, it:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "reads the list of substitutions from the target slot of the macro"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unwraps the value from the macro"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "applies the substitutions to the value"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the macro is absent, the value is processed with the header substitution group."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "pass-macro",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Change substitutions when assigning a value"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Unlike attribute entries, substitutions are "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " applied to the value of an attribute passed in to the AsciiDoc processor. An attribute can be passed into the AsciiDoc processor using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-a"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " CLI option or the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":attributes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API option. When attributes are defined external to the document, the value must be prepared so it’s ready to be referenced as is. If the value contains XML special characters, that means those characters must be pre-escaped. The exception would be if you intend for XML/HTML tags in the value to be preserved. If the value needs to reference other attributes, those values must be pre-replaced."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s consider the case when the value of an attribute defined external to the document contains an ampersand. In order to reference this attribute safely in the AsciiDoc document, the ampersand must be escaped:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a equipment=\"a bat &amp; ball\" document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can reference the attribute as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To play, you'll need {equipment}."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the attribute were to be defined in the document, this escaping would not be necessary."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":equipment: a bat & ball"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "That’s because, in contrast, substitutions are applied to the value of an attribute entry."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_substitutions_for_attributes_defined_outside_the_document",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Substitutions for attributes defined outside the document"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also change the substitutions that are applied to an attribute at the time it is resolved. This is done by manipulating the substitutions applied to the text where it is referenced. For example, here’s how we could get the processor to apply quote substitutions to the value of an attribute:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ":app-name: MyApp^2^\n\n[subs=\"specialchars,attributes,quotes,replacements,macros,post_replacements\"]\nThe application is called {app-name}."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notice that we’ve swapped the order of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "attributes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quotes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " substitutions. This strategy is akin to post-processing the attribute value."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_change_substitutions_when_referencing_an_attribute",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Change substitutions when referencing an attribute"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Attribute Entry Substitutions"
+      }
+    ]
+  }
+}

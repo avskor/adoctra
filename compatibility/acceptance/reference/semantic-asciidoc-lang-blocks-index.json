@@ -1,0 +1,2235 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Block elements form the main structure of an AsciiDoc document, starting with the document itself."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A block element (aka block) is a discrete, line-oriented chunk of content in an AsciiDoc document. Once parsed, that chunk of content becomes a block element in the parsed document model. Certain blocks may contain other blocks, so we say that blocks can be nested. The converter visits each block in turn, in document order, converting it to a corresponding chunk of output."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_what_is_a_block",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "What is a block?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "How the boundaries of a block are defined in the AsciiDoc syntax varies. The boundaries of some blocks, like lists, paragraphs, and block macro, are implicit. Other blocks have boundaries that are explicitly marked using delimiters (i.e., delimited blocks). The main commonality is that a block is always line-oriented."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "paragraph block"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is defined as a discrete set of contiguous (non-empty) lines. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "delimited block"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is bounded by delimiter lines. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "section block"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (aka section) is defined by a section title that’s prefixed by one or more equal signs. The section includes all content that follows the section title line until the next sibling or parent section title or the document boundary. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "list block"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is defined by a group of sibling list items, each denoted by a marker. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "description list"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " block is defined by a sibling group of list items, each denoted by one or more terms. A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "block macro"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is defined by a single line that matches the block macro syntax. And the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "document"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is also a block."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A block (including its metadata lines) should always be bounded by an empty line or document boundary on either side."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whether or not a block supports nested blocks depends on content model of the block (and what the syntax allows)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_block_forms",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Block forms"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The content model of a block determines what kind of content the block can have (if any) and how that content is processed. The content models of blocks in AsciiDoc are as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a block that may only contain other blocks (e.g., a section)"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "compound"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a block that’s treated as contiguous lines of paragraph text (and subject to normal substitutions) (e.g., a paragraph block)"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "simple"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a block that holds verbatim text (displayed “as is”) (and subject to verbatim substitutions) (e.g., a listing block)"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "verbatim"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a block that holds unprocessed content passed directly through to the output with no substitutions applied (e.g., a passthrough block)"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "raw"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a block that has no content (e.g., an image block)"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "empty"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "a special content model reserved for tables that enforces a fixed structure"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "table"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The content model is inferred for all built-in syntax (as determined by the context), but can be configured for custom blocks. Blocks may also support different content models under different circumstances. The circumstance is determined by the context and style, and in the case of a delimited block, the structural container as well."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_content_model",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Content model"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may often hear a block referred to by a name, such as an example block, a sidebar block, an admonition block, or a section. That name is the block’s context."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s consider the following normal section:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "== Section Title\n\nContent of section."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The context of this block is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "section"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". We often refer to this as a section (or section block), using the context as an adjective to describe the block. The writer does not have to specify the context in this case since it’s implied by the syntax."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Every block has a context. The context is often implied by the syntax, but can be declared explicitly in certain cases. The context is what distinguishes one kind of block from another. You can think of the context as the block’s type."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The context can be further modified using a block style to create a family of blocks that share a common type, as is the case with admonition blocks and sections. We’ll cover that modifier shortly."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For blocks, the context is sometimes referred to as the block name. This comes up in particular when talking about custom blocks. The block name is just another layer of abstraction. All the built-in block names map to exactly one context. But a block extension can map an arbitrary block name to one or more contexts. Which context is ultimately used depends on what is returned from the extension’s process method. In the end, it’s the context that determines how the block is converted."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The context often determines the content model. For example, all sections implicitly have the compound content model because a section may only contain other blocks. All literal blocks implicitly have the verbatim content model because the purpose of this block is to present verbatim output."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s a list of the contexts of all the built-in blocks in AsciiDoc."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the Asciidoctor API, the contexts are represented as symbols. In Ruby, a symbol is a name prefixed with a colon (e.g., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":listing"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). This documentation will sometimes use this notation when referring to the name of a context. However, this notation is not universal. Some processors, such as Asciidoctor.js, store the context as a string instead."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "admonition"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "One of five admonition blocks."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "audio"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An audio block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "colist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A callout list."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "dlist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A description list."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "document"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "The top-level document or the document in an AsciiDoc table cell"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "example"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An example block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "floating_title"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A discrete heading."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "image"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An image block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "list_item"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An item in an ordered, unordered, or description list (only relevant inside a list or description list block). In a description list, this block is used to represent the term and the description."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "listing"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A listing block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "literal"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A literal block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "olist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An ordered list."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "open"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An open block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "page_break"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A page break."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "paragraph"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A paragraph."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "pass"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A passthrough block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "preamble"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "The preamble of the document."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "quote"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A quote block (aka blockquote)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "section"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A section. May also be a part, chapter, or special section."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "sidebar"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A sidebar block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "table"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A table block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "table_cell"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A table cell (only relevant inside a table block)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "thematic_break"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A thematic break (aka horizontal rule)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "toc"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A TOC block (to designate custom TOC placement)."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "ulist"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "An unordered list."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "verse"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A verse block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "video"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": "strong",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "A video block."
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 1. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "strong",
+                    "valign": "top",
+                    "width": "33.3333"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "66.6667"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Name"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Purpose"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": "table-of-contexts",
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Built-in contexts"
+                  }
+                ],
+                "width": 100
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Each inline element also has a context, but those elements are not (yet) accessible from the parsed document model."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Additional contexts may be introduced through the use of the block, block macro, or inline macro extension points."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_summary_of_built_in_contexts",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Summary of built-in contexts"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The context is what the converter uses to dispatch to a convert method. The style is then used by the converter to apply special behavior to blocks of the same family."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "With two exceptions, there’s a 1-to-1 mapping between the contexts and the handler methods of a converter. Those exceptions are the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "list_item"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "table_cell"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " contexts, which are not mapped to a handler method. In the converter, these blocks must be accessed from their parent block."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_contexts_used_by_the_converter",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Contexts used by the converter"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_context",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Context"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The context does not always tell the whole story of a block’s identity. Some blocks require specialization. That’s where the block style comes into play."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Above some blocks, you may notice a name at the start of the block attribute list (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[source]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[verse]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The first positional (unnamed) attribute in the block attribute list is used to declare the block style."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The declared block style is the value the author supplies. That value is then interpreted and resolved. The resolved block style, if non-empty, specializes the block’s context. (It may instead, or in addition to, alter the block’s context)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Consider the following example of a source block:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[source,ruby]\n----\nputs \"Hello, World!\"\n----"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The context of a source block is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "listing"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (as inferred from the block delimiters) and the style is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (as specified by the writer). We say that the style specializes the block as a source block. (Technically, the presence of a source language already implies the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " style, but under the covers this is what’s happening). The context of the block is still the same, but it has additional metadata to indicate that it requires special processing."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "We also see the block style used for other purposes. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "appendix"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " block style (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[appendix]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") above the section title specializes the section as an appendix (a special section) and thus has special semantics and behavior. In the model, the section’s style is dually stored as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "sectname"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". One of the five admonition styles (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[TIP]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") above an example block transforms the example block into an admonition block with that name (i.e., label). In the model, the admonition style in lowercase is stored in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute. A block style (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[circle]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[loweralpha]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") above an unordered or ordered list, respectively, alters the marker used in front of list items when displayed. A block style (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[qanda]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "[horizontal]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") above a description list can either change its semantics or layout."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The declared block style can be used to change the context of a block, referred to as "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "block masquerading"
+                  }
+                ],
+                "kind": "xref",
+                "target": "masquerading.html"
+              },
+              {
+                "kind": "text",
+                "value": ". Consider the case of this alternate syntax for a listing block using the literal block delimiters."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[listing]\n....\na > b\n...."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since the declared block style matches the name of a context, the context of the block becomes "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "listing"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and the resolved block style remains unset. That means the resolved block style differs from the declared block style. To learn more about how to change the context of a block using the declared block style, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "masquerading.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "masquerading.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To get a complete picture of a block’s identity, you must consider both the context and the style. The resolved style specializes the context to give it special behavior or semantics."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "block-style",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Block style"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Blocks are defined using some form of line-oriented syntax. Section blocks begin with a section title line. Delimited blocks are enclosed in a matching pair of delimiter lines. Paragraph blocks must be contiguous lines."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All blocks accommodate zero or more lines of metadata stacked linewise directly on top of the block. These lines populate the properties of the block, such as the ID, title, and options. These metadata lines are as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Zero or more block attribute lines (which populate the block’s attributes)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional block anchor line"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional block title line (many blocks also support a corresponding caption)"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional ID"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional set of roles"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An optional set of options"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, consider a sidebar block with a title and ID:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": ".Styles of music\n[#music-styles]\n****\nGo off on a tangent to describe what a style of music is.\n****"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When it comes to processing content, blocks split off into different groups. These groups are primarily associated with the block’s content model."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Paragraph blocks and verbatim blocks have an implicit and modifiable set of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "substitutions"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:index.html"
+              },
+              {
+                "kind": "text",
+                "value": ". Substitutions do not apply to compound blocks (i.e., blocks that may contain nested blocks)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_block_commonalities",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Block commonalities"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Blocks"
+      }
+    ]
+  }
+}

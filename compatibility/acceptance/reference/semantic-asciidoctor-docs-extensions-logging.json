@@ -1,0 +1,1002 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a problem occurs while an extension is running, you probably want to communicate that information to the user. The extension should only throw an error (i.e., raise an exception) if the problem is so severe that no additional processing should be done. Otherwise, we recommend that extensions report the problem as a log message at an appropriate severity level. You can use Asciidoctor’s logger to log messages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When Asciidoctor processes a document, it creates a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Logger"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://ruby-doc.org/3.2.2/stdlibs/logger/Logger.html"
+              },
+              {
+                "kind": "text",
+                "value": " instance scoped to that document. You can access that logger in your extension to log messages. This page describes how to do that."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To access the instance of Asciidoctor’s Logger, you must include the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor::Logging"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module into your extension. In doing so, it will provide access to the static "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, which will retrieve the instance from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LoggerManager"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The logger can also be accessed using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method on the document object. If you’re writing an extension that has access to the document object, this may be a simpler approach."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re writing a class-based extension, you can include the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Logging"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "include"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class CustomBlock < Asciidoctor::Extensions::BlockProcessor\n  include Asciidoctor::Logging\n\n  # ...\nend\n\nAsciidoctor::Extensions.register do\n  block CustomBlock, :custom\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re writing an extension purely using the DSL, the processor class is created dynamically. Therefore, you need to mix in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Logging"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module by referencing the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "include"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method on that class instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  block :custom do\n    singleton_class.include Asciidoctor::Logging\n\n    # ...\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As mentioned above, you can access the logger from the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "logger"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method on the document object that’s passed to the extension’s process method. For example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor::Extensions.register do\n  block :custom do\n    process do |doc, reader, attrs|\n      puts doc.logger\n\n      # ...\n    end\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to log a message, pass the message string to one of the severity methods (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "error"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "warn"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "info"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", etc) on the logger instance returned by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method. Here’s an example of how to log a warning message in the process method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "def process doc, reader, attrs\n  logger.warn 'We are logging!'\n\n  # ...\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s what Asciidoctor will print to the log:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "asciidoctor: WARN: We are logging!"
+              }
+            ],
+            "language": null,
+            "roles": [
+              "output"
+            ],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Refer to the documentation for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Logger"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://ruby-doc.org/3.2.2/stdlibs/logger/Logger.html"
+              },
+              {
+                "kind": "text",
+                "value": " to learn about the available methods."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s a complete example to show where these additions are used in context:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  block :custom do\n    singleton_class.include Asciidoctor::Logging\n\n    on_context :paragraph\n    process do |parent, reader, attrs|\n      logger.warn 'We are logging!'\n      create_paragraph parent, reader.lines, attrs\n    end\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Keep in mind that the message will only be displayed if its severity level is enabled by the user. By default, error and warn(ing) messages will be displayed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You should refrain from using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fatal"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method unless the extension is in the process of throwing an error."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_mix_in_the_logger",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Mix in the Logger"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you pass a string to the log method, Asciidoctor will only print the severity level and the message. That means the user won’t know what AsciiDoc source the message refers to nor that the message is coming from an extension. Therefore, you’ll probably want to provide more detail. Let’s begin by including the extension name in the message."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "First, when logging a message, you should prefix that message with the name of the extension."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger.warn '(custom-block-extension) Something is out of sorts.'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "That will print the message as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor: WARN: (custom-block-extension) Something is out of sorts."
+                  }
+                ],
+                "language": null,
+                "roles": [
+                  "output"
+                ],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternately, you can move your extension name so that it immediately follows the program name (i.e., "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "asciidoctor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger.log ::Logger::WARN, 'hi', %(#{logger.progname} (custom-block-extension))"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "That will print the message as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor (custom-block-extension): WARN: Something is out of sorts."
+                  }
+                ],
+                "language": null,
+                "roles": [
+                  "output"
+                ],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Another way to get the same output is to use the form that accepts the message as a block."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger.warn(%(#{logger.progname} (custom-block-extension))) { 'Something is out of sorts.' }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The block form is useful in other ways. If the computation of the message is expensive, the block form defers evaluation of the message until (and thus if) it is logged."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now the reader knows that the message is coming from an extension, but not the location of the AsciiDoc source the extension is processing. Let’s look at how to do that."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_add_the_extension_name",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Add the extension name"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In addition to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "logger"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, Asciidoctor’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Logging"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " module also adds a helper named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "message_with_context"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that generates a message object that bundles source information with the string message."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For block and block macro extensions, you probably want to reference the location where the block is found, which you can retrieve using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "parent.document.reader.cursor_at_mark"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method call. For a tree processor extension, you can retrieve the source location from the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "source_location"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method on the block. For most other extensions, you likely want to reference the current cursor, which is accessible from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "parent.document.reader.cursor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "doc.reader"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for extensions that only provide access to the document object)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example that replaces the message with an object that includes the source location:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "logger.warn %(#{logger.progname} (custom-block-extension)) do\n  message_with_context 'Something is out of sorts.', source_location: parent.document.reader.cursor_at_mark\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example of what Asciidoctor will print:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor (custom-block-extension): WARNING: test.adoc: line 4: Something is out of sorts."
+                  }
+                ],
+                "language": null,
+                "roles": [
+                  "output"
+                ],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In a tree processor extension, you can get the source location from any block if the sourcemap is enabled. If it’s not enabled, the code will degrade gracefully by logging the message without the source location."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor::Extensions.register do\n  tree_processor do |doc|\n    singleton_class.include Asciidoctor::Logging\n    doc.find_by context: :paragraph do |paragraph|\n      logger.warn %(#{logger.progname} (custom-tree-processor)) do\n        message_with_context 'Found paragraph.', source_location: paragraph.source_location\n      end\n    end\n    nil\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Source location tracking in Asciidoctor is not perfect, so you may need to retrieve the cursor and adjust it slightly to align it with the line you want to reference in the message."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Refer to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Reader#cursor"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/Reader#cursor-instance_method"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a list of cursor methods."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_add_the_source_location",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Add the source location"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_add_context_to_the_message",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Add context to the message"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Log from an Extension"
+      }
+    ]
+  }
+}

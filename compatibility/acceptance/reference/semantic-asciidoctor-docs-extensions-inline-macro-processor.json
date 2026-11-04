@@ -1,0 +1,358 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Create an inline macro named "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "man"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " that links to another man page."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Purpose"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See man:gittutorial[7] to get started."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_sample_with_man_link_adoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "sample-with-man-link.adoc"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class ManInlineMacro < Asciidoctor::Extensions::InlineMacroProcessor\n  use_dsl\n\n  named :man\n  name_positional_attributes 'volnum'\n\n  def process parent, target, attrs\n    doc = parent.document\n    text = manname = target\n    suffix = (volnum = attrs['volnum']) ? %((#{volnum})) : ''\n    if doc.basebackend? 'html'\n      target = %(#{manname}#{doc.outfilesuffix})\n      doc.register :links, target\n      node = create_anchor parent, text, type: :link, target: target\n    elsif doc.backend == 'manpage'\n      node = create_inline parent, :quoted, manname, type: :strong\n    else\n      node = create_inline parent, :quoted, manname\n    end\n    create_inline parent, :quoted, %(#{node.convert}#{suffix})\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_manpageinlinemacro",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "ManpageInlineMacro"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  inline_macro ManInlineMacro\nend\n\nAsciidoctor.convert_file 'sample-with-man-link.adoc', safe: :safe"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Usage"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By the time an inline macro is processed, most substitutions have already been applied (since macros is one of the last substitutions). In order to get the processor to apply substitutions to the text of the Inline node returned by the extension, you must specify those extensions on the node instance itself."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can specify substitutions to apply to the text of the node using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute. This attribute accepts a symbol, an array of symbols, or a comma-separated string."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s say that we want normal substitutions to be applied to the text. Here’s how that can be done:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create_inline_pass parent, '*https://example.org[Learn more]*',\n  attributes: { 'subs' => :normal }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This inline passthrough node will produce a link that has link text with strong emphasis (i.e., bold)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also specify the substitutions as a string, which is parsed just like the value of the subs attribute on a block."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create_inline_pass parent, '*https://example.org[Learn more]*',\n  attributes: { 'subs' => 'quotes,macros' }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can specify whichever substitutions you want applied, and in what order."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Instead of creating an inline passthrough node, you can also create a span of formatted text with additional substitutions applied."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create_inline parent, :quoted, 'https://asciidoctor.org is _awesome_!',\n  attributes: { 'subs' => :quotes }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":quoted"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " primary type represents a span of formatted text. In this case, we don’t need to apply the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "macros"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " substitution since links have not yet been converted."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_apply_substitutions",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Apply substitutions"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_tips_techniques",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Tips & Techniques"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Inline Macro Processor Extension Example"
+      }
+    ]
+  }
+}

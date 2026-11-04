@@ -260,9 +260,10 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         match name {
             // Structural wrappers — drop them. `figure`/`figcaption` are adoctra's
             // quote/verse wrappers (asciidoctor uses `div`s), `aside` is adoctra's
-            // sidebar wrapper, `section` its section wrapper and `nav` its TOC
-            // (asciidoctor `div`s), so both collapse alike.
-            "div" | "figure" | "figcaption" | "aside" | "section" | "nav" => {}
+            // sidebar wrapper (its title the aside's `header`), `section` its
+            // section wrapper and `nav` its TOC (asciidoctor `div`s), so both
+            // collapse alike.
+            "div" | "figure" | "figcaption" | "aside" | "header" | "section" | "nav" => {}
             "p" if strip_p => {} // admonition/quote body paragraph wrapper — drop it
             "pre" if !inner.starts_with('/') => out.push_str("<pre>"),
             _ => out.push_str(tag),
@@ -270,7 +271,27 @@ fn normalize_container(s: &str, strip_p: bool) -> String {
         rest = &rest[gt + 1..];
     }
     out.push_str(rest);
-    out.split_whitespace().collect::<Vec<_>>().join(" ")
+    list_item_text(&out.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+/// A list item's text: Ruby wraps it in the item's first `<p>`, adoctra's is
+/// the `<li>` itself. Applied to both sides alike, an item's leading `<p>` and
+/// its `</p>` drop, and so does the whitespace just inside `<li>`/`</li>`.
+fn list_item_text(s: &str) -> String {
+    let mut out = String::new();
+    let mut rest = s;
+    while let Some(at) = rest.find("<li>") {
+        out.push_str(&rest[..at + 4]);
+        rest = rest[at + 4..].trim_start();
+        if let Some(text) = rest.strip_prefix("<p>") {
+            if let Some(end) = text.find("</p>") {
+                out.push_str(&text[..end]);
+                rest = &text[end + 4..];
+            }
+        }
+    }
+    out.push_str(rest);
+    out.replace(" </li>", "</li>")
 }
 
 /// Normalise a sidebar block to its children's markup in document order. Like

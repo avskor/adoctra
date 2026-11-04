@@ -98,8 +98,11 @@ class ProjectionTests(unittest.TestCase):
     def test_sidebar_aside_is_ruby_sidebarblock(self):
         ruby = ('<div id="s" class="sidebarblock r"><div class="content"><div class="title">T</div>'
                 '<div class="paragraph"><p>x</p></div></div></div>')
-        ours = '<aside id="s" class="sidebarblock r"><div class="title">T</div><p>x</p></aside>'
+        ours = '<aside id="s" class="sidebarblock r"><header class="title">T</header><p>x</p></aside>'
         self.assertEqual(projection(ruby), projection(ours))
+        # The aside's title header is Ruby's title div; a header elsewhere is not.
+        self.assertNotEqual(projection('<div><header class="title">T</header></div>'),
+                            projection('<div><div class="title">T</div></div>'))
         # Its id, roles, title and content remain observable.
         self.assertNotEqual(projection(ours), projection(ours.replace('sidebarblock r', 'sidebarblock')))
         self.assertNotEqual(projection(ours), projection(ours.replace('>T<', '><')))
@@ -286,6 +289,9 @@ class ResourceFixtureTests(unittest.TestCase):
         for case in [{"resources": {}}, {"profile": "include-body-dom-v1"}]:
             with self.assertRaises(ValueError):
                 validate_resources(case)
+        # An Antora resource id from another module is a plain file name.
+        validate_resources({"profile": "include-body-dom-v1",
+                            "resources": {"html-backend:example$my-document.adoc": "x"}})
 
     def test_both_renderers_use_the_same_isolated_utf8_tree(self):
         case = {"profile": "include-body-dom-v1", "source": "include::sub/я.adoc[]\r\n",

@@ -1,0 +1,1767 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you use the HTML converter to generate a standalone HTML document, Asciidoctor includes a default stylesheet to ensure the HTML looks presentable right out of the box. This feature gets you up and running quickly by giving you a result you can preview or publish without having to do any additional work."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page covers why the default is necessary, how to apply it, and how to build on it so you don’t have to create a stylesheet from scratch."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The default stylesheet that Asciidoctor provides is just that, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "a default"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". If you prefer a different style, you can customize it, extend it, or replace it with an entirely different one. When replacing the default stylesheet, it’s important to understand that it does provide support for numerous features in AsciiDoc, as covered in the next section. You’ll need to include these required styles when developing your own stylesheet if you want these features to continue to work."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor includes a default stylesheet to provide a nice out-of-the-box experience when generating HTML from AsciiDoc. But there’s more to it. There are elements of AsciiDoc that require stylesheet support."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One example is to honor "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "built-in roles"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text-center"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In order for a role to take effect, it needs a companion CSS class in the stylesheet. To satisfy the expectations of a built-in role, a stylesheet is required."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may have noticed the floating anchors next to section titles when you hover over them. Although the HTML to make them is there, it’s the stylesheet that brings them to life."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another example is to implement "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "list marker styles"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". AsciiDoc allows you to specify the marker for a list using a block style (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "loweralpha"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). However, HTML does not apply these markers by default. Rather, it’s something that the stylesheet provides."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The default stylesheet also applies "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "borders and shading to table cells"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to support all combinations of the frame, grid, and stripes attributes."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Yet another example is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TOC position"
+                  }
+                ],
+                "kind": "strong",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". To position the TOC on the left or right requires help from the stylesheet to change the layout of the page so the TOC appears as a sidebar. It’s the stylesheet that handles that task."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order for the AsciiDoc experience to be complete when generating HTML, a stylesheet is required. The default stylesheet not only completes this experience, but also serves as a reference for the styles a custom stylesheet must provide."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The default stylesheet ensures that the same fonts are selected across all platforms."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By default, the browser relies on system fonts. But system fonts vary widely by platform, so users end up getting a very different experience. That’s where web fonts come in."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When the default stylesheet is used, the converter adds additional HTML to load open source fonts from Google Fonts. The default stylesheet, in turn, specifies a preference for these fonts."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The web fonts used by the default stylesheet are as follows:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "body text (default)"
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Noto Serif"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "headings"
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Open Sans"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "monospaced phrases and verbatim blocks"
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Droid Sans Mono"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Loading and preferring these web fonts ensures everyone sees the same result."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_web_fonts",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Web fonts"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_why_provide_a_default",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Why provide a default?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When generating HTML, there’s nothing special you need to do to apply the default stylesheet. Asciidoctor automatically embeds the default stylesheet into the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<head>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of the generated HTML when you run the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since no stylesheet is specified, Asciidoctor uses the default stylesheet (which is located at "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "data/stylesheets/asciidoctor.css"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " inside the installed gem)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you view the generated HTML file, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "document.html"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": [
+                  "path"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": ", you’ll see styled HTML, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "default stylesheet"
+              }
+            ],
+            "attributes": {},
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "default-stylesheet.png",
+            "svg": null,
+            "target": "default-stylesheet.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want Asciidoctor to generate HTML that links to the default stylesheet instead of embedding it in the HTML, you can instruct it to do so by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "linkcss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "copycss"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attributes as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a linkcss -a copycss document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using the API, Asciidoctor already links to the stylesheet by default instead of embedding it (due to the default safe mode). However, Asciidoctor does not copy the stylesheet to the output directory. You would have to put it there yourself. Otherwise, the browser will not be able to find the stylesheet."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To solve this problem, set the safe mode to server or lower (e.g., server, safe, or unsafe) and Asciidoctor will embed the default stylesheet, like when using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'asciidoctor'\n\nAsciidoctor.convert_file 'document.adoc', safe: :safe"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Usage"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the default stylesheet is used, the converter adds a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<link>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element specialized by the attribute "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "rel=\"stylesheet\""
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to load web fonts from Google Fonts. You can disable this link by unsetting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "webfonts"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute from the CLI, API, or document header."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -a webfonts! document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With the web fonts absent, the browser will drop back to the fallback system fonts specified in the stylesheet. But this also provides an opportunity to use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docinfo"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#customize-docinfo"
+              },
+              {
+                "kind": "text",
+                "value": " to load the web fonts from a different source."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Rather than disabling the link, you can also use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "webfonts"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute to change which fonts are loaded. When set, the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "webfonts"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute is used as the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "family"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " query string parameter in the font-loader URL."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s say you want to use Ubuntu Mono instead of Droid Sans Mono for monospaced text. You would set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "webfonts"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor \\\n-a webfonts=\"Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CUbuntu+Mono:400\" \\\ndocument.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this case, you would still need to use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docinfo"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#customize-docinfo"
+              },
+              {
+                "kind": "text",
+                "value": " to instruct the stylesheet to use the new font."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_disable_or_modify_the_web_fonts",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Disable or modify the web fonts"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "What if the default stylesheet is not exactly to your liking, but you don’t want to go off and create a custom stylesheet from scratch? Can you customize it? Indeed, you can."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are at least two ways to customize the default stylesheet. One way is to add auxiliary styles using docinfo. Another way is to create a custom stylesheet, but import the default stylesheet as a starting point."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Adding auxiliary styles is a great use case for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "docinfo"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "ROOT:docinfo.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The docinfo feature in AsciiDoc allows you to inject auxiliary content from a file into various places in the HTML output. In this case, we’re interested in the \"head\" position, which injects content at the bottom of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<head>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s say you want to change the color of headings (and other heading-like titles) to match the color of paragraph text. Start by creating a file named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "docinfo.html"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": " (head is the default location) and populate it with a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<style>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element with the necessary styles."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<style>\nh1, h2, h3, h4, h5, h6, #toctitle,\n.sidebarblock > .content > .title {\n  color: rgba(0, 0, 0, 0.8);\n}\n</style>"
+                  }
+                ],
+                "language": "html",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "docinfo.html"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now tell Asciidoctor to look for and load the docinfo file using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "docinfo"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -a docinfo=shared document.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "<style>"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " element in your docinfo file will be inserted directly below the default stylesheet in the generated HTML."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "customize-docinfo",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Auxiliary styles with docinfo"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to style specific elements in your content, you need to make them addressable from CSS. In other words, it must be possible to target them using a CSS selector. There are two mechanisms in AsciiDoc that enable you to do this:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "You can add an ID to almost any element in AsciiDoc using the "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ID attribute"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "asciidoc:attributes:ids.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": ". The ID attribute in AsciiDoc translates to the "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "id"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " attribute in HTML. You can then target that element (and only that element) from CSS in order to modify its style using the syntax "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "#<id>"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": ", where "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "<id>"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " is the value you specify. Each ID can only be used once in a document."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "id"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "You can add a role to almost any element in AsciiDoc using the "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "role attribute"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "asciidoc:attributes:role.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": ". The role attribute in AsciiDoc translates to the "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " attribute in HTML. You can then target that element (and any other elements that share the same role) from CSS in order to modify its style using the syntax "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": ".<role>"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": ", where "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "<role>"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " is the value you specify. A role can be used many times in the document. You can even target different elements that share the same role individually in the stylesheet by adding the element name (e.g., "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "span.appname"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": ") or additional roles (e.g., "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": ".varname.global"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": ")."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "role"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For any ID or role you introduce, you must provide custom styles for it in order for it to have any visual effect."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "customize-targets",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Make more elements addressable from CSS"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Instead of writing a custom stylesheet from scratch, you can import the default stylesheet and add overrides for any styles you want to change (leveraging the cascading nature of CSS). This is also a good way to use the default stylesheet, but load web fonts from a different CDN."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Let’s again change the color of headings (and other heading-like titles) to match the color of paragraph text. Start by creating a stylesheet named "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "my-asciidoctor.css"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": [
+                      "path"
+                    ]
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Next, add an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@import"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declaration to import the default stylesheet. We use a CDN here to pull the default stylesheet directly out of the repository, but you can put it anywhere the browser can access it. Then, add another "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@import"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " declaration to import the web fonts the default stylesheet uses (which are not imported by the default stylesheet). Finally, add your overrides below those "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@import"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directives. Here’s how that looks altogether."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@import \"https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700\";\n@import \"https://cdn.jsdelivr.net/gh/asciidoctor/asciidoctor@{page-component-version}/data/stylesheets/asciidoctor-default.css\";\n\nh1, h2, h3, h4, h5, h6, #toctitle,\n.sidebarblock > .content > .title {\n  color: rgba(0, 0, 0, 0.8);\n}"
+                  }
+                ],
+                "language": "css",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now tell Asciidoctor to use your custom stylesheet instead of the default one:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ asciidoctor -a stylesheet=my-asciidoctor.css document.adoc"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor will now embed the contents of your custom stylesheet instead of the default one. However, Asciidoctor will not embed the contents of the default stylesheet. Instead, the browser will fetch it from the location specified by the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@import"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directive. You can avoid this network call by putting the default stylesheet in the same directory as your custom stylesheet and linking to it using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@import \"asciidoctor.css\""
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To obtain the compiled default stylesheet, you can either "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "download it"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://cdn.jsdelivr.net/gh/asciidoctor/asciidoctor@{page-component-version}/data/stylesheets/asciidoctor-default.css"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " from the source repository, or you can use the following "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "asciidoctor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " command (or equivalent) to write it to the current directory:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "literal",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ echo | asciidoctor -o $TMPDIR/out.html -a linkcss -a copycss - && cp $TMPDIR/asciidoctor.css ."
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternately, you can use this script to write the default stylesheet to the working directory:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require 'asciidoctor'\n\nAsciidoctor::Stylesheets.instance.write_primary_stylesheet '.'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can also download the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "source of the default stylesheet"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://github.com/asciidoctor/asciidoctor/blob/v{page-component-version}.x/src/stylesheets/asciidoctor.css"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " if you want to use it as a starting point for developing a custom stylesheet."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To learn more about how to apply a custom stylesheet, see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "custom-stylesheet.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "custom-stylesheet.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "customize-extend",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Extend the default stylesheet"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_customize_the_default_stylesheet",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Customize the default stylesheet"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The default stylesheet does not provide different themes. You may be interested in trying the themes provided by the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor Skins"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/darshandsoni/asciidoctor-skins"
+              },
+              {
+                "kind": "text",
+                "value": " project. These stylesheets take the approach of loading the default stylesheet (from a CDN), then overlaying additional styles to produce a variety of themes. You also have the option of downloading the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source of the default stylesheet"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/asciidoctor/asciidoctor/blob/v{page-component-version}.x/src/stylesheets/asciidoctor.css"
+              },
+              {
+                "kind": "text",
+                "value": " and customizing it to suit your needs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Asciidoctor Skins project is hosted outside of the Asciidoctor organization. As such, it’s not guaranteed to be compatible with the latest Asciidoctor release. If there are problems with the stylesheets it provides, please report it to that project."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "caution"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To learn how to apply a custom stylesheet, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom-stylesheet.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom-stylesheet.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_are_there_different_themes",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Are there different themes?"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Default Stylesheet"
+      }
+    ]
+  }
+}

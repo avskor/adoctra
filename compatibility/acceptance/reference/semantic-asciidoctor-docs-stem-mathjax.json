@@ -1,0 +1,269 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MathJax"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.mathjax.org"
+              },
+              {
+                "kind": "text",
+                "value": " is a JavaScript library for displaying interactive LaTeX, AsciiMath, and MathML expressions in the browser. The Asciidoctor HTML converter integrates with MathJax to provide STEM processing for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AsciiMath"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://docs.mathjax.org/en/latest/input/asciimath.html"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TeX and LaTeX"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://docs.mathjax.org/en/latest/input/tex/index.html"
+              },
+              {
+                "kind": "text",
+                "value": " notation used in an AsciiDoc document. This integration offers simple, out-of-the-box support for STEM content when converting to HTML."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you convert your document to HTML using the HTML converter, and the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "stem"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute is set on your document, the HTML will be configured to automatically load MathJax into the page from a CDN. There’s nothing you have to install. Specifically, it loads the MathJax bundle that includes support for both TeX and AsciiMath, as shown here:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<script src=\"https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_HTMLorMML\"></script>"
+              }
+            ],
+            "language": "html",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After the page loads, MathJax scans for expressions inside special delimiters and transforms them into a displayable format. You may notice a brief flash of the expression in source form while this is happening."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s an example of a STEM expression written in AsciiMath and rendered by MathJax."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "stem",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "e = sum_(n=0)^oo 1 / n!"
+              }
+            ],
+            "roles": [],
+            "style": "asciimath",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you right click on the rendered expression, you’ll notice its interactive. One of the options even allows you to view the original AsciiMath input."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_how_it_works",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "How it works"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The delimiters that the HTML converter places around the expressions to tell MathJax what to process are not the same as the ones MathJax looks for by default. These custom delimiters were chosen to avoid conflicts with other syntax in the AsciiDoc language."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The converter configures MathJax to look for the custom delimiters it emits. If you look at the HTML source, you’ll see a text/x-mathjax-config stanza that defines them, as well as some other settings."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_custom_delimiters",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom delimiters"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The MathJax integration is currently only designed for HTML output. When converting to other backend formats, additional libraries are needed. A good alternative is "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "mathematical.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "mathematical.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_alternatives",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Alternatives"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "MathJax and HTML"
+      }
+    ]
+  }
+}

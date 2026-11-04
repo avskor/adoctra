@@ -1,0 +1,150 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Register a custom block style named "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "shout"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " that uppercases all the words and converts periods to exclamation points."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Purpose"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[shout]\nThe time is now. Get a move on."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_sample_with_shout_block_adoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "sample-with-shout-block.adoc"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "class ShoutBlock < Asciidoctor::Extensions::BlockProcessor\n  PeriodRx = /\\.(?= |$)/\n\n  use_dsl\n\n  named :shout\n  on_context :paragraph\n  name_positional_attributes 'vol'\n  parse_content_as :simple\n\n  def process parent, reader, attrs\n    volume = ((attrs.delete 'vol') || 1).to_i\n    create_paragraph parent, (reader.lines.map {|l| l.upcase.gsub PeriodRx, '!' * volume }), attrs\n  end\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_shoutblock",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "ShoutBlock"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor::Extensions.register do\n  block ShoutBlock\nend\n\nAsciidoctor.convert_file 'sample-with-shout-block.adoc', safe: :safe"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_usage",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Usage"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Block Processor Extension Example"
+      }
+    ]
+  }
+}

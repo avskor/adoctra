@@ -53,10 +53,19 @@ def synthetic(family, size):
     raise ValueError(f'unknown workload family: {family}')
 
 
-# The real workloads are the pages of these pinned origins: the recorded
-# studies measure them, so later additions to the semantic corpus do not
-# silently change what a performance report covers.
+# The real workloads are these pinned pages (of the origins below): the
+# recorded studies measure them, so later additions to the semantic corpus
+# (such as the full Asciidoctor documentation) do not silently change what a
+# performance report covers.
 WORKLOAD_ORIGINS = ('asciidoctor-docs-2.0.23', 'spring-framework-6.2.0')
+WORKLOAD_CASES = (
+    'semantic-asciidoctor-docs-safe-modes', 'semantic-spring-aop-proxying',
+    'semantic-asciidoctor-docs-api-options', 'semantic-asciidoctor-docs-custom-highlighter',
+    'semantic-spring-resources', 'semantic-spring-bean-validation',
+    'semantic-spring-expression-operators', 'semantic-asciidoctor-docs-localization',
+    'semantic-asciidoctor-docs-custom-stylesheet', 'semantic-asciidoctor-docs-custom-converter',
+    'semantic-spring-bean-scopes', 'semantic-spring-webtestclient',
+)
 
 
 def workloads(manifest=MANIFEST, sizes=SIZES):
@@ -66,8 +75,10 @@ def workloads(manifest=MANIFEST, sizes=SIZES):
     result = []
     for case in loaded:
         entry = original[case['id']]
-        if metadata['files'][entry['source']]['origin'] not in origins:
+        if case['id'] not in WORKLOAD_CASES:
             continue
+        if metadata['files'][entry['source']]['origin'] not in origins:
+            raise ValueError(f"workload {case['id']} is outside the pinned origins")
         paths = [entry['source'], *entry.get('resources', {}).values()]
         result.append({
             'id': case['id'].removeprefix('semantic-'), 'kind': 'document',

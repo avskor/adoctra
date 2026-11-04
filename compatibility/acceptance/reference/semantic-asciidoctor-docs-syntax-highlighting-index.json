@@ -1,0 +1,946 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AsciiDoc defines a style of listing block known as a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source block"
+                  }
+                ],
+                "kind": "xref",
+                "target": "asciidoc:verbatim:source-blocks.html"
+              },
+              {
+                "kind": "text",
+                "value": " for adding source code snippets intended to be colorized by a syntax highlighter to a document. Here’s a simple example of a source block:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[source,ruby]\n----\nputs \"Hello, World!\"\n----"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If a language is specified on a listing block, the source style is implied. Therefore, it can be excluded in this case."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[,ruby]\n----\nputs \"Hello, World!\"\n----"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s how we expect it to appear:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "puts \"Hello, World!\""
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s up to an AsciiDoc processor such as Asciidoctor to apply the syntax highlighting to this source block, a process referred to as "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source highlighting"
+                  }
+                ],
+                "kind": "xref",
+                "target": "asciidoc:verbatim:source-highlighter.html"
+              },
+              {
+                "kind": "text",
+                "value": ". Asciidoctor provides adapters that integrate with several popular syntax highlighter libraries to perform this task. It also provides an interface for implementing a custom syntax highlighter adapter."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor supports two types of syntax highlighters: client-side and build-time. Let’s explore each type and how they work."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "client-side syntax highlighter"
+                  }
+                ],
+                "kind": "strong",
+                "roles": [
+                  "term"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " performs syntax highlighting in the browser as the page is loading. Asciidoctor does not invoke the syntax highlighter itself. Instead, it focuses on adding the assets to the generated HTML so the browser can load the syntax highlighter and run it. For this type of syntax highlighter, Asciidoctor passes the contents of the source block through to the output as is. It also adds metadata to the element so that the syntax highlighter knows to highlight it and which language it is. Unfortunately, Asciidoctor does not process callout numbers in the source block in this case, so they may cause the syntax highlighter to get tripped up."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "build-time syntax highlighter"
+                  }
+                ],
+                "kind": "strong",
+                "roles": [
+                  "term"
+                ]
+              },
+              {
+                "kind": "text",
+                "value": " performs syntax highlighting during AsciiDoc conversion. Asciidoctor does invoke the syntax highlighter in this case. It also takes care of hiding the callout numbers from the syntax highlighter, ensuring they are put back in the proper place afterwards. What Asciidoctor emits into the output is the result produced by the syntax highlighter, which are the tokens enclosed in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<span>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " elements to apply color and other formatting (either inline or via CSS classes). These syntax highlighters tend to support more features because Asciidoctor has greater control over the process."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are benefits and drawbacks of each type. The benefit of a client-side syntax highlighter is that does not require installing any additional libraries. It also makes conversion faster and makes it produce smaller output since the syntax highlighting is deferred until page load. The main drawback is that callouts in the source block can be mangled by the syntax highlighter or confuse it. The benefits of a build-time syntax highlighter are that you have more control over syntax highlighting and can enable additional features such as line numbers and line highlighting. The main drawback is that it requires installing an extra library, it slows down conversion, and causes the output to be larger."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You should try each syntax highlighter and find the one that works best for you."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_client_side_vs_build_time",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Client-side vs build-time"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_syntax_highlighter_types",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Syntax highlighter types"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "autowidth": true,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Client-side"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": "header",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Highlight.js"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "n/a"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "HTML, Reveal.js"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Build-time"
+                      }
+                    ]
+                  ],
+                  "rowspan": 3,
+                  "style": "header",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "CodeRay"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "coderay (>= 1.1)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "HTML, PDF, EPUB3, Reveal.js"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Pygments"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "pygments.rb (>= 1.2)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "HTML, PDF, EPUB3, Reveal.js"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Rouge"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "rouge (>= 2)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "HTML, PDF, EPUB3, Reveal.js"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "25"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Type"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Syntax Highlighter"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Required Gem"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Compatible Converters"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [
+              "autowidth"
+            ],
+            "roles": [],
+            "stripes": null,
+            "title": null,
+            "width": 100
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor does not apply syntax highlighting when generating DocBook. The assumption is that this is a task the DocBook toolchain can handle. The DocBook converter generates a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<programlisting>"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " element for the source block and passes through the source language as specified in the AsciiDoc. It’s then up to the DocBook toolchain to apply syntax highlighting to the contents of that tag."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can explore these integrations in depth on the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "highlightjs.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "highlightjs.html"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "rouge.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "rouge.html"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pygments.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "pygments.html"
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "coderay.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "coderay.html"
+              },
+              {
+                "kind": "text",
+                "value": " pages."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can also create your own integration by making a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_built_in_syntax_highlighter_adapters",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Built-in syntax highlighter adapters"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You should not mix syntax highlighting with AsciiDoc text formatting (i.e., the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quotes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "macros"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " substitutions). In many converters, these two operations are mutually exclusive."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[,java,subs=+quotes]\n----\ninterface OrderRepository extends CrudRepository<Order,Long> {\n\n  *List<Order>* findByCategory(String category);\n\n  Order findById(long id);\n}\n----"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Improper use of custom substitutions on a source block"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The additional markup introduced by AsciiDoc text formatting may confuse the syntax highlighter and lead to unexpected results. While it may work in some syntax highlighters in the HTML backend (which perhaps know how to work around the formatting tags), it will most certainly fail when converting to other formats such as PDF."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re going to customize the substitutions on a source block using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "subs"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute, you should limit those substitutions to attribute replacements ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "attributes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "[,java,subs=attributes+]\n----\ninterface {model}Repository extends CrudRepository<{model},Long> {\n\n  {model} findById(long id);\n}\n----"
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Valid use of custom substitutions on a source block"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you still need to emphasize certain tokens in the block of code, you should do so by creating a custom lexer or formatter for the syntax highlighting library that understands these additional semantics and perhaps even hints. In other words, work through the syntax highlighter so it’s added during the highlighting process, giving the syntax highlighter full knowledge as to what’s going on. Another option is to use a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom syntax highlighter adapter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before trying to get the syntax highlighter to recognize new tokens, make sure it doesn’t already recognize them. If it does, it may just be a matter of customizing the syntax highlighter theme to apply different formatting to those tokens."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_custom_subs_on_source_blocks",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom subs on source blocks"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Syntax Highlighting"
+      }
+    ]
+  }
+}

@@ -1,0 +1,351 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A URL may not display correctly when it contains characters such as underscores ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "_"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ") or carets ("
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "^"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "). This problem occurs because the markup parser interprets parts of the URL (i.e., the link target) as valid text formatting markup. Most lightweight markup languages have this issue because they don’t use a grammar-based parser. The AsciiDoc language plans to handle URLs more carefully in the future (see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor issue #281"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://github.com/asciidoctor/asciidoctor/issues/281"
+          },
+          {
+            "kind": "text",
+            "value": "), which may be solved by moving to a grammar-based parser (see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor issue #61"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://github.com/asciidoctor/asciidoctor/issues/61"
+          },
+          {
+            "kind": "text",
+            "value": "). Thankfully, there are many ways to include URLs of arbitrary complexity using the AsciiDoc passthrough mechanisms."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The simplest way to get a link to behave is to assign it to an attribute."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "= Document Title\n:link-with-underscores: https://asciidoctor.org/now_this__link_works.html\n\nThis URL has repeating underscores {link-with-underscores}."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The AsciiDoc processor won’t break links with underscores when they are assigned to an attribute because "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inline formatting markup is substituted before attributes"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:quotes.html"
+              },
+              {
+                "kind": "text",
+                "value": ". The URL remains hidden while the rest of the document is being formatted (strong, emphasis, monospace, etc.)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Solution A"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another way to solve formatting glitches is to explicitly specify the formatting you want to have applied to a span of text. This can be done by using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inline pass macro"
+                  }
+                ],
+                "kind": "xref",
+                "target": "pass:pass-macro.html"
+              },
+              {
+                "kind": "text",
+                "value": ". If you want to display a URL, and have it preserved, put it inside the pass macro and enable the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "macros substitution"
+                  }
+                ],
+                "kind": "xref",
+                "target": "subs:apply-subs-to-text.html"
+              },
+              {
+                "kind": "text",
+                "value": ", which is what substitutes links."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This URL has repeating underscores pass:macros[https://asciidoctor.org/now_this__link_works.html]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The pass macro removes the URL from the document, applies the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "macros"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " substitution to the URL, and then restores the processed URL to its original location once the substitutions are complete on the whole document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, you can use the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "double plus inline macro"
+                  }
+                ],
+                "kind": "xref",
+                "target": "pass:pass-macro.html#def-plus"
+              },
+              {
+                "kind": "text",
+                "value": " ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "++"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") around the URL only. However, when you use this approach, the AsciiDoc processor won’t recognize it as a URL any more, so you have to use the explicit "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "link"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " prefix."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This URL has repeating underscores link:++https://asciidoctor.org/now_this__link_works.html++[]."
+              }
+            ],
+            "language": "asciidoc",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Solution B"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For more information, see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor issue #625"
+              }
+            ],
+            "kind": "link",
+            "metadata": {
+              "rel": "noopener",
+              "window": "_blank"
+            },
+            "target": "https://github.com/asciidoctor/asciidoctor/issues/625"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Troubleshooting Complex URLs"
+      }
+    ]
+  }
+}

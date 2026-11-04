@@ -698,7 +698,10 @@ class SemanticProjectionTests(unittest.TestCase):
         manifest, cases = acceptance.load_corpus(root / 'semantics.json')
         original_manifest, original = acceptance.load_corpus(root / 'cases.json')
         self.assertEqual(manifest['profile'], semantics.PROFILE)
-        self.assertEqual(len(cases), 59)
+        # 59 selected pages plus the rest of the full Asciidoctor and AsciiDoc
+        # language documentation (test_documentation_corpus.py pins those).
+        self.assertEqual(len(cases), 321)
+        full = {'asciidoctor-docs-2.0.23', 'asciidoc-lang-0.3.0'}
         for path, provenance in manifest['files'].items():
             self.assertEqual(provenance, original_manifest['files'][path])
         for origin in manifest['origins'].values():
@@ -708,7 +711,11 @@ class SemanticProjectionTests(unittest.TestCase):
             original_case = next(entry for entry in original if 'semantic-' + entry['id'] == case['id'])
             for key in ['source', 'attributes', 'resources']:
                 self.assertEqual(case.get(key), original_case.get(key))
-            self.assertGreater(len(case['source'].splitlines()), 90)
+            source = next(entry['source'] for entry in manifest['cases'] if entry['id'] == case['id'])
+            if manifest['files'][source]['origin'] not in full:
+                # A selected page is a whole, substantial page (a full
+                # documentation has short pages too, all of them included).
+                self.assertGreater(len(case['source'].splitlines()), 90)
             self.assertEqual(case['expect'], 'pass')
             reference = json.loads((root / 'reference' / (case['id'] + '.json')).read_text())
             semantics.validate(reference['semantics'], case['semantic_attributes'])

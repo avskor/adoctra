@@ -1,0 +1,1560 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Pandoc"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://pandoc.org"
+              },
+              {
+                "kind": "text",
+                "value": " is a Swiss army knife for converting one markup format to another. It does an admirable job converting simple docx files to AsciiDoc."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Generally, we don’t like to recommend pandoc because it doesn’t create AsciiDoc the way we prefer. However, in this case, it’s a good choice."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To perform the conversion from MS Word docx to AsciiDoc, you need to perform the following command:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ pandoc -f docx -t asciidoctor --wrap=none --atx-headers \\\n  --extract-media=extracted-media -o output.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "pandoc < 2.11.2"
+              }
+            ]
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ pandoc input.docx -f docx -t asciidoc --wrap=none --markdown-headings=atx \\\n  --extract-media=extracted-media -o output.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "pandoc (2.11.2 or newer)"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you use docker you can also use the latest version of pandoc with docker without installing it:"
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "pandoc (2.11.2 or newer) and docker"
+              }
+            ]
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ docker run --rm --volume \"$PWD:/data\" --user `id -u`:`id -g` pandoc/core input.docx -f docx \\\n  -t asciidoc --wrap=none --markdown-headings=atx --extract-media=extracted-media -o output.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Then, edit the output file to tidy it up."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The conversions you can expect are shown in the following table (tested using MS Word 2010 and 2013 + Pandoc 2.0 and 2.5 (Windows)):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Headings (using MS Word Heading styles 1-5)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Tables"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes."
+                      },
+                      {
+                        "kind": "line-break"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Merged cells are unmerged. Column widths are ignored."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Unordered and ordered lists"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Footnotes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Figure and table captions"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Normal paragraph"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Other MS Word styled paragraphs"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Normal paragraph"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Embedded images"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Character formatting (bold, underline and italic)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "URL links"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "No. See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "how to remove hyperlinks"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "#remove-refs"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to fix it."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Email links"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Yes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Document automation (fields, auto-generated figure and table numbers)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Ignored"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Internal references (e.g., “See Figure 3”)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Plain text"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Drawing canvas"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Ignored"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Text boxes"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Ignored"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Linked (not embedded) images"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Ignored"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Vector graphics (MS Word “insert shape”)"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Ignored"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 1. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "MS Word Feature"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Conversion"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Pandoc MS Word to AsciiDoc conversions"
+              }
+            ],
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "_pandoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Pandoc"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The basic usage documented above is fine for one-off imports. If you have a lot to do, it’s worthwhile cleaning the input document first, and automating the post-conversion tidy up."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Remove non-essential material (title pages, headers and footers, table of contents etc.); it is usually easiest to copy just the body text into a new blank document"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Switch off tracking and accept all changes"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Ensure you have used Heading styles for headings"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Ensure table titles are immediately "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "above"
+                              }
+                            ],
+                            "kind": "strong",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " their table"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Ensure figure titles are immediately "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "above"
+                              }
+                            ],
+                            "kind": "strong",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " their figure"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Ensure images are inserted as embedded files, not as links"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Remove canvases and put any images they contained into the main flow as paragraph images (this limitation may be removed in the next release of pandoc)"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": "remove-refs",
+                            "kind": "anchor"
+                          },
+                          {
+                            "kind": "text",
+                            "value": "Remove hyperlinks and replace all internal references and auto-generated sequence numbers with their literal values (kbd:[Ctrl+A], kbd:[Ctrl+Shift+F9])"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Remove text boxes and put their text into the main flow"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Replace special characters: smart quotes with simple quotes, non-breaking hyphens with normal hyphens."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Remove all character formatting (kbd:[Ctrl+A], kbd:[Ctrl+B], kbd:[Ctrl+B], kbd:[Ctrl+I], kbd:[Ctrl+I], kbd:[Ctrl+U], kbd:[Ctrl+U])"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Optional: insert ids and cross references using AsciiDoc notation (You might find it easier doing it now rather than in the AsciiDoc document later.)"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Save as “Strict Open XML document (docx)`”"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Clean up the MS Word document:"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Convert using pandoc as shown above."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If for some reason pandoc is not extracting images, you can always extract them by using unzip tool. Docx is just a zip file with a docx file extension. Embedded images are located in "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "word/media"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": [
+                              "path"
+                            ]
+                          },
+                          {
+                            "kind": "text",
+                            "value": " directory."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "literal",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "$ unzip input.docx -d input-docx\n  ls input-docx/word/media/"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "context": "admonition",
+                    "id": null,
+                    "roles": [],
+                    "title": null,
+                    "type": "note"
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Check that the output document looks OK, and that all images have been extracted."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Delete automatic ids (those beginning with underscores)"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Replace long table delimiters with short ones."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Insert line-breaks to get to 1 sentence per paragraph."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Re-insert images and turn caption paragraphs back into Asciidoctor captions."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Replace the hard cross references with AsciiDoc references."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Fix tables: merged cells will have unmerged, column widths need putting back."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Fix up the output, preferably with an editor that can do regular expressions:"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Try to convert it, and fix any errors that come up."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following are POSIX shell one-liners to automate some of these steps (adjust the regexps to match your particular document):"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ perl -W -pe  's!\\[\\[_.*]]!!g' -i output.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Delete automatically inserted ids"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ perl -W -pe  's!\\|==*!|====!g' -i output.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Shorten table delimiters"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ perl -W -pe 's!(\\w\\w+)\\.\\s+(\\w)!$1.\\n$2!g' -i output.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "1 sentence per line. Be careful not to match lists. It will get confused by abbreviations, but there is no way around that."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ perl -W -pe 's!^Figure (\\d+)\\s?(.*)![[fig-$1]]\\n.$2\\n!g' -i output.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Replace figure captions with id and title"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "literal",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "$ perl -W -pe 's!Figure (\\d+)!<<fig-$1>>!g' -i output.adoc"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Replace references to figures with AsciiDoc xref"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_optimizing_for_pandoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Optimizing for Pandoc"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Google Docs can already upload and edit MS Word docx files. Using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AsciiDoc Processor add-on"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://workspace.google.com/marketplace/app/asciidoc_processor/1023004302050"
+              },
+              {
+                "kind": "text",
+                "value": " by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Guillaume Grossetie"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/ggrossetie"
+              },
+              {
+                "kind": "text",
+                "value": ", you can copy and paste part or all of the document from Google Docs as AsciiDoc text. The features that it can handle seem to be substantially fewer than pandoc but expect further development. The source for the add-on can be found in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "its repository"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://github.com/ggrossetie/asciidoc-googledocs-addon/"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_google_docs",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Google Docs"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This method is only useful for very small files or if the other methods are not available."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It keeps the text, and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fixes"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " fields like auto-numbered lists and cross references."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It loses tables (converted to plain paragraphs), images, symbols, form fields, and text boxes."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In MS Word, use \"Save as > Plain text\", then when the File Conversion dialog appears, set:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Other encoding: UTF-8"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Do not insert line breaks"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Allow character substitution"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Save the file then apply AsciiDoc markup manually."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Experiment with the encoding. Try UTF-8 first, but if you get problems you can always revert to US-ASCII."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_plain_text",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Plain text"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Migrate from MS Word to Asciidoctor"
+      }
+    ]
+  }
+}

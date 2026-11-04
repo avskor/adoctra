@@ -45,11 +45,15 @@ class PerformanceTests(unittest.TestCase):
         real = [c for c in workloads if c['kind'] == 'document']
         self.assertEqual(len(real), 12)
         self.assertEqual(len(workloads), 24)
-        # Only the pinned origins' pages are workloads, in manifest order.
+        # Only the pinned pages (of the pinned origins) are workloads, in
+        # manifest order; other pages of those origins are not.
         sources = {entry['id']: entry['source'] for entry in metadata['cases']}
-        pinned = [case for case in original
-                  if metadata['files'][sources[case['id']]]['origin'] in perf.WORKLOAD_ORIGINS]
+        pinned = [case for case in original if case['id'] in perf.WORKLOAD_CASES]
         self.assertEqual(len(pinned), 12)
+        self.assertTrue(all(metadata['files'][sources[case['id']]]['origin'] in perf.WORKLOAD_ORIGINS
+                            for case in pinned))
+        self.assertGreater(sum(metadata['files'][sources[case['id']]]['origin'] in perf.WORKLOAD_ORIGINS
+                               for case in original), 12)
         pinned_origins = {name: metadata['origins'][name] for name in perf.WORKLOAD_ORIGINS}
         for workload, origin in zip(real, pinned):
             self.assertEqual(workload['source'], origin['source'])

@@ -1,0 +1,1172 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor provides a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Ruby API"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23"
+              },
+              {
+                "kind": "text",
+                "value": " named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for parsing, analyzing, and converting AsciiDoc content. This API is intended for use in applications, scripts, integrations with other Ruby software, such as Rails, GitHub, and GitLab, and by other languages, such as Java (via "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AsciidoctorJ"
+                  }
+                ],
+                "kind": "xref",
+                "target": "asciidoctorj::index.html"
+              },
+              {
+                "kind": "text",
+                "value": ") and JavaScript (via "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor.js"
+                  }
+                ],
+                "kind": "xref",
+                "target": "asciidoctor.js::index.html"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This page examines the purpose of the API and how it can be used, shows how to get started with it, introduces its primary entry points, and links to where you can find more information to start putting it into practice."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If all you need to do is convert an AsciiDoc file to a publishable format such as HTML, then the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "asciidoctor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "cli:index.html"
+              },
+              {
+                "kind": "text",
+                "value": " CLI should suit your needs. Here’s an example showing how to convert an AsciiDoc document to HTML using the CLI:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "$ asciidoctor -d book -n -a toc=left -a source-highlighter=highlight.js document.adoc"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Here’s the same example showing how to convert the document to HTML using the API:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'asciidoctor'\n\nAsciidoctor.convert_file 'document.adoc', doctype: :book, safe: :unsafe,\n  attributes: { 'toc' => 'left', 'sectnums' => '', 'source-highlighter' => 'highlight.js' }"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This API call can be abbreviated by declaring the document attributes using shorthand form:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'asciidoctor'\n\nAsciidoctor.convert_file 'document.adoc', doctype: :book, safe: :unsafe,\n  attributes: 'toc=left sectnums source-highlighter=highlight.js'"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In contrast to the CLI, the API enables you to break down the processing into smaller steps. By doing so, you can capture the result of a single step, analyze the parsed document, interface with the document model in an extension, or just gain more control over the processing in general."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using the API, we talk about two main steps:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "In this step, the AsciiDoc content is parsed into a document object model. This model represents an in-memory hierarchy of the AsciiDoc content as a tree of Ruby objects. These objects represent the elements in the AsciiDoc document, down to the block level, along with any metadata, such as document and block attributes."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "load"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "In this step, the previously prepared document object model is converted into the specified output format using a converter. In coordination with the converter, the processor passes each node in the document object model to the converter to be converted. The result is then combined and either returned or written to a file, depending on the options passed to the API."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "convert"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the API to perform these two steps together (like the CLI) using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or separately using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "load"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "load_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " followed by calling "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "#convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on the document object. The API can load and convert AsciiDoc files ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "load_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") or strings ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "load"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "convert"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "API entrypoints"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#entrypoints"
+              },
+              {
+                "kind": "text",
+                "value": " section introduces these methods in more detail."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The API is the main way to interface with Asciidoctor in an application or integration library. By using the API, you avoid having to invoke Asciidoctor using a subprocess. You’ll find that it also gives you a lot more control over the processing than what the CLI affords. The API is also a useful tool in scripts, where you may need to dive deeper into the document model beyond where extensions allow you to go. It is also instrumental in the development of extensions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Let’s learn how to get started with the API by requiring the Asciidoctor library."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "when-to-use",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "When to use the API"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To get started with the Asciidoctor API, you first need to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "install the gem"
+                  }
+                ],
+                "kind": "xref",
+                "target": "install:index.html"
+              },
+              {
+                "kind": "text",
+                "value": ". The gem provides both the CLI and the API. In fact, the CLI uses the API to handle AsciiDoc conversion."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whereas with the CLI, you interact with Asciidoctor using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " command, when using the API, you interact with Asciidoctor using methods on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to make the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module available in a Ruby script or application, you must require the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "asciidoctor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " gem using Ruby’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " function:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require 'asciidoctor'"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This one statement makes all of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public APIs in Asciidoctor"
+                  }
+                ],
+                "kind": "link",
+                "metadata": {
+                  "rel": "noopener",
+                  "window": "_blank"
+                },
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23"
+              },
+              {
+                "kind": "text",
+                "value": " available to your Ruby code. For example, we can check which version of Asciidoctor was required by Ruby using the following statement:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "puts Asciidoctor::VERSION\n# => 2.0.23"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " statement fails, check to make sure that you have the gem installed (and available on the GEM_PATH)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "require",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Start with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "require"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The CLI is primarily intended for converting AsciiDoc. While the API can do that as well, it can do so much more. Instead of just converting AsciiDoc, the API allows you to load the AsciiDoc into a document model. From there, you can either convert the document model to an output format, or you can pause to analyze or modify its structure."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are four main entrypoints in the Asciidoctor API:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "parses the AsciiDoc source (down to the block level) into an "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor::Document"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " object"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor.load"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "parses the contents of the AsciiDoc source file (down to the block level) into an "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor::Document"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " object"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor.load_file"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "parses and converts the AsciiDoc source to the output format determined by the specified backend"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor.convert"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "parses and converts the contents of the AsciiDoc source file to the output format determined by the specified backend"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Asciidoctor.convert_file"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re processing a file, you’d typically use a method that ends with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Otherwise, you’d use its complement, which accepts a String, an array of Strings, or an IO object."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, the output of the convert methods follows the input. If you convert a String, the method will output a String. If you convert a file, the method will output to a file. However, these defaults can be changed using the options (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ":to_file"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When calling Asciidoctor using the API, you can access "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "additional options that control processing"
+                  }
+                ],
+                "kind": "xref",
+                "target": "options.html"
+              },
+              {
+                "kind": "text",
+                "value": " which are not available when using the CLI. For example, you can pass in extensions, parse only the header, enable the sourcemap, or catalog assets."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the main entrypoints, the API also provides a mechanism to register and develop extensions. To learn more about extensions, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "extensions:index.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions:index.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "entrypoints",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "API entrypoints"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Load and convert AsciiDoc from a file"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "convert-files.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Load and convert AsciiDoc from a string"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "convert-strings.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Generating embedded vs standalone output"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "convert-strings.html#embedded-output"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Convert inline markup only"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "convert-strings.html#convert-inline-markup-only"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Generate an HTML TOC"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "generate-html-toc.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Load custom templates"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "load-templates.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create extensions"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "extensions:index.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "API options"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "options.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Ruby API docs"
+                      }
+                    ],
+                    "kind": "link",
+                    "metadata": {
+                      "rel": "noopener",
+                      "window": "_blank"
+                    },
+                    "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_next_steps",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Next steps"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Process AsciiDoc Using the API"
+      }
+    ]
+  }
+}

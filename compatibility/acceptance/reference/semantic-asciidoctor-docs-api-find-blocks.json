@@ -1,0 +1,1161 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once the document has been loaded (or partially loaded), you can traverse the document to find block nodes. There are two ways to look for block nodes. One way is to start walking down the tree starting from the Document object. All blocks can be reached from the Document object. However, a much quicker way to find blocks is to use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "find_by"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, which does the walking for you. We’ll start there, then look at how to use the custom traversal approach."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Every block node (a parsed block), including the Document object, provides the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "find_by"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.rubydoc.info/gems/asciidoctor/2.0.23/Asciidoctor/AbstractBlock#find_by-instance_method"
+              },
+              {
+                "kind": "text",
+                "value": " method. The purpose of this method is to help you quickly find descendant blocks. Since some blocks have different models, this method can help you navigate the document without having to worry about those nuances."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "find_by"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method only finds block nodes. It does not find inline nodes."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you want to look for any block in the parsed document, call the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "find_by"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method on the Document object. Otherwise, you can look for blocks in a specific area of the document by calling it on the relevant ancestor of those blocks."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The return value of this method is a flat array of blocks in document order which were matched. The relationship between those blocks is only preserved by way of their own model. If no blocks are matched, the method returns an empty array."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If not called with any arguments, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "find_by"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method will return all blocks starting from the block on which it was called. If called on the Document object, it will return all blocks in the document (except for blocks in AsciiDoc table cells), including the document itself. Here’s an example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "require 'asciidoctor'\n\ndoc = Asciidoctor.load_file 'input.adoc', safe: :safe\nputs doc.find_by"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example of how to find all the blocks in the first section:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "doc.sections.first.find_by"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notice that the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "find_by"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method always returns the block that you start with as the first result (assuming it also matches the provided selector, covered later). If you want to exclude that block, slice it off from the results:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "puts doc.find_by.slice 1..-1"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If youre just looking for the first result, you can pluck it from the result array:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "puts doc.find_by.first"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By default, and for backwards compatibility, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "find_by"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method does not traverse into AsciiDoc table cells. If you want it to look in these cells for blocks, set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":traverse_documents"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " key on the selector Hash to true."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "all_blocks = doc.find_by traverse_documents: true"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The next section will look at how to filter the blocks that are returned."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_all_blocks",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "All blocks"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "find_by"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method, you’re probably looking for specific blocks. The method accepts an optional selector (a Hash) and an optional block filter (a Ruby proc). The method will walk the entire tree (including in AsciiDoc table cells if "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":traverse_documents"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") to find blocks. By default, it will descend into a block which does not match, though this behavior can be controlled using the block filter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The simplest way to match blocks is to use the selector. The selector is a Hash that accepts four predefined symbol keys:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A single block "
+                        },
+                        {
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "context"
+                            }
+                          ],
+                          "kind": "xref",
+                          "target": "convert:contexts-ref.html"
+                        },
+                        {
+                          "kind": "text",
+                          "value": " (i.e., block name), such as "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": ":paragraph"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":context"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A single block style, such as "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "source"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":style"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "An ID."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":id"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A single role."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":role"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is specified, the method will never return more than one block since an ID is, by natural, globally unique. Here’s an example of how to find a block by ID using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " selector:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "match = (doc.find_by id: 'prerequisites').first"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Now let’s assume we want to match all listing blocks that are source blocks. We can do so by combining the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":context"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":style"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " selectors:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "some_source_blocks = doc.find_by context: :listing, style: 'source'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since literal blocks can also be source blocks, if we want all source blocks, we’d need to leave off the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":context"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " selector:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "all_source_blocks = doc.find_by style: 'source'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If we want all blocks marked with a specific role, we can find them using the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":role"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " selector:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "blocks_with_role = doc.find_by role: 'try-it'"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The selector Hash is intentionally simple to make it easy to find blocks. If the blocks you’re looking for cannot be described using that selector, then you’ll want to use a block filter instead."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A block filter is a Ruby proc that runs on each block visited. It accepts the candidate block as the sole argument (i.e., the candidate block is yielded to the proc). If the proc returns true, then the candidate is considered matched."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an example of using the block filter to find all top-level sections:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "top_level_sections = doc.find_by {|block| block.context == :section && block.level == 1 }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "We can make this slightly more efficient by combining it with a selector:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "top_level_sections = doc.find_by(context: :section) {|section| section.level == 1 }"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If a Ruby block is given, it’s applied as a supplemental filter to the selector. In other words, the candidate block must match the selector and the filter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_filter_blocks",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Filter blocks"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The benefit of the block filter is that it also allows you to control the traversal. The filter method can return any of the following keywords:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The block is accepted and the traversal continues."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "true"
+                        }
+                      ],
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":accept"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The block is skipped but its children are traversed."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "false"
+                        }
+                      ],
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":skip"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The block is rejected and its children are not traversed."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":reject"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The block is accepted, but its descendants are not traversed."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": ":prune"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Here’s an efficient way to match all sidebars that are not contained within another block."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "top_level_sidebars = doc.find_by do |block|\n  if block == block.document\n    :skip\n  elsif block.context == :sidebar\n    :prune\n  else\n    :reject\n  end\nend"
+                  }
+                ],
+                "language": "ruby",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The filter has to return "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":skip"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instead of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ":reject"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the document object or else no blocks will be traversed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you combine the selector and the block filter, you will have less control over which nodes are traversed. Therefore, if you’re going to be using the block filter to control the traversal, it’s best to do all logic in that filter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_control_the_traversal",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Control the traversal"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_find_by",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "find_by"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another way to find blocks is to traverse the tree explicitly. Starting at the document object, you can access its children by calling the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "blocks"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "doc.blocks.each do |block|\n  puts block\nend"
+              }
+            ],
+            "language": "ruby",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Not all blocks have the same model. For example, each item in a description list is an array of two nodes. And tables have a very different model from other blocks. These differences are important to be aware of when traversing the document model."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "caution"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the block or blocks you’re looking for are close at hand or in a known location, it may be more efficient to use a custom traversal. However, if you aren’t sure where the block is located in the document tree, you’d be much better off using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "find_by"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method to locate it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_custom_traversal",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom traversal"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Find Blocks"
+      }
+    ]
+  }
+}

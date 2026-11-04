@@ -229,8 +229,12 @@ def normalize(node, verbatim=False, block_kind=None):
         node = Element("div", node.attrs, node.children)
     if node.tag == "aside" and "sidebarblock" in html_classes(node.attrs.get("class", "")):
         # adoctra's sidebar <aside> is Ruby's sidebarblock <div>, whose
-        # children sit in a content wrapper that drops below.
-        node = Element("div", node.attrs, node.children)
+        # children sit in a content wrapper that drops below; its title is
+        # the aside's <header>, Ruby's title <div>.
+        node = Element("div", node.attrs, [
+            Element("div", c.attrs, c.children)
+            if isinstance(c, Element) and c.tag == "header" and c.attrs.get("class") == "title" else c
+            for c in node.children])
     if (node.tag == "aside" and "admonition" in html_classes(node.attrs.get("class", ""))) \
             or (node.tag == "div" and html_classes(node.attrs.get("class", ""))[:1] == ["admonitionblock"]):
         node = admonition(node)
@@ -468,7 +472,10 @@ def validate_resources(case):
     for name, text in {**case["resources"], **binaries}.items():
         if (not isinstance(name, str) or not name or name == "main.adoc"
                 or name.startswith("/") or any(part in {"", ".", ".."} for part in name.split("/"))
-                or any(char in name for char in "\\:\0") or not isinstance(text, str)):
+                or any(char in name for char in "\\\0") or not isinstance(text, str)
+                # An Antora resource id may name a module (`mod:example$x`),
+                # but never a Windows drive (`C:x`).
+                or re.match(r"[A-Za-z]:", name)):
             raise ValueError(f"invalid fixture resource: {name!r}")
         if name in binaries and re.fullmatch(r"(?:[0-9a-fA-F]{2})*", text) is None:
             raise ValueError(f"invalid binary fixture hex: {name!r}")

@@ -1,0 +1,426 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After Asciidoctor parses an AsciiDoc document, it uses a converter to generate the output format of your choice, such as HTML, DocBook, or PDF. Asciidoctor includes a handful of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "built-in converters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "available.html#built-in"
+              },
+              {
+                "kind": "text",
+                "value": ". The Asciidoctor project provides "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "additional converters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "available.html#add-on"
+              },
+              {
+                "kind": "text",
+                "value": " that you can add on, which are distributed separately. You also have the option to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create your own converter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom.html"
+              },
+              {
+                "kind": "text",
+                "value": " or to use one published by a third party."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When working with converters, it’s important to understand the distinction between a converter and a backend. This page explains that difference while also providing more background on how converters function."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A converter takes AsciiDoc and transforms it into a different format. More specifically, it processes each node (i.e., block or inline element) in a parsed AsciiDoc document in document order and returns a converted fragment, which the processor combines to create the output document. Each converter produces a specific output format, such as HTML or DocBook XML."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Asciidoctor provides several built-in converters and a facility for adding additional converters."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to generating traditional articles and books from AsciiDoc documents, you can also use Asciidoctor to create HTML-based slide decks, static websites, and documentation sites. When using these add-on converters, you may need to include some additional structure rules to a document. However, nothing in this structure restricts you from being able to publish the content as a normal document, too."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_what_is_a_converter",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "What is a converter?"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each converter is correlated with an output format using a backend identifier. From the user’s perspective, the backend represents the desired output format. A converter will register itself with a backend identifier to claim that it produces that output format. For example, the backend identifier for the built-in HTML 5 converter is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Thus, from the processor’s perspective, the backend is the value it uses to identify which converter to use."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The term "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "backend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is often used interchangeably with the name of a converter. For example, you might hear “the html5 backend” when someone is talking about the HTML 5 converter. However, there’s an important distinction between these terms."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "custom converter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "custom.html"
+              },
+              {
+                "kind": "text",
+                "value": " can either introduce or reclaim a backend identifier. Since it’s possible for a converter to reclaim a backend identifier, we can’t say that a backend universally equates to a given converter. Rather, the backend identifier informs the processor which converter to select to handle the requested backend based on what’s currently registered."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The user selects which converter to use to convert a document by specifying the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "backend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " document attribute, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "-b"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--backend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") command line option, or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "backend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API option (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "--backend=docbook5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "). The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docbook5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " backends can be referred to using the aliases "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "docbook"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", respectively."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In summary, a converter is a software component that handles the conversion from a parsed AsciiDoc document to a publishable output format. The backend represents the user’s intent to transform the AsciiDoc document to a given format (e.g., "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "html5"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for HTML 5). That backend also serves as an identifier that tells the processor which converter to use. More than one converter can bind to (i.e., stake claim to) the same backend in order to provide the user with alternatives for generating a given output format. For example, the backend "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "pdf"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " could be satisfied by Asciidoctor PDF, but it may also be mapped to a different implementation. The last converter that registers itself with a backend wins."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_what_is_a_backend",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "What is a backend?"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Converters"
+      }
+    ]
+  }
+}

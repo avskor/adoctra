@@ -60,6 +60,9 @@ dt, summary, span.alt { font-size: 1.0625rem; text-rendering: optimizeLegibility
 summary, span.alt { letter-spacing: -0.01em; }
 p strong, .admonition-content strong { letter-spacing: -0.005em; }
 .sidebarblock :is(p, dt), p.tableblock { font-size: 1em; }
+/* Ruby's `.sidebarblock td.content` (its own rule keeps the `:is()` above at
+   element specificity). */
+.sidebarblock .admonition-content { font-size: 1em; }
 /* A list item's text is Ruby's item `p`, so in a sidebar it is 1em too. */
 .sidebarblock :is(ul, ol):not([class^="sectlevel"]) > li { font-size: 1em; }
 p.lead,
@@ -247,12 +250,12 @@ code { font-family: var(--adoctra-mono); font-weight: 400; }
 /* Like Ruby's stylesheet, verbatim text wraps unless `nowrap` (`%nowrap` or
    `:prewrap!:`) keeps its lines. Listing and literal blocks get Ruby's box
    and its viewport-dependent size; a highlighter theme paints its own
-   background. */
+   background. The break rule is inherited, as Ruby's: `anywhere` from the
+   body, `normal` inside a table (a literal cell widens it). */
 pre {
   margin: 0;
   font-family: var(--adoctra-mono);
   white-space: pre-wrap;
-  overflow-wrap: anywhere;
   line-height: 1.45;
   text-rendering: optimizeSpeed;
 }
@@ -400,12 +403,21 @@ aside.admonition {
 :is(.exampleblock > .content, .sidebarblock) > :first-child { margin-block-start: 0; }
 :is(.exampleblock > .content, .sidebarblock) > :last-child,
 :is(.exampleblock > .content, .sidebarblock) > :last-child > :last-child,
-:is(.exampleblock > .content, .sidebarblock) :is(ul, ol) > li:last-child > :last-child {
+:is(.exampleblock > .content, .sidebarblock) :is(ul, ol) > li:last-child > :last-child:not(p) {
   margin-block-end: 0;
 }
+/* An attached paragraph is Ruby's zeroed `div.paragraph` wrapper around a
+   `p` that keeps its item margin (`li p`), so adoctra's `p` keeps it too.
+   A qanda item's `p`s are Ruby's own (unwrapped), so the last is zeroed. */
+:is(.exampleblock > .content, .sidebarblock) ol.qanda > li:last-child > p:last-child { margin-block-end: 0; }
 /* Ruby zeroes the last item `p` of every (nested) list in them; adoctra's
    item text is the `li` itself. */
 :is(.exampleblock > .content, .sidebarblock) :is(ul, ol):not(.colist) > li:last-child { margin-block-end: 0; }
+/* A description list ending them: Ruby zeroes its `div.dlist` wrapper, the
+   `dl` and the last description's last block; adoctra's `p` there stands
+   for the wrapper's margin, so it is zeroed too (a nested list keeps
+   its own margin, as Ruby's `ul` inside the zeroed `div.ulist`). */
+:is(.exampleblock > .content, .sidebarblock) > dl:last-child > dd:last-child > p:last-child { margin-block-end: 0; }
 
 /* A collapsible example (`%collapsible`) is Ruby's `details`: indented,
    with a triangle disclosure marker beside a plain `summary`. */
@@ -470,7 +482,9 @@ details > :last-child { margin-block-end: 0; }
   border-radius: 4px;
   background: #f3f3f2;
 }
-.sidebarblock > .title {
+/* Its own title is the aside's `header` (Ruby's `.content>.title`); a child
+   block's title `div` keeps the ordinary block title style. */
+.sidebarblock > header.title {
   font-family: var(--adoctra-heading-font);
   font-weight: 300;
   font-style: normal;
@@ -482,7 +496,7 @@ details > :last-child { margin-block-end: 0; }
   text-align: center;
 }
 @media screen and (min-width: 768px) {
-  .sidebarblock > .title { font-size: 1.6875em; }
+  .sidebarblock > header.title { font-size: 1.6875em; }
 }
 
 /* --- Open blocks --------------------------------------------------------- */
@@ -521,6 +535,15 @@ details > :last-child { margin-block-end: 0; }
   text-shadow: 0 1px 2px rgb(0 0 0 / 0.1);
 }
 .quoteblock blockquote > p:last-child { margin-block-end: 0; }
+/* Ruby's `.quoteblock p` also styles a list item's text `p`; adoctra's item
+   text is the `li` itself (above the list item rules' specificity). */
+.quoteblock blockquote :is(ul, ol) > li {
+  font-size: 1.15rem;
+  line-height: 1.75;
+  word-spacing: 0.1em;
+  letter-spacing: 0;
+  text-align: justify;
+}
 .quoteblock figcaption { margin-block-start: 0.75em; margin-inline-end: 0.5ex; text-align: end; }
 .verseblock { margin: 0 1em 1.25em; }
 .verseblock pre {
@@ -563,6 +586,11 @@ details > :last-child { margin-block-end: 0; }
 :is(.quoteblock.excerpt, .quoteblock .quoteblock) :is(blockquote, p) {
   color: inherit;
   font-size: 1.0625rem;
+}
+:is(.quoteblock.excerpt, .quoteblock .quoteblock) blockquote :is(ul, ol) > li {
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  word-spacing: 0;
 }
 :is(.quoteblock.excerpt, .quoteblock .quoteblock) figcaption {
   color: inherit;
@@ -685,7 +713,8 @@ table tr :is(th, td) {
 }
 table tr:is(.even, .alt) { background: #f8f8f7; }
 table.tableblock.stretch { inline-size: 100%; }
-table.tableblock.fit-content { inline-size: auto; }
+/* Ruby sets no width for `fit-content`, so `.stretch` (`%autowidth.stretch`) wins. */
+table.tableblock.fit-content:not(.stretch) { inline-size: auto; }
 table.tableblock.fit-content > caption.title { white-space: nowrap; inline-size: 0; }
 table.tableblock.left { float: inline-start; margin-inline-end: 0.625em; }
 table.tableblock.right { float: inline-end; margin-inline-start: 0.625em; }
@@ -784,9 +813,14 @@ ul li ol { margin-inline-start: 1.5em; }
 :is(ul, ol):not([class^="sectlevel"]) > li strong { letter-spacing: -0.005em; }
 :is(ul, ol):not([class^="sectlevel"]) > li > pre { letter-spacing: normal; }
 /* The gap Ruby's item `p` leaves before the item's first block (inline
-   markup in the item text does not count). */
-:is(ul, ol):not([class^="sectlevel"]) > li > :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):not(:is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr) ~ *) {
+   markup in the item text does not count). A qanda item starts with its
+   question `p`, which is Ruby's item text itself. */
+:is(ul, ol):not([class^="sectlevel"], .qanda) > li > :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):not(:is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr) ~ *) {
   margin-block-start: 0.6640625rem;
+}
+/* In a sidebar Ruby's item `p` is 1em (16px), so the gap is 0.625rem. */
+.sidebarblock :is(ul, ol):not([class^="sectlevel"], .qanda) > li > :is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr):not(:is(p, div, ul, ol, dl, pre, table, figure, aside, details, nav, blockquote, hr) ~ *) {
+  margin-block-start: 0.625rem;
 }
 /* An item ending in a block ends, like Ruby's, with that block's margin
    (a nested list's 0.625em of 16px), not the 0.625em of its text. */
@@ -863,7 +897,6 @@ dl.hdlist > div > dd {
   overflow-wrap: anywhere;
   inline-size: var(--adoctra-hdlist-itemwidth, auto);
 }
-ol.qanda > li > p:first-child > em { font-weight: 600; }
 
 /* --- Callouts -------------------------------------------------------------- */
 

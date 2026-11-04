@@ -1,0 +1,167 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A document can include the same file any number of times. The problem comes if there are IDs in the included file; the output document (HTML or DocBook) will then have duplicate IDs which will make it not well-formed. To fix this, you can reference a dynamic variable from the primary document in the ID."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For example, let’s say you want to include the same subsection describing a bike chain in both the operation and maintenance chapters:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "= Bike Manual\n\n:chapter: operation\n== Operation\n\ninclude::fragment-chain.adoc[]\n\n:chapter: maintenance\n== Maintenance\n\ninclude::fragment-chain.adoc[]"
+          }
+        ],
+        "language": "asciidoc",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Write "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fragment-chain.adoc"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": [
+              "path"
+            ]
+          },
+          {
+            "kind": "text",
+            "value": " as:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "[id=chain-{chapter}]\n=== Chain\n\nSee xref:chain-{chapter}[]."
+          }
+        ],
+        "language": "asciidoc",
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The first time the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "fragment-chain.adoc"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": [
+              "path"
+            ]
+          },
+          {
+            "kind": "text",
+            "value": " file is included, the ID of the included section resolves to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "chain-operation"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". The second time the file included, the ID resolves to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "chain-maintenance"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In order for this to work, you must use the long-hand forms of both the ID assignment and the cross reference. The single quotes around the variable name in the assignment are required to force variable substitution (aka interpolation)."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Use an Include File Multiple Times"
+      }
+    ]
+  }
+}

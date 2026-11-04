@@ -294,3 +294,40 @@ Content отличались: при пустом `idprefix` разделы по
 Прочие 722 наблюдения не изменились; добавлена и фикстура
 `callouts/line_comment_catalog.adoc`.
 Итог: *752 из 752 наблюдений `match`* (376 случаев), отличий нет.
+
+Полная документация Asciidoctor и языка AsciiDoc (2026-11-04): все 78 и
+202 страницы (`scripts/import_docs.py`, см. link:acceptance.adoc[]).
+Первый прогон: 274 из 280 страниц `match` в каждом viewport; семь страниц
+отличались, каждое отличие воспроизведено фикстурой (шесть из семи на
+старой таблице стилей дают `differs`, `tables/literal_cell` — на mobile):
+
+* Вопрос `qanda` был полужирным (лишнее правило), а в примере стоял на
+  11px ниже: отступ перед первым блоком пункта действовал и на `p` вопроса,
+  который у Ruby сам текст пункта (`dlists/qanda.adoc`).
+* Пример или sidebar, заканчивающийся списком описаний, оставлял 20px:
+  Ruby обнуляет обёртку `div.dlist`, `dl` и последний `p` последнего `dd`;
+  вложенный список в `dd` свой отступ сохраняет (`examples/dlist_last.adoc`).
+* Прикреплённый абзац в последнем пункте списка в примере обнулялся; у Ruby
+  обнуляется его обёртка `div.paragraph`, а `p` сохраняет 0.625em. В sidebar
+  текст пункта 16px, поэтому зазор перед первым блоком пункта — 0.625rem
+  (`examples/list_continuation.adoc`).
+* Пункты списка в цитате: `.quoteblock p` Ruby задаёт и `p` пунктов
+  (1.15rem, межстрочный 1.75; во вложенной цитате 1.0625rem и 1.6)
+  (`quotes/lists.adoc`).
+* Заголовок листинга внутри sidebar оформлялся как заголовок самого sidebar:
+  без обёртки `.content` оба — прямые дети `aside`. Заголовок sidebar теперь
+  `<header class="title">` (Ruby `.sidebarblock>.content>.title`), заголовок
+  дочернего блока остаётся `div.title` (`sidebars/titled_children.adoc`).
+  Текст admonition в sidebar — 1em, как `.sidebarblock td.content`
+  (`admonitions/in_sidebar.adoc`).
+* `%autowidth.stretch`: правило `fit-content` перебивало `stretch`; у Ruby
+  ширину задаёт только `.stretch` (`tables/autowidth_stretch.adoc`).
+* Литерал в ячейке таблицы переносился посреди слова: у `pre` было явное
+  `overflow-wrap: anywhere`, а у Ruby правило наследуется (`normal` от
+  таблицы), и таблица расширяется (`tables/literal_cell.adoc`).
+
+Первая правка admonition в sidebar подняла специфичность правила
+`.sidebarblock :is(p, dt)` и испортила `hdlists-horizontal`; полный прогон
+это поймал, правило разделено. Chrome обновился (155 → 156), поэтому
+baseline записан заново после полного прогона без отличий.
+Итог: *1306 из 1306 наблюдений `match`* (653 случая), отличий нет.

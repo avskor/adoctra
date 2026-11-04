@@ -1,0 +1,408 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In addition to converting files, the Asciidoctor CLI can read content from standard input (STDIN) and/or write content to standard output (STDOUT). This feature is called piping."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " flag, you can pipe content to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "asciidoctor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " command. This flag tells Asciidoctor read the source from standard input (STDIN). For example:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Any variation of STDIN will work."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This command is effectively the same as:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -o - -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When reading source from STDIN, Asciidoctor doesn’t have a reference to an input file. Therefore, it sends the converted text to standard output (STDOUT) by default."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "If, instead, you want to write the full document to an output file, you specify it using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-o"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " flag. For example, the following command writes a standalone HTML document to "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "output.html"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": [
+              "path"
+            ]
+          },
+          {
+            "kind": "text",
+            "value": " instead of STDOUT:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -o output.html -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When you pipe content to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "asciidoctor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " command, it no longer has a concept of where the document is located. Therefore, relative references such as includes may not work as expected. To resolve this problem, you should specify an absolute base directory using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-B"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " option:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -B /path/to/basedir -o output.html -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Alternately, you can set an artificial document directory by passing an absolute path to the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "docdir"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " attribute:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -a docdir=/path/to/docdir -o output.html -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Try both approaches to determine which one suits your needs better."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "When piping source from STDIN to STDOUT through the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "asciidoctor"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " command, you often just want the converted body (i.e., embeddable HTML). To produce that variant, add the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-e"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " flag, short for "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "--embedded"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (previously the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "-s"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " flag):"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo 'content' | asciidoctor -e -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Or perhaps you want to include the doctitle as well:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "$ echo -e '= Document Title\\n\\ncontent' | asciidoctor -e -a showtitle -"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Pipe Content Through the CLI"
+      }
+    ]
+  }
+}
