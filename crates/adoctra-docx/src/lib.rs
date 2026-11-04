@@ -156,7 +156,12 @@ impl DocxBackend {
         let mut sections = template.body_sect_pr().map(|sect_pr| {
             let chapters = doc.attributes.get("doctype") == Some("book")
                 && (sect_pr.contains("<w:titlePg/>") || sect_pr.contains("<w:titlePg "));
-            Sections::new(sect_pr, chapters)
+            let running = if chapters {
+                template.running_parts(&sect_pr)
+            } else {
+                Vec::new()
+            };
+            Sections::new(sect_pr, chapters, running)
         });
         let text_width = sections
             .as_ref()
@@ -203,9 +208,13 @@ impl DocxBackend {
         template.add_media(media);
         template.add_footnotes(footnotes);
         template.set_core_properties(&core_properties(doc, title.as_ref()).to_xml());
-        let sect_pr = sections.and_then(|s| s.final_sect_pr());
-        let bytes = template.finish(&body, sect_pr, |field| match fields.get(field) {
+        let sect_pr = sections.as_ref().and_then(Sections::final_sect_pr);
+        let copies = sections.as_ref().map_or(&[][..], Sections::copies);
+        // The running chapter shows in part and chapter sections only.
+        let chapters = sections.as_ref().is_some_and(Sections::chapter_seen);
+        let bytes = template.finish(&body, sect_pr, copies, |field| match fields.get(field) {
             Some(runs) => Fill::Runs(runs.clone()),
+            None if field == "chapter" && chapters => Fill::Keep,
             None => Fill::Remove,
         });
         Ok(Output { bytes, warnings })

@@ -7,7 +7,16 @@
 //! section. A section's properties are written where it ends (a paragraph
 //! holding `w:sectPr`); the last section's are the body's final ones. Only
 //! the first section keeps the template's page-number restart.
+//!
+//! A header or footer of the body section with an `adoctra:chapter` marker
+//! is a running one: the marker holds what shows the current part or
+//! chapter (the built-in book's `STYLEREF "Chapter Title"` field). Part and
+//! chapter sections keep the template's part, with the marker's content;
+//! sections before the first part or chapter refer to one copy of it
+//! without that content (`STYLEREF` would look ahead and show the first
+//! chapter there).
 
+use crate::package::Relationships;
 use crate::xml;
 
 /// The text width of a page when the template's section does not say (A4
@@ -20,6 +29,27 @@ struct Kind {
     landscape: bool,
     /// The section's first page has its own header and footer.
     title_page: bool,
+    /// The section belongs to a part or chapter (not to the front matter).
+    chapter: bool,
+}
+
+/// A running header or footer of the body section: its relationship.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Running {
+    pub id: String,
+    pub rel_type: String,
+    pub target: String,
+}
+
+/// A copy of a running header or footer for the front matter, without the
+/// marker's content.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RunningCopy {
+    /// The template part's target and the copy's (relative to the main
+    /// document).
+    pub original: String,
+    pub target: String,
+    pub rel_type: String,
 }
 
 /// The sections written so far and the current one.
@@ -32,47 +62,102 @@ pub struct Sections {
     chapters: bool,
     current: Kind,
     breaks: usize,
+    running: Vec<Running>,
+    /// The front matter's copies of `running` (ids, parallel to it).
+    front_ids: Vec<String>,
+    copies: Vec<RunningCopy>,
+    /// A part or chapter section was started.
+    chapter_seen: bool,
 }
 
 impl Sections {
     /// The sections of a body whose final section properties are `base`;
-    /// `chapters` makes parts and chapters start sections.
-    pub fn new(base: String, chapters: bool) -> Self {
+    /// `chapters` makes parts and chapters start sections; the `running`
+    /// headers and footers show them.
+    pub fn new(base: String, chapters: bool, running: Vec<Running>) -> Self {
         let base_landscape = page_size(&base).is_some_and(|(w, h, orient)| orient || w > h);
         let base_title_page = has_title_page(&base);
         Self {
             current: Kind {
                 landscape: base_landscape,
                 title_page: base_title_page,
+                chapter: false,
             },
             base,
             base_landscape,
             base_title_page,
             chapters,
             breaks: 0,
+            running,
+            front_ids: Vec::new(),
+            copies: Vec::new(),
+            chapter_seen: false,
         }
     }
 
-    /// The break before a part or chapter, if they start sections.
-    pub fn chapter(&mut self) -> Option<String> {
+    /// The break before a part or chapter, if they start sections. At the
+    /// start of the body (`first`) the current section becomes the part's
+    /// or chapter's, without a break. Front matter before it refers to
+    /// copies of the running headers and footers, added to `rels`.
+    pub fn chapter(&mut self, rels: &mut Relationships, first: bool) -> Option<String> {
         if !self.chapters {
             return None;
         }
+        self.chapter_seen = true;
+        if first {
+            self.current.chapter = true;
+            return None;
+        }
+        self.add_front_copies(rels);
         Some(self.break_to(Kind {
             landscape: self.current.landscape,
             title_page: self.base_title_page,
+            chapter: true,
         }))
     }
 
+    /// Whether a part or chapter section was started: the running parts
+    /// keep their marker's content.
+    pub fn chapter_seen(&self) -> bool {
+        self.chapter_seen
+    }
+
+    /// The front matter's copies of the running parts, once, when the
+    /// current section is front matter about to end.
+    fn add_front_copies(&mut self, rels: &mut Relationships) {
+        if self.current.chapter || !self.front_ids.is_empty() {
+            return;
+        }
+        for running in &self.running {
+            let target = front_target(&running.target);
+            self.front_ids
+                .push(rels.add(&running.rel_type, &target, false));
+            self.copies.push(RunningCopy {
+                original: running.target.clone(),
+                target,
+                rel_type: running.rel_type.clone(),
+            });
+        }
+    }
+
+    /// The copies of running headers and footers made.
+    pub fn copies(&self) -> &[RunningCopy] {
+        &self.copies
+    }
+
     /// The break turning the page to landscape (or back), if it changes.
-    pub fn orientation(&mut self, landscape: bool) -> Option<String> {
+    pub fn orientation(&mut self, landscape: bool, rels: &mut Relationships) -> Option<String> {
         if landscape == self.current.landscape {
             return None;
+        }
+        if self.chapters {
+            self.add_front_copies(rels);
         }
         // A turned section continues the chapter: no first-page header.
         Some(self.break_to(Kind {
             landscape,
             title_page: false,
+            chapter: self.current.chapter,
         }))
     }
 
@@ -110,8 +195,56 @@ impl Sections {
         if self.breaks > 0 {
             sect_pr = continue_numbering(&sect_pr);
         }
+        if !kind.chapter {
+            for (running, id) in self.running.iter().zip(&self.front_ids) {
+                sect_pr = refer(&sect_pr, &running.id, id);
+            }
+        }
         sect_pr
     }
+}
+
+/// The target of the front matter's copy of `target` (`header1.xml` →
+/// `header1-front.xml`).
+fn front_target(target: &str) -> String {
+    let (dir, file) = target
+        .rsplit_once('/')
+        .map_or(("", target), |(d, f)| (d, f));
+    let file = match file.rsplit_once('.') {
+        Some((stem, ext)) => format!("{stem}-front.{ext}"),
+        None => format!("{file}-front"),
+    };
+    if dir.is_empty() {
+        file
+    } else {
+        format!("{dir}/{file}")
+    }
+}
+
+/// Section properties whose header and footer references to `from` refer
+/// to `to`.
+fn refer(sect_pr: &str, from: &str, to: &str) -> String {
+    let mut out = String::with_capacity(sect_pr.len());
+    let mut pos = 0;
+    for tag in xml::tags(sect_pr, 0) {
+        if !matches!(tag.name, "w:headerReference" | "w:footerReference")
+            || tag.attr("r:id").as_deref() != Some(from)
+        {
+            continue;
+        }
+        let text = &sect_pr[tag.range.clone()];
+        for quote in ['"', '\''] {
+            let old = format!("r:id={quote}{from}{quote}");
+            if let Some(at) = text.find(&old) {
+                out.push_str(&sect_pr[pos..tag.range.start + at]);
+                out.push_str(&format!("r:id={quote}{to}{quote}"));
+                pos = tag.range.start + at + old.len();
+                break;
+            }
+        }
+    }
+    out.push_str(&sect_pr[pos..]);
+    out
 }
 
 /// `w:pgSz` width, height and whether it says landscape.
@@ -232,27 +365,112 @@ mod tests {
 
     #[test]
     fn chapters_start_sections_with_a_first_page() {
-        let mut s = Sections::new(BOOK.into(), true);
+        let mut rels = Relationships::default();
+        let mut s = Sections::new(BOOK.into(), true, Vec::new());
         assert!(s.final_sect_pr().is_none());
-        let first = s.chapter().unwrap();
+        let first = s.chapter(&mut rels, false).unwrap();
         assert!(first.contains(r#"w:start="1""#) && first.contains("<w:titlePg/>"));
-        let second = s.chapter().unwrap();
+        let second = s.chapter(&mut rels, false).unwrap();
         assert!(!second.contains("w:start") && second.contains("<w:titlePg/>"));
         assert!(!s.final_sect_pr().unwrap().contains("w:start"));
-        assert!(Sections::new(BOOK.into(), false).chapter().is_none());
+        assert!(Sections::new(BOOK.into(), false, Vec::new())
+            .chapter(&mut rels, false)
+            .is_none());
+        assert!(s.copies().is_empty() && rels.entries.is_empty());
+    }
+
+    const RUNNING: &str = r#"<w:sectPr><w:headerReference w:type="default" r:id="rId6"/><w:headerReference w:type="first" r:id="rId7"/><w:footerReference w:type="default" r:id='rId5'/><w:pgSz w:w="11906" w:h="16838"/><w:titlePg/></w:sectPr>"#;
+
+    fn running(id: &str, kind: &str, target: &str) -> Running {
+        Running {
+            id: id.into(),
+            rel_type: format!(
+                "http://schemas.openxmlformats.org/officeDocument/2006/relationships/{kind}"
+            ),
+            target: target.into(),
+        }
+    }
+
+    #[test]
+    fn front_matter_refers_to_copies_of_running_parts() {
+        let mut rels = Relationships::default();
+        for _ in 0..7 {
+            rels.add("x", &format!("t{}", rels.entries.len()), false);
+        }
+        let mut s = Sections::new(
+            RUNNING.into(),
+            true,
+            vec![
+                running("rId6", "header", "header1.xml"),
+                running("rId5", "footer", "parts/footer.xml"),
+            ],
+        );
+        // A turned page of the front matter already uses the copies.
+        let portrait = s.orientation(true, &mut rels).unwrap();
+        assert!(
+            portrait.contains(r#"r:id="rId8""#) && portrait.contains("r:id='rId9'"),
+            "{portrait}"
+        );
+        assert!(portrait.contains(r#"r:id="rId7""#));
+        let front = s.chapter(&mut rels, false).unwrap();
+        assert!(front.contains(r#"r:id="rId8""#), "{front}");
+        assert!(s.chapter_seen());
+        // Chapters keep the template's parts, turned pages too (the
+        // chapter opened on the turned page).
+        let chapter = s.orientation(false, &mut rels).unwrap();
+        assert!(chapter.contains(r#"w:orient="landscape""#), "{chapter}");
+        assert!(
+            chapter.contains(r#"r:id="rId6""#) && chapter.contains("r:id='rId5'"),
+            "{chapter}"
+        );
+        let next = s.chapter(&mut rels, false).unwrap();
+        assert!(next.contains(r#"r:id="rId6""#), "{next}");
+        assert!(s.final_sect_pr().unwrap().contains(r#"r:id="rId6""#));
+        let copies: Vec<_> = s
+            .copies()
+            .iter()
+            .map(|c| (c.original.as_str(), c.target.as_str()))
+            .collect();
+        assert_eq!(
+            copies,
+            [
+                ("header1.xml", "header1-front.xml"),
+                ("parts/footer.xml", "parts/footer-front.xml"),
+            ]
+        );
+        assert_eq!(rels.entries.len(), 9);
+        assert_eq!(rels.entries[8].target, "parts/footer-front.xml");
+    }
+
+    #[test]
+    fn a_chapter_opening_the_body_needs_no_copies() {
+        let mut rels = Relationships::default();
+        let mut s = Sections::new(
+            RUNNING.into(),
+            true,
+            vec![running("rId6", "header", "header1.xml")],
+        );
+        assert!(!s.chapter_seen());
+        assert!(s.chapter(&mut rels, true).is_none());
+        assert!(s.final_sect_pr().is_none());
+        let next = s.chapter(&mut rels, false).unwrap();
+        assert!(next.contains(r#"r:id="rId6""#), "{next}");
+        assert!(s.copies().is_empty() && rels.entries.is_empty());
+        assert_eq!(front_target("header"), "header-front");
     }
 
     #[test]
     fn orientation_turns_the_page_and_back() {
-        let mut s = Sections::new(BOOK.into(), false);
+        let mut rels = Relationships::default();
+        let mut s = Sections::new(BOOK.into(), false, Vec::new());
         assert_eq!(s.text_width(), 9638);
-        assert!(s.orientation(false).is_none());
+        assert!(s.orientation(false, &mut rels).is_none());
         // The portrait section ends; the landscape one has no first page.
-        let to_landscape = s.orientation(true).unwrap();
+        let to_landscape = s.orientation(true, &mut rels).unwrap();
         assert!(to_landscape.contains(r#"<w:pgSz w:w="11906" w:h="16838"/>"#));
         assert!(s.landscape());
         assert_eq!(s.text_width(), 16838 - 2268);
-        let back = s.orientation(false).unwrap();
+        let back = s.orientation(false, &mut rels).unwrap();
         assert!(
             back.contains(r#"<w:pgSz w:w="16838" w:h="11906" w:orient="landscape"/>"#),
             "{back}"
@@ -269,13 +487,15 @@ mod tests {
 
     #[test]
     fn a_landscape_template_turns_to_portrait() {
+        let mut rels = Relationships::default();
         let mut s = Sections::new(
             r#"<w:sectPr><w:pgSz w:w="16838" w:h="11906" w:orient="landscape" w:code="9"/></w:sectPr>"#.into(),
             false,
+            Vec::new(),
         );
         assert!(s.landscape());
-        assert!(s.orientation(true).is_none());
-        s.orientation(false).unwrap();
+        assert!(s.orientation(true, &mut rels).is_none());
+        s.orientation(false, &mut rels).unwrap();
         assert_eq!(
             s.final_sect_pr().unwrap(),
             r#"<w:sectPr><w:pgSz w:w="11906" w:h="16838" w:code="9"/></w:sectPr>"#

@@ -161,7 +161,8 @@ mod tests {
         assert_eq!(target("rId6"), Some((REL_HEADER, "header1.xml")));
         assert_eq!(target("rId7"), Some((REL_HEADER, "header2.xml")));
         let header = package.text("word/header1.xml").unwrap();
-        assert!(header.contains("adoctra:title") && header.contains(r#"STYLEREF "heading 1""#));
+        assert!(header.contains("adoctra:title") && header.contains("adoctra:chapter"));
+        assert!(header.contains(r#"STYLEREF "Chapter Title""#));
         let template = Template::from_package(package).unwrap();
         let body = template.body_sect_pr().unwrap();
         assert!(body.contains("<w:titlePg/>") && body.contains(r#"r:id="rId7""#));
@@ -196,6 +197,9 @@ mod tests {
             for name in crate::contract::TABLE {
                 assert!(template.styles.has(StyleKind::Table, name), "{name}");
             }
+            assert!(template
+                .styles
+                .has(StyleKind::Character, crate::contract::CHAPTER_TITLE));
             assert_eq!(
                 template.markers(),
                 [

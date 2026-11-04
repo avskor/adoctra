@@ -7,6 +7,7 @@ use adoctra_core::ast::{
 };
 use adoctra_core::{AttributeFormat, AttributePart, Document, Inline};
 
+use crate::contract::CHAPTER_TITLE;
 use crate::inline::{Cx, Newlines, Runs};
 use crate::numbering::{self, Level, LIST_INDENT};
 use crate::sections::Sections;
@@ -245,9 +246,12 @@ impl<'c, 't> Writer<'c, 't> {
         };
         match &block.kind {
             BlockKind::Section { level, blocks } => {
-                if self.book && *level <= 1 && !self.out.is_empty() {
-                    if let Some(page) = self.sections.as_deref_mut().and_then(Sections::chapter) {
-                        self.out.push_str(&page);
+                if self.book && *level <= 1 {
+                    let first = self.out.is_empty();
+                    if let Some(sections) = self.sections.as_deref_mut() {
+                        if let Some(page) = sections.chapter(self.cx.rels, first) {
+                            self.out.push_str(&page);
+                        }
                     }
                 }
                 inherit(blocks, Ctx::default())
@@ -891,7 +895,7 @@ impl<'c, 't> Writer<'c, 't> {
                 .once("docx template has no section properties: page orientation is ignored");
             return None;
         };
-        let Some(page) = sections.orientation(landscape) else {
+        let Some(page) = sections.orientation(landscape, self.cx.rels) else {
             return Some(false);
         };
         self.text_width = sections.text_width();
@@ -1238,7 +1242,19 @@ impl<'c, 't> Writer<'c, 't> {
             runs.text(caption);
         }
         runs.inlines(inlines);
-        let runs = runs.finish();
+        let mut runs = runs.finish();
+        // A part's or chapter's title is what running headers show.
+        let discrete = matches!(block.attrs.style.as_deref(), Some("discrete" | "float"));
+        if self.book && level <= 1 && !discrete {
+            if let Some(id) = self
+                .cx
+                .styles
+                .find(StyleKind::Character, CHAPTER_TITLE)
+                .map(|d| d.id.clone())
+            {
+                runs = crate::inline::in_character_style(&runs, &id, self.cx.styles);
+            }
+        }
         self.paragraph(&style, "", &runs);
         // Ruby's `[index]` section: Word builds the index from the `XE`
         // fields when it updates the field.

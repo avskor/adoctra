@@ -72,6 +72,11 @@ pub const CHARACTER: &[&str] = &[
     "Footnote Reference",
 ];
 
+/// The optional character style of part and chapter titles in a book,
+/// which running headers show (`STYLEREF "Chapter Title"`). Only a
+/// template that defines it gets it; its absence is not reported.
+pub const CHAPTER_TITLE: &str = "Chapter Title";
+
 /// Table styles: data tables and the frames of delimited blocks.
 pub const TABLE: &[&str] = &[
     "Table",

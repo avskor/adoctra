@@ -1760,8 +1760,31 @@ header/footer parts too; `finish` can replace the final `w:sectPr` and adds
 `xmlns:r` when the body uses `r:id`. Book: a body `w:sectPr` with
 `w:titlePg` makes each part/chapter (level <= 1, not first) start a section
 (`ChapterSections`; only the first keeps `w:pgNumType w:start`). The
-built-in book has `header1.xml` (title marker + `STYLEREF "heading 1"`) and
+built-in book has `header1.xml` (title + `adoctra:chapter` markers) and
 an empty `header2.xml` (first page), rId6/rId7 added in `builtin.rs`.
+Running chapter titles (fixed 2026-11-04 after a Word check): the
+built-in `header1.xml` wraps `STYLEREF "Chapter Title"` (a custom character
+style, `contract::CHAPTER_TITLE`, in common `styles.xml`) in an
+`adoctra:chapter` SDT. `Template::running_parts` finds the body
+`w:sectPr`'s header/footer parts with that marker; `Sections` makes one
+front-matter copy of each (`header1-front.xml`, rels via
+`add_front_copies` when the front matter ends: at the first chapter break or
+a turned page; none when a chapter opens the body), front sections'
+`render` rewrites their `r:id`s, chapter sections keep the template part.
+`finish` writes copies with the chapter marker removed (rels copied,
+header/footer override) and fills template parts with `Fill::Keep` (SDT
+unwrapped, content kept) when `Sections::chapter_seen`, else `Fill::Remove`.
+`Writer::heading` puts every run of a book's level <= 1 non-discrete heading
+in `Chapter Title` when the template has it (`inline::in_character_style`:
+a run's `rStyle` becomes the style's merged run properties via
+`Styles::run_properties` + `styles::merge_rpr` in `CT_RPr` order, with its
+direct properties on top) — Word/LO `STYLEREF` to a character style reads
+only the last unbroken stretch of runs in it. Not used: built-in names
+(Russian Word fails on `STYLEREF "heading 1"`; names are UI language),
+`STYLEREF 1` (LibreOffice fails), static per-chapter header copies (no
+live field). Word 16 is reachable from WSL via `powershell.exe` COM
+(`Word.Application`, `ExportAsFixedFormat`) for such checks; it evaluates
+header `STYLEREF` without a field update.
 Template mono font is Consolas.
 Stage 3 done 2026-11-04: `numbering.rs` adds one single-level
 `w:abstractNum`/`w:num` per list (ids after the template's; abstracts

@@ -224,6 +224,162 @@ fn book_parts_and_chapters_start_sections_with_a_first_page_header() {
     assert!(!header.contains("<w:sdt>"));
 }
 
+/// The header ids each `w:sectPr` of `doc` refers to (`type=id`).
+fn header_refs(doc: &str) -> Vec<String> {
+    doc.split("<w:sectPr>")
+        .skip(1)
+        .map(|s| {
+            let s = &s[..s.find("</w:sectPr>").unwrap()];
+            s.split("<w:headerReference ")
+                .skip(1)
+                .map(|r| {
+                    let attr = |name: &str| {
+                        r.split_once(&format!("{name}=\""))
+                            .and_then(|(_, v)| v.split_once('"'))
+                            .map_or("", |(v, _)| v)
+                            .to_string()
+                    };
+                    format!("{}={}", attr("w:type"), attr("r:id"))
+                })
+                .collect::<Vec<_>>()
+                .join(" ")
+        })
+        .collect()
+}
+
+/// The target of relationship `id` of the main document.
+fn rel_target(bytes: &[u8], id: &str) -> String {
+    let rels = part(bytes, "word/_rels/document.xml.rels");
+    let at = rels.find(&format!(r#"Id="{id}""#)).unwrap();
+    let rel = &rels[at..];
+    let rel = &rel[..rel.find("/>").unwrap()];
+    rel.split_once(r#"Target=""#)
+        .unwrap()
+        .1
+        .split_once('"')
+        .unwrap()
+        .0
+        .to_string()
+}
+
+/// The paragraph of style `style` whose text contains `text`.
+fn paragraph_xml<'a>(doc: &'a str, style: &str, text: &str) -> &'a str {
+    doc.split("<w:p>")
+        .map(|p| &p[..p.find("</w:p>").unwrap_or(p.len())])
+        .find(|p| p.contains(&format!(r#"<w:pStyle w:val="{style}"/>"#)) && p.contains(text))
+        .unwrap_or_else(|| panic!("no {style} paragraph with {text}"))
+}
+
+/// The `default` header each `w:sectPr` of `doc` refers to.
+fn default_headers(bytes: &[u8], doc: &str) -> Vec<String> {
+    header_refs(doc)
+        .iter()
+        .filter_map(|refs| {
+            let id = refs.split(' ').find_map(|r| r.strip_prefix("default="))?;
+            Some(rel_target(bytes, id))
+        })
+        .collect()
+}
+
+#[test]
+fn running_headers_show_the_chapter_title_style() {
+    let out = render(
+        "= A Book\n:doctype: book\n:sectnums:\n:toc:\n\nPreface text.\n\n= Part One\n\n== Chapter *bold* and `code`\n\n=== Sub *bold*\n\n[discrete]\n== Free *bold*\n\n== Two\n\ntext\n",
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    // The preface refers to the copy without the chapter, the part and
+    // the chapters to the template's header.
+    assert_eq!(
+        default_headers(&out.bytes, &doc),
+        [
+            "header1-front.xml",
+            "header1.xml",
+            "header1.xml",
+            "header1.xml"
+        ]
+    );
+    let header = part(&out.bytes, "word/header1.xml");
+    assert!(
+        header.contains(
+            r#"<w:instrText xml:space="preserve"> STYLEREF "Chapter Title" </w:instrText>"#
+        ) && header.contains(r#"<w:t xml:space="preserve">A Book</w:t>"#)
+            && !header.contains("<w:sdt>"),
+        "{header}"
+    );
+    let front = part(&out.bytes, "word/header1-front.xml");
+    assert!(
+        front.contains(r#"<w:t xml:space="preserve">A Book</w:t>"#)
+            && !front.contains("STYLEREF")
+            && !front.contains("<w:sdt>"),
+        "{front}"
+    );
+    let types = part(&out.bytes, "[Content_Types].xml");
+    assert!(types.contains(r#"<Override PartName="/word/header1-front.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml"/>"#));
+    // Every run of a part or chapter title is in the chapter title style;
+    // its formatting is direct, from the character styles it replaces.
+    let chapter = paragraph_xml(&doc, "Heading1", "Chapter ");
+    assert_eq!(
+        chapter.matches("<w:r>").count(),
+        chapter
+            .matches(r#"<w:rPr><w:rStyle w:val="ChapterTitle"/>"#)
+            .count(),
+        "{chapter}"
+    );
+    assert!(
+        chapter.contains(r#"<w:rPr><w:rStyle w:val="ChapterTitle"/><w:b/><w:bCs/></w:rPr><w:t xml:space="preserve">bold</w:t>"#),
+        "{chapter}"
+    );
+    assert!(
+        chapter.contains(r#"<w:rPr><w:rStyle w:val="ChapterTitle"/><w:rFonts w:ascii="Consolas""#)
+            && !chapter.contains(r#"w:val="Monospace""#)
+            && !chapter.contains(r#"w:val="Strong""#),
+        "{chapter}"
+    );
+    assert!(paragraph_xml(&doc, "PartTitle", "Part One").contains("ChapterTitle"));
+    // Other headings and the table of contents keep their run styles.
+    for (style, text) in [("Heading2", "Sub "), ("FloatingTitle1", "Free ")] {
+        let p = paragraph_xml(&doc, style, text);
+        assert!(
+            !p.contains("ChapterTitle") && p.contains(r#"w:val="Strong""#),
+            "{p}"
+        );
+    }
+    let styles = part(&out.bytes, "word/styles.xml");
+    assert!(styles.contains(r#"<w:name w:val="Chapter Title"/>"#));
+    assert_eq!(
+        doc.matches("ChapterTitle").count(),
+        chapter.matches("ChapterTitle").count() + 2 + 1
+    );
+}
+
+#[test]
+fn a_chapter_opening_the_body_needs_no_front_header() {
+    let out = render("= B\n:doctype: book\n\n== One\n\n[%rotate]\n|===\n|x\n|===\n\n== Two\n");
+    let doc = part(&out.bytes, "word/document.xml");
+    // Chapter one (portrait, landscape, portrait), chapter two.
+    assert_eq!(
+        default_headers(&out.bytes, &doc),
+        ["header1.xml", "header1.xml", "header1.xml", "header1.xml"]
+    );
+    assert!(!parts(&out.bytes).iter().any(|(n, _)| n.contains("-front")));
+    assert!(part(&out.bytes, "word/header1.xml").contains("STYLEREF"));
+}
+
+#[test]
+fn articles_and_books_without_chapter_sections_drop_the_chapter_marker() {
+    // An article in the book template: no chapter sections, no field.
+    let src = "= A\n:docx-template: book\n\n== One\n\ntext\n";
+    let out = render(src);
+    assert!(!parts(&out.bytes).iter().any(|(n, _)| n.contains("-front")));
+    let header = part(&out.bytes, "word/header1.xml");
+    assert!(
+        !header.contains("<w:sdt>") && !header.contains("STYLEREF"),
+        "{header}"
+    );
+    let doc = part(&out.bytes, "word/document.xml");
+    assert!(!doc.contains("ChapterTitle"), "{doc}");
+}
+
 #[test]
 fn articles_keep_one_section() {
     let doc = document("= An Article\n\n== A\n\ntext\n\n== B\n");

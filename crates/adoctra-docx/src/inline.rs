@@ -818,6 +818,55 @@ impl<'c, 't> Runs<'c, 't> {
     }
 }
 
+/// `runs` all in character style `style_id`: a run's own character style
+/// becomes the direct properties it gives (with the run's direct ones on
+/// top). Word's `STYLEREF` to a character style reads only one unbroken
+/// stretch of runs in it, so a title it shows has no other run styles.
+pub fn in_character_style(runs: &str, style_id: &str, styles: &Styles) -> String {
+    let style = format!(
+        r#"<w:rStyle w:val="{}"/>"#,
+        crate::xml::escape_attr(style_id)
+    );
+    let mut out = String::with_capacity(runs.len() + 64);
+    let mut pos = 0;
+    for tag in crate::xml::tags(runs, 0) {
+        if tag.name != "w:r" || tag.kind != crate::xml::TagKind::Start || tag.range.start < pos {
+            continue;
+        }
+        out.push_str(&runs[pos..tag.range.end]);
+        pos = tag.range.end;
+        let Some((_, content)) = crate::xml::element(runs, &tag) else {
+            continue;
+        };
+        let rpr = crate::xml::children(runs, content)
+            .into_iter()
+            .next()
+            .filter(|(t, _)| t.name == "w:rPr");
+        let mut props = String::new();
+        if let Some((rpr_tag, range)) = rpr {
+            let inner = crate::xml::element(runs, &rpr_tag).map_or(0..0, |(_, c)| c);
+            let mut own = String::new();
+            let mut direct = String::new();
+            for (child, child_range) in crate::xml::children(runs, inner) {
+                match child.name {
+                    "w:rStyle" => {
+                        own = child
+                            .attr("w:val")
+                            .map(|id| styles.run_properties(&id))
+                            .unwrap_or_default();
+                    }
+                    _ => direct.push_str(&runs[child_range]),
+                }
+            }
+            props = crate::styles::merge_rpr(&[&own, &direct]);
+            pos = range.end;
+        }
+        out.push_str(&format!("<w:rPr>{style}{props}</w:rPr>"));
+    }
+    out.push_str(&runs[pos..]);
+    out
+}
+
 /// The plain text of inline content (document properties, bookmarks).
 pub fn plain_text(inlines: &[Inline]) -> String {
     let mut out = String::new();
@@ -879,6 +928,28 @@ pub fn parts_text(parts: &[AttributePart]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn runs_in_one_character_style_turn_their_styles_into_direct_properties() {
+        let styles = Styles::parse(
+            r#"<w:styles><w:style w:type="character" w:styleId="Strong"><w:name w:val="Strong"/><w:rPr><w:b/><w:bCs/></w:rPr></w:style></w:styles>"#,
+        );
+        let runs = concat!(
+            r#"<w:bookmarkStart w:id="0" w:name="x"/><w:r><w:t>a</w:t></w:r>"#,
+            r#"<w:r><w:rPr><w:rStyle w:val="Strong"/><w:i/></w:rPr><w:t>b</w:t></w:r>"#,
+            r#"<w:hyperlink w:anchor="y"><w:r><w:rPr><w:u w:val="single"/></w:rPr><w:t>c</w:t></w:r></w:hyperlink>"#,
+            r#"<w:r><w:fldChar w:fldCharType="begin"/></w:r>"#,
+        );
+        assert_eq!(
+            in_character_style(runs, "CT", &styles),
+            concat!(
+                r#"<w:bookmarkStart w:id="0" w:name="x"/><w:r><w:rPr><w:rStyle w:val="CT"/></w:rPr><w:t>a</w:t></w:r>"#,
+                r#"<w:r><w:rPr><w:rStyle w:val="CT"/><w:b/><w:bCs/><w:i/></w:rPr><w:t>b</w:t></w:r>"#,
+                r#"<w:hyperlink w:anchor="y"><w:r><w:rPr><w:rStyle w:val="CT"/><w:u w:val="single"/></w:rPr><w:t>c</w:t></w:r></w:hyperlink>"#,
+                r#"<w:r><w:rPr><w:rStyle w:val="CT"/></w:rPr><w:fldChar w:fldCharType="begin"/></w:r>"#,
+            )
+        );
+    }
 
     #[test]
     fn bookmark_names_are_valid_unique_and_stable() {

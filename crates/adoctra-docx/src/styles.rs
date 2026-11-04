@@ -49,6 +49,8 @@ pub struct StyleDef {
     pub based_on: Option<String>,
     /// The numbering the style itself applies (`w:pPr/w:numPr/w:numId`).
     pub num_id: Option<u32>,
+    /// The content of the style's own run properties (`w:style/w:rPr`).
+    pub rpr: String,
 }
 
 /// The styles of a template plus the definitions added during conversion.
@@ -82,8 +84,10 @@ impl Styles {
                 aliases: Vec::new(),
                 based_on: None,
                 num_id: None,
+                rpr: String::new(),
             };
             if let Some((_, content)) = xml::element(text, &tag) {
+                def.rpr = own_rpr(text, content.clone());
                 let mut in_ppr = false;
                 for inner in xml::tags(&text[..content.end], content.start) {
                     let val = || inner.attr("w:val");
@@ -154,6 +158,22 @@ impl Styles {
         }
     }
 
+    /// The run properties style `id` gives, its bases' first (the content
+    /// of a `w:rPr`, in schema order).
+    pub fn run_properties(&self, id: &str) -> String {
+        let mut chain = Vec::new();
+        let mut next = Some(id);
+        while let Some(id) = next.filter(|_| chain.len() < 16) {
+            let Some(def) = self.defs.iter().find(|d| d.id == id) else {
+                break;
+            };
+            chain.push(def.rpr.as_str());
+            next = def.based_on.as_deref();
+        }
+        chain.reverse();
+        merge_rpr(&chain)
+    }
+
     /// The id of style `name` for the output. A missing Word built-in is
     /// added with Word's defaults; a missing custom style is reported once
     /// and gives `None` (the element falls back to its base formatting).
@@ -222,6 +242,7 @@ impl Styles {
             aliases: Vec::new(),
             based_on,
             num_id: None,
+            rpr: own_rpr(&markup, 0..markup.len()),
         });
         id
     }
@@ -235,9 +256,121 @@ impl Styles {
     }
 }
 
+/// The content of the `w:rPr` child of a style element's `content`.
+fn own_rpr(text: &str, content: std::ops::Range<usize>) -> String {
+    let style = xml::children(text, content.clone())
+        .into_iter()
+        .find(|(tag, _)| tag.name == "w:style");
+    let content = match style {
+        Some((tag, _)) => xml::element(text, &tag).map_or(content, |(_, c)| c),
+        None => content,
+    };
+    xml::children(text, content)
+        .into_iter()
+        .find(|(tag, _)| tag.name == "w:rPr")
+        .and_then(|(tag, _)| xml::element(text, &tag))
+        .map_or_else(String::new, |(_, c)| text[c].to_string())
+}
+
+/// The children of `w:rPr` in the order of the schema (`CT_RPr`).
+const RPR_ORDER: &[&str] = &[
+    "w:rStyle",
+    "w:rFonts",
+    "w:b",
+    "w:bCs",
+    "w:i",
+    "w:iCs",
+    "w:caps",
+    "w:smallCaps",
+    "w:strike",
+    "w:dstrike",
+    "w:outline",
+    "w:shadow",
+    "w:emboss",
+    "w:imprint",
+    "w:noProof",
+    "w:snapToGrid",
+    "w:vanish",
+    "w:webHidden",
+    "w:color",
+    "w:spacing",
+    "w:w",
+    "w:kern",
+    "w:position",
+    "w:sz",
+    "w:szCs",
+    "w:highlight",
+    "w:u",
+    "w:effect",
+    "w:bdr",
+    "w:shd",
+    "w:fitText",
+    "w:vertAlign",
+    "w:rtl",
+    "w:cs",
+    "w:em",
+    "w:lang",
+    "w:eastAsianLayout",
+    "w:specVanish",
+    "w:oMath",
+];
+
+/// Run properties (contents of `w:rPr`) merged: a later layer's element
+/// replaces an earlier one of the same name; the result is in schema
+/// order, unknown elements last.
+pub fn merge_rpr(layers: &[&str]) -> String {
+    let mut merged: Vec<(&str, &str)> = Vec::new();
+    for layer in layers {
+        for (tag, range) in xml::children(layer, 0..layer.len()) {
+            let element = &layer[range];
+            match merged.iter_mut().find(|(name, _)| *name == tag.name) {
+                Some(slot) => slot.1 = element,
+                None => merged.push((tag.name, element)),
+            }
+        }
+    }
+    let rank = |name: &str| {
+        RPR_ORDER
+            .iter()
+            .position(|n| *n == name)
+            .unwrap_or(usize::MAX)
+    };
+    merged.sort_by_key(|(name, _)| rank(name));
+    merged.into_iter().map(|(_, element)| element).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn run_properties_merge_bases_in_schema_order() {
+        let styles = Styles::parse(
+            r#"<w:styles><w:style w:type="character" w:styleId="Base"><w:name w:val="Base"/><w:pPr><w:rPr><w:caps/></w:rPr></w:pPr><w:rPr><w:u w:val="single"/><w:b/></w:rPr></w:style><w:style w:type="character" w:styleId="Code"><w:name w:val="Code"/><w:basedOn w:val="Base"/><w:rPr><w:color w:val="111111"/><w:rFonts w:ascii="Mono"/><w:u w:val="none"/></w:rPr></w:style></w:styles>"#,
+        );
+        assert_eq!(
+            styles.run_properties("Code"),
+            r#"<w:rFonts w:ascii="Mono"/><w:b/><w:color w:val="111111"/><w:u w:val="none"/>"#
+        );
+        assert_eq!(styles.run_properties("Missing"), "");
+        assert_eq!(
+            merge_rpr(&[
+                "<w:i/><w:x/>",
+                r#"<w:vertAlign w:val="superscript"/><w:b/>"#
+            ]),
+            r#"<w:b/><w:i/><w:vertAlign w:val="superscript"/><w:x/>"#
+        );
+    }
+
+    #[test]
+    fn added_builtins_keep_their_run_properties() {
+        let mut styles = Styles::parse("<w:styles/>");
+        let id = styles.resolve(StyleKind::Character, "Hyperlink").unwrap();
+        assert_eq!(
+            styles.run_properties(&id),
+            r#"<w:color w:val="0563C1"/><w:u w:val="single"/>"#
+        );
+    }
 
     const RUSSIAN_WORD: &str = r#"<w:styles>
 <w:style w:type="paragraph" w:default="1" w:styleId="a"><w:name w:val="Normal"/></w:style>

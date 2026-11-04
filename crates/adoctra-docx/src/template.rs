@@ -12,11 +12,16 @@
 //! * Content controls tagged `adoctra:<field>` (`title`, `author`…) are
 //!   replaced by the field's text, keeping the paragraph properties of their
 //!   first paragraph, or removed when the document has no such field.
+//! * In a book with chapter sections, a header or footer of the body
+//!   section with an `adoctra:chapter` marker keeps the marker's content
+//!   (the running chapter field); the front matter refers to a copy without
+//!   it ([`crate::sections`]). Elsewhere the marker is removed.
 
 use std::ops::Range;
 
 use crate::numbering::Numbering;
 use crate::package::{self, Package, Relationships};
+use crate::sections::{Running, RunningCopy};
 use crate::styles::Styles;
 use crate::xml;
 
@@ -50,6 +55,12 @@ const REL_HEADER: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header";
 const REL_FOOTER: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer";
+const HEADER_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml";
+const FOOTER_CONTENT_TYPE: &str =
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml";
+/// The marker of the running part or chapter title.
+pub const CHAPTER_MARKER: &str = "adoctra:chapter";
 
 /// A template ready to receive a converted document.
 #[derive(Debug, Clone)]
@@ -78,6 +89,8 @@ pub enum Fill {
     Runs(String),
     /// Remove the marker.
     Remove,
+    /// Keep the marker's content in its place, without the control.
+    Keep,
 }
 
 impl Template {
@@ -193,6 +206,35 @@ impl Template {
         final_sect_pr(&self.document).map(|range| self.document[range].to_string())
     }
 
+    /// The headers and footers `sect_pr` refers to that show the chapter
+    /// (an `adoctra:chapter` marker), each once.
+    pub fn running_parts(&self, sect_pr: &str) -> Vec<Running> {
+        let mut found: Vec<Running> = Vec::new();
+        for tag in xml::tags(sect_pr, 0) {
+            if !matches!(tag.name, "w:headerReference" | "w:footerReference") {
+                continue;
+            }
+            let Some(id) = tag.attr("r:id") else { continue };
+            let Some(rel) = self.rels.entries.iter().find(|r| r.id == id && !r.external) else {
+                continue;
+            };
+            let text = self
+                .package
+                .text(&package::resolve_target(&self.main, &rel.target))
+                .unwrap_or_default();
+            if found.iter().all(|r| r.id != id)
+                && markers(&text).iter().any(|m| m.tag == CHAPTER_MARKER)
+            {
+                found.push(Running {
+                    id: id.to_string(),
+                    rel_type: rel.rel_type.clone(),
+                    target: rel.target.clone(),
+                });
+            }
+        }
+        found
+    }
+
     /// Replace the package's core properties (`docProps/core.xml`).
     pub fn set_core_properties(&mut self, xml_text: &str) {
         let mut rels = Relationships::parse(&self.package.text("_rels/.rels").unwrap_or_default());
@@ -209,12 +251,14 @@ impl Template {
     }
 
     /// Put `body` (block-level markup) in place, fill the other markers of
-    /// the document and its headers and footers, replace the final section
-    /// properties with `sect_pr_override` if given, and write the package.
+    /// the document and its headers and footers, add the front matter's
+    /// `copies` of running headers and footers, replace the final section properties with
+    /// `sect_pr_override` if given, and write the package.
     pub fn finish(
         mut self,
         body: &str,
         sect_pr_override: Option<String>,
+        copies: &[RunningCopy],
         mut fill: impl FnMut(&str) -> Fill,
     ) -> Vec<u8> {
         let mut document = place(&self.document, Some(body), &mut fill);
@@ -261,6 +305,30 @@ impl Template {
             self.package.put(&part, text);
         }
         self.package.put(&self.main, document);
+        // Copies first, from the template's parts (their relationships
+        // too), without the chapter; the template's parts are filled below.
+        for copy in copies {
+            let original = package::resolve_target(&self.main, &copy.original);
+            let Some(text) = self.package.text(&original) else {
+                continue;
+            };
+            let filled = place(&text, None, &mut |field| match field {
+                "chapter" => Fill::Remove,
+                _ => fill(field),
+            });
+            let part = package::resolve_target(&self.main, &copy.target);
+            self.package.put(&part, filled);
+            if let Some(rels) = self.package.get(&package::rels_name(&original)) {
+                let rels = rels.to_vec();
+                self.package.put(&package::rels_name(&part), rels);
+            }
+            let content_type = if copy.rel_type == REL_FOOTER {
+                FOOTER_CONTENT_TYPE
+            } else {
+                HEADER_CONTENT_TYPE
+            };
+            self.package.set_override_type(&part, content_type);
+        }
         let parts: Vec<String> = self
             .rels
             .entries
@@ -383,8 +451,13 @@ fn place(doc: &str, body: Option<&str>, fill: &mut dyn FnMut(&str) -> Fill) -> S
             out.push_str(body.unwrap_or_default());
             continue;
         }
-        let Fill::Runs(runs) = fill(&marker.tag[MARKER_PREFIX.len()..]) else {
-            continue;
+        let runs = match fill(&marker.tag[MARKER_PREFIX.len()..]) {
+            Fill::Runs(runs) => runs,
+            Fill::Remove => continue,
+            Fill::Keep => {
+                out.push_str(&doc[marker.content.clone()]);
+                continue;
+            }
         };
         let kids = xml::children(doc, marker.content.clone());
         match kids.iter().find(|(tag, _)| tag.name == "w:p") {
@@ -454,7 +527,7 @@ mod tests {
 
     fn finish(document: &str, fill: impl FnMut(&str) -> Fill) -> Package {
         let template = Template::from_package(package(document, true)).unwrap();
-        Package::read(&template.finish("<w:p>BODY</w:p>", None, fill)).unwrap()
+        Package::read(&template.finish("<w:p>BODY</w:p>", None, &[], fill)).unwrap()
     }
 
     #[test]
@@ -543,7 +616,7 @@ mod tests {
                 .as_deref(),
             Some("Heading1")
         );
-        let out = Package::read(&template.finish("<w:p/>", None, |_| Fill::Remove)).unwrap();
+        let out = Package::read(&template.finish("<w:p/>", None, &[], |_| Fill::Remove)).unwrap();
         let styles = out.text("word/styles.xml").unwrap();
         assert!(styles.contains(r#"w:styleId="Heading1""#));
         assert!(styles.contains(r#"w:styleId="Normal""#));
@@ -587,6 +660,7 @@ mod tests {
         let out = Package::read(&template.finish(
             "<w:p>BODY</w:p>",
             Some("<w:sectPr/>".into()),
+            &[],
             |field| match field {
                 "title" => Fill::Runs("<w:r><w:t>Doc</w:t></w:r>".into()),
                 _ => Fill::Remove,
@@ -607,12 +681,84 @@ mod tests {
     }
 
     #[test]
+    fn copies_running_headers_for_the_front_matter() {
+        let doc = format!(
+            r#"<w:document {W}><w:body><w:sectPr><w:headerReference w:type="default" r:id="rId9"/><w:headerReference w:type="first" r:id="rId8"/><w:footerReference r:id="rId9"/></w:sectPr></w:body></w:document>"#
+        );
+        let mut p = package(&doc, true);
+        p.put(
+            "word/_rels/document.xml.rels",
+            r#"<Relationships xmlns="r"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId8" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header2.xml"/><Relationship Id="rId9" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/header" Target="header1.xml"/></Relationships>"#,
+        );
+        p.put(
+            "word/header1.xml",
+            format!(
+                r#"<w:hdr {W}><w:p>{}<w:r><w:ptab/></w:r>{}</w:p></w:hdr>"#,
+                sdt("adoctra:title", "<w:r><w:t>T</w:t></w:r>"),
+                sdt("adoctra:chapter", "<w:r><w:t>C</w:t></w:r>")
+            ),
+        );
+        p.put("word/_rels/header1.xml.rels", "<Relationships/>");
+        p.put("word/header2.xml", format!(r#"<w:hdr {W}><w:p/></w:hdr>"#));
+        let mut template = Template::from_package(p).unwrap();
+        let running = template.running_parts(&template.body_sect_pr().unwrap());
+        assert_eq!(
+            running,
+            [Running {
+                id: "rId9".into(),
+                rel_type: REL_HEADER.into(),
+                target: "header1.xml".into(),
+            }]
+        );
+        let target = template.rels.add(REL_HEADER, "header1-front.xml", false);
+        let copy = RunningCopy {
+            original: "header1.xml".into(),
+            target: "header1-front.xml".into(),
+            rel_type: REL_HEADER.into(),
+        };
+        let out = Package::read(&template.finish("", None, &[copy], |field| match field {
+            "title" => Fill::Runs("<w:r><w:t>Doc</w:t></w:r>".into()),
+            "chapter" => Fill::Keep,
+            _ => Fill::Remove,
+        }))
+        .unwrap();
+        // The front matter's copy has no chapter.
+        assert_eq!(
+            out.text("word/header1-front.xml").unwrap(),
+            format!(
+                r#"<w:hdr {W}><w:p><w:r><w:t>Doc</w:t></w:r><w:r><w:ptab/></w:r></w:p></w:hdr>"#
+            )
+        );
+        // The template's part, for chapters, keeps the marker's content.
+        assert_eq!(
+            out.text("word/header1.xml").unwrap(),
+            format!(
+                r#"<w:hdr {W}><w:p><w:r><w:t>Doc</w:t></w:r><w:r><w:ptab/></w:r><w:r><w:t>C</w:t></w:r></w:p></w:hdr>"#
+            )
+        );
+        assert_eq!(
+            out.text("word/_rels/header1-front.xml.rels").unwrap(),
+            "<Relationships/>"
+        );
+        assert!(out.text("[Content_Types].xml").unwrap().contains(&format!(
+            r#"<Override PartName="/word/header1-front.xml" ContentType="{HEADER_CONTENT_TYPE}"/>"#
+        )));
+        assert!(out
+            .text("word/_rels/document.xml.rels")
+            .unwrap()
+            .contains(&format!(
+                r#"Id="{target}" Type="{REL_HEADER}" Target="header1-front.xml""#
+            )));
+    }
+
+    #[test]
     fn declares_the_relationships_namespace_for_links() {
         let doc = format!(r#"<w:document {W}><w:body/></w:document>"#);
         let template = Template::from_package(package(&doc, true)).unwrap();
         let out = Package::read(&template.finish(
             r#"<w:p><w:hyperlink r:id="rId5"/></w:p>"#,
             None,
+            &[],
             |_| Fill::Remove,
         ))
         .unwrap();
@@ -628,7 +774,7 @@ mod tests {
         let mut template = Template::from_package(package(&doc, true)).unwrap();
         template.set_core_properties("<cp:coreProperties/>");
         template.set_core_properties("<cp:coreProperties>2</cp:coreProperties>");
-        let out = Package::read(&template.finish("", None, |_| Fill::Remove)).unwrap();
+        let out = Package::read(&template.finish("", None, &[], |_| Fill::Remove)).unwrap();
         assert_eq!(
             out.text("docProps/core.xml").unwrap(),
             "<cp:coreProperties>2</cp:coreProperties>"
