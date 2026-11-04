@@ -1,0 +1,2046 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "apicurio-registry",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Apicurio API and Schema Registry"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "about-the-registry",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "About the Apicurio API and Schema Registry"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "overview-of-deploying-a-debezium-connector-that-uses-avro-serialization",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Apicurio Registry deployment overview"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "deploying-with-debezium-containers",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Deploying Apicurio Registry with Debezium containers"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "confluent-schema-registry",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Confluent Schema Registry"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "overview-of-deploying-confluent-schema-registry",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Confluent Schema Registry deployment overview"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "deploying-confluent-schema-registry-with-debezium-containers",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Deploying Confluent Schema Registry with Debezium containers"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "avro-naming",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Naming"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_getting_more_information",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Getting More Information"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A Debezium connector works in the Kafka Connect framework to capture each row-level change in a database by generating a change event record. For each change event record, the Debezium connector completes the following actions:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Applies configured transformations."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Serializes the record key and value into a binary form by using the configured "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Kafka Connect converters"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#connect_running"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Writes the record to the correct Kafka topic."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can specify converters for each individual Debezium connector instance. Kafka Connect provides a JSON converter that serializes the record keys and values into JSON documents. The default behavior is that the JSON converter includes the record’s message schema, which makes each record very verbose. The "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium Tutorial"
+                  }
+                ],
+                "kind": "xref",
+                "target": "kc-tutorial.html"
+              },
+              {
+                "kind": "text",
+                "value": " shows what the records look like when both payload and schemas are included. If you want records to be serialized with JSON, consider setting the following connector configuration properties to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "key.converter.schemas.enable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "value.converter.schemas.enable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Setting these properties to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " excludes the verbose schema information from each record."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, you can serialize the record keys and values by using "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Apache Avro"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://avro.apache.org/"
+              },
+              {
+                "kind": "text",
+                "value": ". The Avro binary format is compact and efficient. Avro schemas make it possible to ensure that each record has the correct structure. Avro’s schema evolution mechanism enables schemas to evolve. This is essential for Debezium connectors, which dynamically generate each record’s schema to match the structure of the database table that was changed. Over time, change event records written to the same Kafka topic might have different versions of the same schema. Avro serialization makes it easier for the consumers of change event records to adapt to a changing record schema."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To use Apache Avro serialization, you must deploy a schema registry that manages Avro message schemas and their versions. Available options include the Apicurio API and Schema Registry as well as the Confluent Schema Registry. Both are described here."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Apicurio Registry"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/Apicurio/apicurio-registry"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " open-source project provides several components that work with Avro:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "An Avro converter that you can specify in Debezium connector configurations. This converter maps Kafka Connect schemas to Avro schemas. The converter then uses the Avro schemas to serialize the record keys and values into Avro’s compact binary form."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "ulist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Avro schemas that are used in Kafka topics."
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Where the Avro converter sends the generated Avro schemas."
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": null,
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Because the Avro schemas are stored in this registry, each record needs to contain only a tiny "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "schema identifier"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ". This makes each record even smaller. For an I/O bound system like Kafka, this means more total throughput for producers and consumers."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "An API and schema registry that tracks:"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Avro "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Serdes"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (serializers and deserializers) for Kafka producers and consumers. Kafka consumer applications that you write to consume change event records can use Avro Serdes to deserialize the change event records."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Apicurio’s "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Confluent compatibility mode"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", enabled by setting "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "as-confluent: true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", allows Apicurio Registry to serialize Kafka messages using the same wire format as Confluent Schema Registry (including the magic byte and 4-byte schema ID). This enables full interoperability with Confluent clients and tools, making Apicurio a drop-in replacement without requiring changes to producers or consumers."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the Apicurio Registry with Debezium, add Apicurio Registry converters and their dependencies to the Kafka Connect container image that you are using for running a Debezium connector."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The Apicurio Registry project also provides a JSON converter. This converter combines the advantage of less verbose messages with human-readable JSON. Messages do not contain the schema information themselves, but only a schema ID."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To use converters provided by Apicurio Registry you need to provide "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "apicurio.registry.url"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "about-the-registry",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "About the Apicurio API and Schema Registry"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To deploy a Debezium connector that uses Avro serialization, you must complete three main tasks:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy an "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Apicurio API and Schema Registry"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/Apicurio/apicurio-registry"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " instance."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Install the Avro converter from the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "installation package"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://repo1.maven.org/maven2/io/apicurio/apicurio-registry-distro-connect-converter/3.2.5/apicurio-registry-distro-connect-converter-3.2.5.tar.gz"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " into a plug-in directory. If you are using the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Debezium Connect container image"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://quay.io/repository/debezium/connect"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", it’s not necessary to install the package. For more information, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Deploying Apicurio Registry with Debezium containers"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "#deploying-with-debezium-containers"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "key.converter=io.apicurio.registry.utils.converter.AvroConverter\nkey.converter.apicurio.registry.url=http://apicurio:8080/apis/registry/v2\nkey.converter.apicurio.registry.auto-register=true\nkey.converter.apicurio.registry.find-latest=true\nvalue.converter=io.apicurio.registry.utils.converter.AvroConverter\nvalue.converter.apicurio.registry.url=http://apicurio:8080/apis/registry/v2\nvalue.converter.apicurio.registry.auto-register=true\nvalue.converter.apicurio.registry.find-latest=true\nschema.name.adjustment.mode=avro"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "or you can use the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Confluent Compatibility mode"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " as follows:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "key.converter=io.apicurio.registry.utils.converter.AvroConverter\nkey.converter.apicurio.registry.url=http://apicurio:8080/apis/registry/v2\nkey.converter.apicurio.registry.auto-register=true\nkey.converter.apicurio.registry.find-latest=true\nkey.converter.schemas.enable\": \"false\"\nkey.converter.apicurio.registry.headers.enabled\": \"false\"\nkey.converter.apicurio.registry.as-confluent\": \"true\"\nkey.converter.apicurio.use-id: \"contentId\"\nvalue.converter=io.apicurio.registry.utils.converter.AvroConverter\nvalue.converter.apicurio.registry.url=http://apicurio:8080/apis/registry/v2\nvalue.converter.apicurio.registry.auto-register=true\nvalue.converter.apicurio.registry.find-latest=true\nvalue.converter.schemas.enable\": \"false\"\nvalue.converter.apicurio.registry.headers.enabled\": \"false\"\nvalue.converter.apicurio.registry.as-confluent\": \"true\"\nvalue.converter.apicurio.use-id: \"contentId\"\nschema.name.adjustment.mode=avro"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configure a Debezium connector instance to use Avro serialization by setting configuration properties as follows:"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When using Apicurio Registry in Confluent compatibility mode, the parameters are configured in a specific way to imitate exactly how Confluent Schema Registry works, both on the wire format and in client expectations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "converter.apicurio.registry.as-confluent: true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": Forces Apicurio to serialize Kafka messages with the same structure as Confluent (magic byte + 4-byte schema ID)."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "converter.apicurio.use-id: true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "globalId"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": "): Ensures that only a numeric schema ID is written in the message, matching what Confluent consumers expect."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "converter.schemas.enable: false"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": Prevents embedding the full Avro schema inside the Kafka message, which Confluent deserializers do not expect (they fetch the schema by ID from the registry)."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "converter.apicurio.registry.headers.enabled: false"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ": Disables Apicurio-specific metadata headers that Confluent clients wouldn’t understand, keeping the message format clean and compatible."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Internally, Kafka Connect always uses JSON key/value converters for storing configuration and offsets."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "overview-of-deploying-a-debezium-connector-that-uses-avro-serialization",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Apicurio Registry deployment overview"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In your environment, you might want to use a provided Debezium container image to deploy Debezium connectors that use Avro serialization. Follow the procedure here to do that. In this procedure, you enable Apicurio converters on the Debezium Kafka Connect container image, and configure the Debezium connector to use the Avro converter."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You have Docker installed and sufficient rights to create and manage containers."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You downloaded the Debezium connector plug-in(s) that you want to deploy with Avro serialization."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Prerequisites"
+                  }
+                ]
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The following example uses a non-production, in-memory, Apicurio Registry instance:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docker run -it --rm --name apicurio \\\n    -p 8080:8080 apicurio/apicurio-registry:3.2.5"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy an instance of Apicurio Registry."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docker run -it --rm --name connect \\\n    --link kafka:kafka \\\n    --link mysql:mysql \\\n    --link apicurio:apicurio \\\n    -e ENABLE_APICURIO_CONVERTERS=true \\\n    -e GROUP_ID=1 \\\n    -e CONFIG_STORAGE_TOPIC=my_connect_configs \\\n    -e OFFSET_STORAGE_TOPIC=my_connect_offsets \\\n    -e KEY_CONVERTER=io.apicurio.registry.utils.converter.AvroConverter \\\n    -e VALUE_CONVERTER=io.apicurio.registry.utils.converter.AvroConverter \\\n    -e CONNECT_KEY_CONVERTER=io.apicurio.registry.utils.converter.AvroConverter \\\n    -e CONNECT_KEY_CONVERTER_APICURIO.REGISTRY_URL=http://apicurio:8080/apis/registry/v2 \\\n    -e CONNECT_KEY_CONVERTER_APICURIO_REGISTRY_AUTO-REGISTER=true \\\n    -e CONNECT_KEY_CONVERTER_APICURIO_REGISTRY_FIND-LATEST=true \\\n    -e CONNECT_VALUE_CONVERTER=io.apicurio.registry.utils.converter.AvroConverter \\\n    -e CONNECT_VALUE_CONVERTER_APICURIO_REGISTRY_URL=http://apicurio:8080/apis/registry/v2 \\\n    -e CONNECT_VALUE_CONVERTER_APICURIO_REGISTRY_AUTO-REGISTER=true \\\n    -e CONNECT_VALUE_CONVERTER_APICURIO_REGISTRY_FIND-LATEST=true \\\n    -e CONNECT_SCHEMA_NAME_ADJUSTMENT_MODE=avro \\\n    -p 8083:8083 quay.io/debezium/connect:3.7"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Run the Debezium container image for Kafka Connect, configuring it to provide the Avro converter by enabling Apicurio via "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ENABLE_APICURIO_CONVERTERS=true"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " environment variable:"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Procedure"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "deploying-with-debezium-containers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Deploying Apicurio Registry with Debezium containers"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "apicurio-registry",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Apicurio API and Schema Registry"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There is an alternative "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "schema registry"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/confluentinc/schema-registry"
+              },
+              {
+                "kind": "text",
+                "value": " implementation provided by Confluent."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For information about installing the standalone Confluent Schema Registry, see the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Confluent Platform deployment documentation"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.confluent.io/platform/current/installation/installing_cp/overview.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As an alternative, you can "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "install"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.confluent.io/platform/current/installation/docker/installation.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " the standalone Confluent Schema Registry as a container."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "overview-of-deploying-confluent-schema-registry",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Confluent Schema Registry deployment overview"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Beginning with Debezium 2.0.0, Confluent Schema Registry support is not included in the Debezium containers. To enable the Confluent Schema Registry for a Debezium container, install the following Confluent Avro converter JAR files into the Connect plugin directory:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-connect-avro-converter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-connect-avro-data"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-avro-serializer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-schema-serializer"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-schema-converter"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "kafka-schema-registry-client"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "common-config"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "common-utils"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can download the preceding files from the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Confluent Maven repository"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://packages.confluent.io/maven/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are also some other JAR files required to be located into the Connect plugin directory:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "avro"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "commons-compress"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "failureaccess"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "guava"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "minimal-json"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "re2j"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "slf4j-api"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "snakeyaml"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "swagger-annotations"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jackson-databind"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jackson-core"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jackson-annotations"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jackson-dataformat-csv"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "logredactor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "logredactor-metrics"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can download the preceding files from the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Maven repository"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://mvnrepository.com/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The configuration is slightly different."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "key.converter=io.confluent.connect.avro.AvroConverter\nkey.converter.schema.registry.url=http://localhost:8081\nvalue.converter=io.confluent.connect.avro.AvroConverter\nvalue.converter.schema.registry.url=http://localhost:8081"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "In your Debezium connector configuration, specify the following properties:"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docker run -it --rm --name schema-registry \\\n    --link kafka \\\n    -e SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=kafka:9092\n    -e SCHEMA_REGISTRY_HOST_NAME=schema-registry \\\n    -e SCHEMA_REGISTRY_LISTENERS=http://schema-registry:8081 \\\n    -p 8181:8181 confluentinc/cp-schema-registry"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy an instance of the Confluent Schema Registry:"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docker run -it --rm --name connect \\\n    --link kafka:kafka \\\n    --link mysql:mysql \\\n    --link schema-registry:schema-registry \\\n    -e GROUP_ID=1 \\\n    -e CONFIG_STORAGE_TOPIC=my_connect_configs \\\n    -e OFFSET_STORAGE_TOPIC=my_connect_offsets \\\n    -e KEY_CONVERTER=io.confluent.connect.avro.AvroConverter \\\n    -e VALUE_CONVERTER=io.confluent.connect.avro.AvroConverter \\\n    -e CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081 \\\n    -e CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://schema-registry:8081 \\\n    -p 8083:8083 quay.io/debezium/connect:3.7"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Run a Kafka Connect image configured to use Avro:"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "docker run -it --rm --name avro-consumer \\\n    --link kafka:kafka \\\n    --link mysql:mysql \\\n    --link schema-registry:schema-registry \\\n    quay.io/debezium/connect:3.7 \\\n    /kafka/bin/kafka-console-consumer.sh \\\n      --bootstrap-server kafka:9092 \\\n      --property print.key=true \\\n      --formatter io.confluent.kafka.formatter.AvroMessageFormatter \\\n      --property schema.registry.url=http://schema-registry:8081 \\\n      --topic db.myschema.mytable"
+                          }
+                        ],
+                        "language": null,
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Run a console consumer that reads new Avro messages from the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "db.myschema.mytable"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " topic and decodes to JSON:"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "deploying-confluent-schema-registry-with-debezium-containers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Deploying Confluent Schema Registry with Debezium containers"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "confluent-schema-registry",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Confluent Schema Registry"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As stated in the Avro "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "documentation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://avro.apache.org/docs/1.12.0/specification/#names"
+              },
+              {
+                "kind": "text",
+                "value": ", names must adhere to the following rules:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Start with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[A-Za-z_]"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Subsequently contains only "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "[A-Za-z0-9_]"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " characters"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium uses the column’s name as the basis for the corresponding Avro field. This can lead to problems during serialization if the column name does not also adhere to the Avro naming rules. Each Debezium connector provides a configuration property, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "field.name.adjustment.mode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that you can set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "avro"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if you have columns that do not adhere to Avro rules for names. Setting "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "field.name.adjustment.mode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "avro"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " allows serialization of non-conformant fields without having to actually modify your schema."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "avro-naming",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Naming"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This post"
+                  }
+                ],
+                "kind": "link",
+                "target": "/blog/2016/09/19/Serializing-Debezium-events-with-Avro/"
+              },
+              {
+                "kind": "text",
+                "value": " from the Debezium blog describes the concepts of serializers, converters, and other components, and discusses the advantages of using Avro. Some Kafka Connect converter details have slightly changed since that post was written."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For a complete example of using Avro as the message format for Debezium change data events, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MySQL and the Avro message format"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/debezium-examples/tree/main/tutorial#using-mysql-and-the-avro-message-format"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_getting_more_information",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Getting More Information"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Avro Serialization"
+      }
+    ]
+  }
+}

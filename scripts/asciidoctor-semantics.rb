@@ -32,6 +32,18 @@ class SemanticConverter < Asciidoctor::Converter::Base
     handle(event: :open, node: node) + text.to_s + handle(event: :close, opening: opening)
   end
 
+  # A passthrough in a field this oracle keeps out of the output (a link
+  # target: `link:{repo}+/milestone/1?closed=1+[]`): Ruby restores it in the
+  # converted text, so restore it here with the block's own passthroughs.
+  def restored node, value
+    return value unless value.to_s.include? Asciidoctor::Substitutors::PASS_START
+    node.parent.send :restore_passthroughs, value
+  end
+
+  def same_kind? left, right
+    left[:node].reject { |key, _| key == :inlines } == right[:node].reject { |key, _| key == :inlines }
+  end
+
   def inlines text
     result = []
     stack = [[nil, result]]
@@ -46,7 +58,14 @@ class SemanticConverter < Asciidoctor::Converter::Base
           stack[-1][1] << node
           stack << [index, node[:inlines]]
         when :close
-          raise 'unbalanced semantic handles' unless stack.size > 1 && stack[-1][0] == event[:opening]
+          raise 'unbalanced semantic handles' unless stack.size > 1
+          # Ruby's substitutions can cross two spans of one kind (```x```:
+          # the unconstrained pair takes "`x", the constrained one spans the
+          # rest), and its HTML closes the innermost element of that tag, as
+          # a parser reads it. Spans of different kinds must nest.
+          unless stack[-1][0] == event[:opening] || same_kind?(@nodes[stack[-1][0]], @nodes[event[:opening]])
+            raise 'unbalanced semantic handles'
+          end
           stack.pop
         when :leaf
           stack[-1][1] << event[:node]
@@ -105,7 +124,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
   def image_fields node
     # pdfwidth/scaledwidth size the image in PDF and DocBook only.
     allowed = [:attribute_entries, *%w[alt default-alt width height title link float align id role imagesdir target
-                                       inline-option interactive-option fallback format pdfwidth scaledwidth]]
+                                       inline-option interactive-option fallback format pdfwidth scaledwidth caption]]
     raise 'image options are outside inline-semantics-v1' unless node.attributes.keys.all? { |key| Integer === key || allowed.include?(key) }
     attrs = node.attributes.select { |key, _| %w[width height title link float align].include? key }
     target = node.respond_to?(:target) ? node.target : (node.attr 'target')
@@ -359,7 +378,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
         { terms: terms.map { |term| inlines(term.text) }, description: description ? item(description) : nil }
       })
     when 'image'
-      metadata(node).merge(image_fields(node))
+      metadata(node).merge(image_fields(node)).merge(caption: node.caption ? inlines(node.caption) : nil)
     when 'table'
       # Ruby's Table#initialize resolves tablepcwidth; frame=topbot is an
       # alias of ends that the converter maps before using the value.
@@ -401,7 +420,7 @@ class SemanticConverter < Asciidoctor::Converter::Base
     when 'inline_anchor'
       case node.type
       when :link
-        result = { kind: 'link', target: node.target }
+        result = { kind: 'link', target: restored(node, node.target) }
         fields = link_metadata node
         result[:metadata] = fields unless fields.empty?
         wrap(result, node.text)

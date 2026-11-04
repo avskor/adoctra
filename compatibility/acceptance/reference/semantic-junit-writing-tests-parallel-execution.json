@@ -1,0 +1,3305 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, JUnit Jupiter tests are run sequentially in a single thread; however, running tests in parallel — for example, to speed up execution — is available as an opt-in feature. To enable parallel execution, set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.enabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration parameter to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " — for example, in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit-platform.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "running-tests/configuration-parameters.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": " for other options)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Please note that enabling this property is only the first step required to execute tests in parallel. If enabled, test classes and methods will still be executed sequentially by default. Whether or not a node in the test tree is executed concurrently is controlled by its execution mode. The following two modes are available."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Force execution in the same thread used by the parent. For example, when used on a test method, the test method will be executed in the same thread as any "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@BeforeAll"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " or "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "@AfterAll"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " methods of the containing test class."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "SAME_THREAD"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Execute concurrently unless a resource lock forces execution in the same thread."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "CONCURRENT"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, nodes in the test tree use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SAME_THREAD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " execution mode. You can change the default by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration parameter. Alternatively, you can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Execution"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/Execution.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation to change the execution mode for the annotated element and its subelements (if any) which allows you to activate parallel execution for individual test classes, one by one."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "junit.jupiter.execution.parallel.enabled = true\njunit.jupiter.execution.parallel.mode.default = concurrent"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration parameters to execute all tests in parallel"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The default execution mode is applied to all nodes of the test tree with a few notable exceptions, namely test classes that use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Lifecycle.PER_CLASS"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mode or a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "MethodOrderer"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/MethodOrderer.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In the former case, test authors have to ensure that the test class is thread-safe; in the latter, concurrent execution might conflict with the configured execution order. Thus, in both cases, test methods in such test classes are only executed concurrently if the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Execution(CONCURRENT)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation is present on the test class or method."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Execution"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation to explicitly configure the execution mode for a test class or method:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Execution(ExecutionMode.CONCURRENT)\nclass ExplicitExecutionModeDemo {\n\n\t@Test\n\tvoid testA() {\n\t\t// concurrent\n\t}\n\n\t@Test\n\t@Execution(ExecutionMode.SAME_THREAD)\n\tvoid testB() {\n\t\t// overrides to same_thread\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This allows test classes or methods to opt in or out of concurrent execution regardless of the globally configured default."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When parallel execution is enabled and a default "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ClassOrderer"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/ClassOrderer.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is registered (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Class Order"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/test-execution-order.html#classes"
+              },
+              {
+                "kind": "text",
+                "value": " for details), top-level test classes will initially be sorted accordingly and scheduled in that order. However, they are not guaranteed to be started in exactly that order since the threads they are executed on are not controlled directly by JUnit."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All nodes of the test tree that are configured with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CONCURRENT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " execution mode will be executed fully in parallel according to the provided "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#config"
+              },
+              {
+                "kind": "text",
+                "value": " while observing the declarative "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "synchronization"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#synchronization"
+              },
+              {
+                "kind": "text",
+                "value": " mechanism. Please note that "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "running-tests/capturing-standard-output-error.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/capturing-standard-output-error.html"
+              },
+              {
+                "kind": "text",
+                "value": " needs to be enabled separately."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition, you can configure the default execution mode for top-level classes by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.classes.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration parameter. By combining both configuration parameters, you can configure classes to run in parallel but their methods in the same thread:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "junit.jupiter.execution.parallel.enabled = true\njunit.jupiter.execution.parallel.mode.default = same_thread\njunit.jupiter.execution.parallel.mode.classes.default = concurrent"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration parameters to execute top-level classes in parallel but methods in same thread"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The opposite combination will run all methods within one class in parallel, but top-level classes will run sequentially:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "junit.jupiter.execution.parallel.enabled = true\njunit.jupiter.execution.parallel.mode.default = concurrent\njunit.jupiter.execution.parallel.mode.classes.default = same_thread"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration parameters to execute top-level classes sequentially but their methods in parallel"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following diagram illustrates how the execution of two top-level test classes "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "B"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with two test methods per class behaves for all four combinations of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.classes.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (see labels in first column)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "writing tests execution mode"
+              }
+            ],
+            "attributes": {},
+            "caption": [],
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "writing-tests_execution_mode.svg",
+            "svg": null,
+            "target": "writing-tests_execution_mode.svg",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default execution mode configuration combinations"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.classes.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration parameter is not explicitly set, the value for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.execution.parallel.mode.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will be used instead."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If parallel execution is enabled, a thread pool is used behind the scenes to execute tests concurrently. You can configure which implementation of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "HierarchicalTestExecutorService"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is used be setting the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit.jupiter.execution.parallel.config.executor-service"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration parameter to one of the following options:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Use an executor service that is backed by a "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ForkJoinPool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " from the JDK. This will cause tests to be executed in a "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ForkJoinWorkerThread"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": ". In some cases, usages of "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ForkJoinPool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " in test or production code or calls to blocking JDK APIs may cause the number of concurrently executing tests to increase. To avoid this situation, please use "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "worker_thread_pool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fork_join_pool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " (default)"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Use an executor service that is backed by a regular thread pool and does not create additional threads if test or production code uses "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "ForkJoinPool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " or calls a blocking API in the JDK."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "worker_thread_pool"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " (experimental)"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "worker_thread_pool"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is currently an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "experimental"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " feature. You’re invited to give it a try and provide feedback to the JUnit team so they can improve and eventually "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "promote"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "api-evolution.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " this feature."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              }
+            ],
+            "context": "section",
+            "id": "config-executor-service",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Executor Service"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Properties such as the desired parallelism and the maximum pool size can be configured using a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "ParallelExecutionConfigurationStrategy"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/support/hierarchical/ParallelExecutionConfigurationStrategy.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". The JUnit Platform provides two implementations out of the box: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dynamic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fixed"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Alternatively, you may implement a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "custom"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategy."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To select a strategy, set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit.jupiter.execution.parallel.config.strategy"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration parameter to one of the following options."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Computes the desired parallelism based on the number of available processors/cores multiplied by the "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "junit.jupiter.execution.parallel.config.dynamic.factor"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " configuration parameter (defaults to "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "1"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": "). The optional "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "junit.jupiter.execution.parallel.config.dynamic.max-pool-size-factor"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " configuration parameter can be used to limit the maximum number of threads."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "dynamic"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Uses the mandatory "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "junit.jupiter.execution.parallel.config.fixed.parallelism"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " configuration parameter as the desired parallelism. The optional "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "junit.jupiter.execution.parallel.config.fixed.max-pool-size"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " configuration parameter can be used to limit the maximum number of threads."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "fixed"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Allows you to specify a custom "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ParallelExecutionConfigurationStrategy"
+                                }
+                              ],
+                              "kind": "xref",
+                              "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/support/hierarchical/ParallelExecutionConfigurationStrategy.html"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " implementation via the mandatory "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "junit.jupiter.execution.parallel.config.custom.class"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " configuration parameter to determine the desired configuration."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "custom"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no configuration strategy is set, JUnit Jupiter uses the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dynamic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration strategy with a factor of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "1"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Consequently, the desired parallelism will be equal to the number of available processors/cores."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "By default, JUnit Jupiter does not guarantee that the number of threads used to execute test will not exceed the configured parallelism. For example, when using one of the synchronization mechanisms described in the next section, the executor service implementation may spawn additional threads to ensure execution continues with sufficient parallelism. If you require such guarantees, it is possible to limit the maximum number of threads by configuring the maximum pool size of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dynamic"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "fixed"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "custom"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " strategies."
+                  }
+                ],
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Parallelism alone does not imply maximum number of concurrent threads"
+                  }
+                ],
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "config-strategies",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Strategies"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following table lists relevant properties for configuring parallel execution. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "running-tests/configuration-parameters.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details on how to set such properties."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Enable/disable parallel test execution (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "false"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.enabled=true|false"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Default execution mode of nodes in the test tree (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "same_thread"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.mode.default=concurrent|same_thread"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Default execution mode of top-level classes (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "same_thread"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.mode.classes.default=concurrent|same_thread"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Type of "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "HierarchicalTestExecutorService"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " to use for parallel execution (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "fork_join_pool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.executor-service=fork_join_pool|worker_thread_pool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Execution strategy for desired parallelism, maximum pool size, etc. (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "dynamic"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.strategy=dynamic|fixed|custom"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_general",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "General"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Factor to be multiplied by the number of available processors/cores to determine the desired parallelism for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "dynamic"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy. Must be a positive decimal number (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "1.0"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.dynamic.factor=decimal"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Factor to be multiplied by the number of available processors/cores and the value of "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.dynamic.factor"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " to determine the desired parallelism for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "dynamic"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy. Must be a positive decimal number greater than or equal to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "1.0"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " (defaults to 256 plus the value of "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.dynamic.factor"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " multiplied by the number of available processors/cores)"
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.dynamic.max-pool-size-factor=decimal"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Enable/disable saturation of the underlying "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ForkJoinPool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "dynamic"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "true"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "). Only used if "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.executor-service"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " is set to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "fork_join_pool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.dynamic.saturate=true|false"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_dynamic_strategy",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Dynamic strategy"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Desired parallelism for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "fixed"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy (no default value). Must be a positive integer."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.fixed.parallelism=integer"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Desired maximum pool size of the underlying fork-join pool for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "fixed"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy. Must be a positive integer greater than or equal to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.fixed.parallelism"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " (defaults to 256 plus the value of "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.fixed.parallelism"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ")."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.fixed.max-pool-size=integer"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Enable/disable saturation of the underlying "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ForkJoinPool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "fixed"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy (defaults to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "true"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "). Only used if "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.executor-service"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " is set to "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "fork_join_pool"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": "."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.fixed.saturate=true|false"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_fixed_strategy",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Fixed strategy"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Fully qualified class name of the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "ParallelExecutionConfigurationStrategy"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " to be used for the "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "custom"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " configuration strategy (no default value)."
+                            }
+                          ]
+                        },
+                        "terms": [
+                          [
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "junit.jupiter.execution.parallel.config.custom.class=classname"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_custom_strategy",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Custom strategy"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "config-properties",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Relevant properties"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "config",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to controlling the execution mode using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Execution"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/Execution.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation, JUnit Jupiter provides another annotation-based declarative synchronization mechanism. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation allows you to declare that a test class or method uses a specific shared resource that requires synchronized access to ensure reliable test execution. The shared resource is identified by a unique name which is a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The name can be user-defined or one of the predefined constants in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Resources"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/Resources.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ": "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SYSTEM_PROPERTIES"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SYSTEM_OUT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SYSTEM_ERR"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LOCALE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TIME_ZONE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to declaring these shared resources statically, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation has a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "providers"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute that allows registering implementations of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceLocksProvider"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLocksProvider.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface that can add shared resources dynamically at runtime. Note that resources declared statically with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation are combined with resources added dynamically by "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceLocksProvider"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLocksProvider.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the tests in the following example were run in parallel "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "without"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " the use of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", they would be "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "flaky"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Sometimes they would pass, and at other times they would fail due to the inherent race condition of writing and then reading the same JVM System Property."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When access to shared resources is declared using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation, the JUnit Jupiter engine uses this information to ensure that no conflicting tests are run in parallel. This guarantee extends to lifecycle methods of a test class or method. For example, if a test method is annotated with a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation, the \"lock\" will be acquired before any "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BeforeEach"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods are executed and released after all "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@AfterEach"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods have been executed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If most of your test classes can be run in parallel without any synchronization but you have some test classes that need to run in isolation, you can mark the latter with the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@Isolated"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/Isolated.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation. Tests in such classes are executed sequentially without any other tests running at the same time."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Running tests in isolation"
+              }
+            ],
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that uniquely identifies the shared resource, you may specify an access mode. Two tests that require "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " access to a shared resource may run in parallel with each other but not while any other test that requires "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ_WRITE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " access to the same shared resource is running."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Execution(CONCURRENT)\nclass StaticSharedResourcesDemo {\n\n\tprivate Properties backup;\n\n\t@BeforeEach\n\tvoid backup() {\n\t\tbackup = new Properties();\n\t\tbackup.putAll(System.getProperties());\n\t}\n\n\t@AfterEach\n\tvoid restore() {\n\t\tSystem.setProperties(backup);\n\t}\n\n\t@Test\n\t@ResourceLock(value = SYSTEM_PROPERTIES, mode = READ)\n\tvoid customPropertyIsNotSetByDefault() {\n\t\tassertNull(System.getProperty(\"my.prop\"));\n\t}\n\n\t@Test\n\t@ResourceLock(value = SYSTEM_PROPERTIES, mode = READ_WRITE)\n\tvoid canSetCustomPropertyToApple() {\n\t\tSystem.setProperty(\"my.prop\", \"apple\");\n\t\tassertEquals(\"apple\", System.getProperty(\"my.prop\"));\n\t}\n\n\t@Test\n\t@ResourceLock(value = SYSTEM_PROPERTIES, mode = READ_WRITE)\n\tvoid canSetCustomPropertyToBanana() {\n\t\tSystem.setProperty(\"my.prop\", \"banana\");\n\t\tassertEquals(\"banana\", System.getProperty(\"my.prop\"));\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Declaring shared resources \"statically\" with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation"
+              }
+            ]
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Execution(CONCURRENT)\n@ResourceLock(providers = DynamicSharedResourcesDemo.Provider.class)\nclass DynamicSharedResourcesDemo {\n\n\tprivate Properties backup;\n\n\t@BeforeEach\n\tvoid backup() {\n\t\tbackup = new Properties();\n\t\tbackup.putAll(System.getProperties());\n\t}\n\n\t@AfterEach\n\tvoid restore() {\n\t\tSystem.setProperties(backup);\n\t}\n\n\t@Test\n\tvoid customPropertyIsNotSetByDefault() {\n\t\tassertNull(System.getProperty(\"my.prop\"));\n\t}\n\n\t@Test\n\tvoid canSetCustomPropertyToApple() {\n\t\tSystem.setProperty(\"my.prop\", \"apple\");\n\t\tassertEquals(\"apple\", System.getProperty(\"my.prop\"));\n\t}\n\n\t@Test\n\tvoid canSetCustomPropertyToBanana() {\n\t\tSystem.setProperty(\"my.prop\", \"banana\");\n\t\tassertEquals(\"banana\", System.getProperty(\"my.prop\"));\n\t}\n\n\tstatic class Provider implements ResourceLocksProvider {\n\n\t\t@Override\n\t\tpublic Set<Lock> provideForMethod(List<Class<?>> enclosingInstanceTypes, Class<?> testClass,\n\t\t\t\tMethod testMethod) {\n\t\t\tResourceAccessMode mode = testMethod.getName().startsWith(\"canSet\") ? READ_WRITE : READ;\n\t\t\treturn Set.of(new Lock(SYSTEM_PROPERTIES, mode));\n\t\t}\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Adding shared resources \"dynamically\" with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceLocksProvider"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLocksProvider.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementation"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Also, \"static\" shared resources can be declared for "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "direct"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " child nodes via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "target"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation, the attribute accepts a value from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ResourceLockTarget"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLockTarget.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " enum."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Specifying "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "target = CHILDREN"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in a class-level "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation has the same semantics as adding an annotation with the same "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "value"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "mode"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to each test method and nested test class declared in this class."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This may improve parallelization when a test class declares a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lock, but only a few methods hold a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ_WRITE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lock."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Tests in the following example would run in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SAME_THREAD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " if the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ResourceLock"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/parallel/ResourceLock.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " didn’t have "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "target = CHILDREN"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". This is because the test class declares a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " shared resource, but one test method holds a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "READ_WRITE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lock, which would force the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SAME_THREAD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " execution mode for all the test methods."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Execution(CONCURRENT)\n@ResourceLock(value = \"a\", mode = READ, target = CHILDREN)\npublic class ChildrenSharedResourcesDemo {\n\n\t@ResourceLock(value = \"a\", mode = READ_WRITE)\n\t@Test\n\tvoid test1() throws InterruptedException {\n\t\tThread.sleep(2000L);\n\t}\n\n\t@Test\n\tvoid test2() throws InterruptedException {\n\t\tThread.sleep(2000L);\n\t}\n\n\t@Test\n\tvoid test3() throws InterruptedException {\n\t\tThread.sleep(2000L);\n\t}\n\n\t@Test\n\tvoid test4() throws InterruptedException {\n\t\tThread.sleep(2000L);\n\t}\n\n\t@Test\n\tvoid test5() throws InterruptedException {\n\t\tThread.sleep(2000L);\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Declaring shared resources for child nodes with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "target"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "synchronization",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Synchronization"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Parallel Execution"
+      }
+    ]
+  }
+}

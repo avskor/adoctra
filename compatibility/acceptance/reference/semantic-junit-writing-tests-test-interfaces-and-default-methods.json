@@ -1,0 +1,1158 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "JUnit Jupiter allows "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Test"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@RepeatedTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ParameterizedTest"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestFactory"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestTemplate"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@BeforeEach"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@AfterEach"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " to be declared on interface "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "default"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " methods. "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@BeforeAll"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@AfterAll"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can either be declared on "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "static"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " methods in a test interface or on interface "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "default"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " methods "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "if"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " the test interface or test class is annotated with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@TestInstance(Lifecycle.PER_CLASS)"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " (see "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "writing-tests/test-instance-lifecycle.html"
+              }
+            ],
+            "kind": "xref",
+            "target": "writing-tests/test-instance-lifecycle.html"
+          },
+          {
+            "kind": "text",
+            "value": "). Here are some examples."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@TestInstance(Lifecycle.PER_CLASS)\ninterface TestLifecycleLogger {\n\n\tLogger logger = Logger.getLogger(TestLifecycleLogger.class.getName());\n\n\t@BeforeAll\n\tdefault void beforeAllTests() {\n\t\tlogger.info(\"Before all tests\");\n\t}\n\n\t@AfterAll\n\tdefault void afterAllTests() {\n\t\tlogger.info(\"After all tests\");\n\t}\n\n\t@BeforeEach\n\tdefault void beforeEachTest(TestInfo testInfo) {\n\t\tlogger.info(() -> \"About to execute [%s]\".formatted(\n\t\t\ttestInfo.getDisplayName()));\n\t}\n\n\t@AfterEach\n\tdefault void afterEachTest(TestInfo testInfo) {\n\t\tlogger.info(() -> \"Finished executing [%s]\".formatted(\n\t\t\ttestInfo.getDisplayName()));\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@TestInstance(Lifecycle.PER_CLASS)\ninterface TestLifecycleLogger {\n    @BeforeAll\n    fun beforeAllTests() {\n        logger.info(\"Before all tests\")\n    }\n\n    @AfterAll\n    fun afterAllTests() {\n        logger.info(\"After all tests\")\n    }\n\n    @BeforeEach\n    fun beforeEachTest(testInfo: TestInfo) {\n        logger.info { \"About to execute [${testInfo.displayName}]\" }\n    }\n\n    @AfterEach\n    fun afterEachTest(testInfo: TestInfo) {\n        logger.info { \"Finished executing [${testInfo.displayName}]\" }\n    }\n\n    companion object {\n        private val logger: Logger = Logger.getLogger(TestLifecycleLogger::class.java.name)\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "interface TestInterfaceDynamicTestsDemo {\n\n\t@TestFactory\n\tdefault Stream<DynamicTest> dynamicTestsForPalindromes() {\n\t\treturn Stream.of(\"racecar\", \"radar\", \"mom\", \"dad\")\n\t\t\t.map(text -> dynamicTest(text, () -> assertTrue(isPalindrome(text))));\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "interface TestInterfaceDynamicTestsDemo {\n    @TestFactory\n    fun dynamicTestsForPalindromes(): Sequence<DynamicTest> =\n        sequenceOf(\"racecar\", \"radar\", \"mom\", \"dad\")\n            .map { text -> dynamicTest(text) { assertTrue(isPalindrome(text)) } }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ExtendWith"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Tag"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " can be declared on a test interface so that classes that implement the interface automatically inherit its tags and extensions. See "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Before and After Test Execution Callbacks"
+              }
+            ],
+            "kind": "xref",
+            "target": "extensions/test-lifecycle-callbacks.html#before-after-execution"
+          },
+          {
+            "kind": "text",
+            "value": " for the source code of the "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TimingExtension"
+              }
+            ],
+            "kind": "xref",
+            "target": "extensions/test-lifecycle-callbacks.html#timing-extension"
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Tag(\"timed\")\n@ExtendWith(TimingExtension.class)\ninterface TimeExecutionLogger {\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@Tag(\"timed\")\n@ExtendWith(TimingExtension::class)\ninterface TimeExecutionLogger"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In your test class you can then implement these test interfaces to have them applied."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class TestInterfaceDemo implements TestLifecycleLogger,\n\t\tTimeExecutionLogger, TestInterfaceDynamicTestsDemo {\n\n\t@Test\n\tvoid isEqualValue() {\n\t\tassertEquals(1, \"a\".length(), \"is always equal\");\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class TestInterfaceDemo :\n    TestLifecycleLogger,\n    TimeExecutionLogger,\n    TestInterfaceDynamicTestsDemo {\n    @Test\n    fun isEqualValue() {\n        assertEquals(1, \"a\".length, \"is always equal\")\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Running the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "TestInterfaceDemo"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " results in output similar to the following:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "INFO  example.TestLifecycleLogger - Before all tests\nINFO  example.TestLifecycleLogger - About to execute [dynamicTestsForPalindromes()]\nINFO  example.TimingExtension - Method [dynamicTestsForPalindromes] took 19 ms.\nINFO  example.TestLifecycleLogger - Finished executing [dynamicTestsForPalindromes()]\nINFO  example.TestLifecycleLogger - About to execute [isEqualValue()]\nINFO  example.TimingExtension - Method [isEqualValue] took 1 ms.\nINFO  example.TestLifecycleLogger - Finished executing [isEqualValue()]\nINFO  example.TestLifecycleLogger - After all tests"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Another possible application of this feature is to write tests for interface contracts. For example, you can write tests for how implementations of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Object.equals"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Comparable.compareTo"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " should behave as follows."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public interface Testable<T> {\n\n\tT createValue();\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "interface Testable<T> {\n    fun createValue(): T\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public interface EqualsContract<T> extends Testable<T> {\n\n\tT createNotEqualValue();\n\n\t@Test\n\tdefault void valueEqualsItself() {\n\t\tT value = createValue();\n\t\tassertEquals(value, value);\n\t}\n\n\t@Test\n\tdefault void valueDoesNotEqualNull() {\n\t\tT value = createValue();\n\t\tassertNotEquals(null, value);\n\t}\n\n\t@Test\n\tdefault void valueDoesNotEqualDifferentValue() {\n\t\tT value = createValue();\n\t\tT differentValue = createNotEqualValue();\n\t\tassertNotEquals(value, differentValue);\n\t\tassertNotEquals(differentValue, value);\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "interface EqualsContract<T> : Testable<T> {\n    fun createNotEqualValue(): T\n\n    @Test\n    fun valueEqualsItself() {\n        val value = createValue()\n        assertEquals(value, value)\n    }\n\n    @Test\n    fun valueDoesNotEqualNull() {\n        val value = createValue()\n        assertNotEquals(null, value)\n    }\n\n    @Test\n    fun valueDoesNotEqualDifferentValue() {\n        val value = createValue()\n        val differentValue = createNotEqualValue()\n        assertNotEquals(value, differentValue)\n        assertNotEquals(differentValue, value)\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public interface ComparableContract<T extends Comparable<T>> extends Testable<T> {\n\n\tT createSmallerValue();\n\n\t@Test\n\tdefault void returnsZeroWhenComparedToItself() {\n\t\tT value = createValue();\n\t\tassertEquals(0, value.compareTo(value));\n\t}\n\n\t@Test\n\tdefault void returnsPositiveNumberWhenComparedToSmallerValue() {\n\t\tT value = createValue();\n\t\tT smallerValue = createSmallerValue();\n\t\tassertTrue(value.compareTo(smallerValue) > 0);\n\t}\n\n\t@Test\n\tdefault void returnsNegativeNumberWhenComparedToLargerValue() {\n\t\tT value = createValue();\n\t\tT smallerValue = createSmallerValue();\n\t\tassertTrue(smallerValue.compareTo(value) < 0);\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "interface ComparableContract<T : Comparable<T>> : Testable<T> {\n    fun createSmallerValue(): T\n\n    @Test\n    fun returnsZeroWhenComparedToItself() {\n        val value = createValue()\n        assertEquals(0, value.compareTo(value))\n    }\n\n    @Test\n    fun returnsPositiveNumberWhenComparedToSmallerValue() {\n        val value = createValue()\n        val smallerValue = createSmallerValue()\n        assertTrue(value > smallerValue)\n    }\n\n    @Test\n    fun returnsNegativeNumberWhenComparedToLargerValue() {\n        val value = createValue()\n        val smallerValue = createSmallerValue()\n        assertTrue(smallerValue < value)\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In your test class you can then implement both contract interfaces thereby inheriting the corresponding tests. Of course you’ll have to implement the abstract methods."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class StringTests implements ComparableContract<String>, EqualsContract<String> {\n\n\t@Override\n\tpublic String createValue() {\n\t\treturn \"banana\";\n\t}\n\n\t@Override\n\tpublic String createSmallerValue() {\n\t\treturn \"apple\"; // 'a' < 'b' in \"banana\"\n\t}\n\n\t@Override\n\tpublic String createNotEqualValue() {\n\t\treturn \"cherry\";\n\t}\n\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class StringTests :\n    ComparableContract<String>,\n    EqualsContract<String> {\n    override fun createValue() = \"banana\"\n\n    override fun createSmallerValue() = \"apple\" // 'a' < 'b' in \"banana\"\n\n    override fun createNotEqualValue() = \"cherry\"\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The above tests are merely meant as examples and therefore not complete."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Test Interfaces and Default Methods"
+      }
+    ]
+  }
+}

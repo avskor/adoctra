@@ -289,9 +289,10 @@ class ResourceFixtureTests(unittest.TestCase):
         for case in [{"resources": {}}, {"profile": "include-body-dom-v1"}]:
             with self.assertRaises(ValueError):
                 validate_resources(case)
-        # An Antora resource id from another module is a plain file name.
-        validate_resources({"profile": "include-body-dom-v1",
-                            "resources": {"html-backend:example$my-document.adoc": "x"}})
+        # A module-qualified Antora id is a URI to Asciidoctor, never a file.
+        with self.assertRaises(ValueError):
+            validate_resources({"profile": "include-body-dom-v1",
+                                "resources": {"html-backend:example$my-document.adoc": "x"}})
 
     def test_both_renderers_use_the_same_isolated_utf8_tree(self):
         case = {"profile": "include-body-dom-v1", "source": "include::sub/я.adoc[]\r\n",

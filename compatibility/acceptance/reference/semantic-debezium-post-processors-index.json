@@ -1,0 +1,360 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Post processors perform lightweight, per-message mutations, similar to the modifications that are performed by single message transformations (SMTs). However, Debezium calls post processors earlier in the event chain than transformations, enabling post processors to act on messages before they are handed off to the messaging runtime. Because post processors can act on messages from within the Debezium context, they are more efficient at modifying event payloads than transformations."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "For a transformation to modify a message, it must recreate the message’s immutable "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ConnectRecord"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", or more aptly, its "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SourceRecord"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". By contrast, because a post processor acts within the Debezium scope, it can operate on mutable "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Struct"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " types in the event payload of a message, modifying payloads before the construction of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "SourceRecord"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". Close integration with Debezium provides post processors with access to Debezium internals, such as Debezium metadata about database connections, relational schema model, and so forth. In turn, this access enhances efficiency when performing tasks that rely on such internal information."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Debezium provides the following post processor implementations:"
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "autowidth": false,
+        "body": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "document": {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Reselect columns"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "post-processors/reselect-columns.html"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "title": null
+              },
+              "halign": "left",
+              "rowspan": 1,
+              "style": "asciidoc",
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "document": {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Re-selects specific columns that may not have been provided by the change event, such as TOASTed columns or Oracle LOB columns that were not modified by the current event’s change."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "title": null
+              },
+              "halign": "left",
+              "rowspan": 1,
+              "style": "asciidoc",
+              "valign": "top"
+            }
+          ],
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "document": {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "S3 large message"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "post-processors/s3-large-message.html"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "title": null
+              },
+              "halign": "left",
+              "rowspan": 1,
+              "style": "asciidoc",
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "document": {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Offloads large "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "STRING"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "BYTES"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " field values from change event records to Amazon S3, replacing the in-message value with a compact inline reference."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "title": null
+              },
+              "halign": "left",
+              "rowspan": 1,
+              "style": "asciidoc",
+              "valign": "top"
+            }
+          ]
+        ],
+        "caption": null,
+        "columns": [
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": "asciidoc",
+            "valign": "top",
+            "width": "30"
+          },
+          {
+            "autowidth": false,
+            "halign": "left",
+            "style": "asciidoc",
+            "valign": "top",
+            "width": "70"
+          }
+        ],
+        "context": "table",
+        "explicit_width": false,
+        "float": null,
+        "foot": [],
+        "frame": "all",
+        "grid": "all",
+        "head": [
+          [
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Post Processor"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            },
+            {
+              "background": null,
+              "colspan": 1,
+              "halign": "left",
+              "inlines": [
+                {
+                  "kind": "text",
+                  "value": "Description"
+                }
+              ],
+              "rowspan": 1,
+              "style": null,
+              "valign": "top"
+            }
+          ]
+        ],
+        "id": null,
+        "options": [
+          "header"
+        ],
+        "roles": [],
+        "stripes": null,
+        "title": null,
+        "width": 100
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Post processors are designed to modify change event records emitted by Debezium source connectors only."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You cannot configure the Debezium JDBC sink connector to use a post processor."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": null,
+        "type": "important"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Post Processors"
+      }
+    ]
+  }
+}

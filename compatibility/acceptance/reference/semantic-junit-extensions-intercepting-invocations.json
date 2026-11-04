@@ -1,0 +1,187 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "InvocationInterceptor"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/InvocationInterceptor.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " defines the API for "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Extensions"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " that wish to intercept calls to test code."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows an extension that executes all test methods in Swing’s Event Dispatch Thread."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "public class SwingEdtInterceptor implements InvocationInterceptor {\n\n\t@Override\n\tpublic void interceptTestMethod(Invocation<Void> invocation,\n\t\t\tReflectiveInvocationContext<Method> invocationContext,\n\t\t\tExtensionContext extensionContext) throws Throwable {\n\n\t\tAtomicReference<Throwable> throwable = new AtomicReference<>();\n\n\t\tSwingUtilities.invokeAndWait(() -> {\n\t\t\ttry {\n\t\t\t\tinvocation.proceed();\n\t\t\t}\n\t\t\tcatch (Throwable t) {\n\t\t\t\tthrowable.set(t);\n\t\t\t}\n\t\t});\n\t\tThrowable t = throwable.get();\n\t\tif (t != null) {\n\t\t\tthrow t;\n\t\t}\n\t}\n}"
+          }
+        ],
+        "language": "java",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "An extension that executes tests in a user-defined thread"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You may override the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getTestInstantiationExtensionContextScope(…​)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method to return "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TEST_METHOD"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to make test-specific data available to your extension implementation of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "interceptTestClassConstructor"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or if you want to "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "keep state"
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/keeping-state-in-extensions.html"
+              },
+              {
+                "kind": "text",
+                "value": " on the test method level."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Accessing the test-scoped "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExtensionContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ],
+        "type": "note"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Intercepting Invocations"
+      }
+    ]
+  }
+}

@@ -2848,3 +2848,38 @@ and not compared (PDF/DocBook only) on both sides. `semantics.py` maps
 adoctra's standalone discrete `heading` and `break` blocks. Probe
 `semantic-floating-breaks-bibref`; five full-docs pages returned to the
 profile (616 + 152 = 768 PASS); three stay out by design (diagnostics, raw).
+
+**Full JUnit and Debezium docs; import corrections** (2026-11-04):
+`import_docs.py` gained `--component` (JUnit/Debezium use `documentation/`),
+`--collect SRC=INTO` (an Antora collector: JUnit's `src/test` →
+`modules/ROOT/examples`) and `--refresh` (recompute imported pages'
+resources). Include targets are read line by line with `Attributes` (host
+values, hard ones locked, soft `@` overridable, plus the files' own entries,
+e.g. `frag-{context}`); a plain path resolves from the module directory (the
+fixture root), a nested include from the including file's directory, up to
+depth 64. A module-qualified id (`mod:example$x`) is a URI to Asciidoctor
+(`UriSniffRx`), so it is no longer registered (the earlier import did; the
+12 affected pages were regenerated and `validate_resources` forbids `:`
+again). Core fix: a description whose text starts on the next line keeps
+its first line in `adjust_indentation!` (`item_text` takes the content from
+the line start; `fold_indentation` includes that line): mixed space/tab
+indents keep the remainder (`    a`/`\tb` → `   a`). Semantic profile: block
+image `caption` compared (like tables); same-kind crossing spans
+(```` ```x``` ````) close the innermost span of their kind on both sides
+(`same_kind?` in the oracle, `('format', name)` closing in `semantics.py`);
+a passthrough in a link target is restored with the block's
+`restore_passthroughs`. Two Debezium pages have Ruby HTML with crossing
+`strong`/`code` tags: out of the body and semantic profiles, adoctra's
+identical output pinned by golden `strong_across_monospace`. Results: body
+788, structure 764, semantics 748 (+152 = 900).
+Visual: `measure.mjs` compares pixels in 2048-row bands (exact counts; the
+diff image of a page over 16M pixels is scaled down); the seven largest
+Debezium connector pages are out of `visual-v1` (`VISUAL_EXCLUSIONS`,
+screenshot timeout/memory). Fixes: `.admonition-content pre` at any depth;
+`li ol.colist.icons { margin-block-end: 1.25rem }` (Ruby's icon colist is a
+table). Visual-only fixtures live in `golden/visual/` (no golden.rs test;
+DOM pinned by the minimal corpus case `callouts-icons-in-list`).
+Without `--screenshots`, `measure.mjs` deletes each pair's PNGs once compared
+(`keep` in the job): /tmp here is a RAM-backed tmpfs, and a full run's
+screenshots exhausted it (ENOSPC, then browser crashes). visual-v1: 2160 of
+2160 match (1080 cases); Rouge 4309 listings / 788 documents.

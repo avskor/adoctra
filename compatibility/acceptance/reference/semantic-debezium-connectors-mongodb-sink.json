@@ -1,0 +1,3209 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "mongodb-sink-overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-architecture",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Architecture and how it works"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-limitations",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Limitations"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "quick-start",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Quick Start (using Kafka Connect)"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Configuration"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-examples",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Example configuration"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-monitoring",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Monitoring"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-key-field-mapping",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Key field mapping"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "mongodb-sink-cloudevents",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Using CloudEvents with Debezium MongoDB Sink Connector"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium MongoDB sink connector captures change event records from Apache Kafka topics and then transforms the records into MongoDB documents that it writes to collections in a specified MongoDB sink database. For applications that require high scalability and fast data retrieval, propagating change data to a cluster-based MongoDB environment, which uses such features as sharding and replica sets to optimize read operations, can significantly improve retrieval performance. The connector can process only change events that originate from a Debezium relational database connector."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For information about the MongoDB versions that are compatible with this connector, see the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium release overview"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://debezium.io/releases/"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium MongoDB sink connector mirrors the state of tables in a relational source database to collections in a MongoDB database by consuming Debezium change events from Kafka topics and applying them as document-level operations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The connector subscribes to Kafka topics that are populated with event messages produced by Debezium relational database source connectors. Each event message describes a database operation (insert, update, or delete) in a structured format that captures the details of the event. The connector transforms incoming change event records into MongoDB document format, and then writes the resulting documents into the target MongoDB collection."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After it receives an event, the connector parses the event payload and determines which MongoDB collection to send it to. Depending on the event type that is specified in the event payload, the connector then performs one of the following operations in the target collection:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "INSERT"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Create document"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "UPDATE"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Modify document with the specified identifier."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "DELETE"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Remove document with the specified identifier."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "70"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Event type in payload"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Resulting operation"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": null,
+            "width": 100
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The connector uses the MongoDB Java driver to interact with the MongoDB database."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The mapping between topics and MongoDB collections is derived from the connector configuration. The document key serves as a unique identifier for the document, ensuring that updates, inserts, and deletions are propagated to the correct MongoDB document and collection, and that operations are applied in the correct order."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Through this process of mapping event messages to MongoDB documents, the connector is able to mirror the state of tables in your relational database to collections in a MongoDB database."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-architecture",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Architecture and how it works"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium MongoDB sink connector has the following limitations:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "ulist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "MariaDB"
+                            }
+                          ]
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "MySQL"
+                            }
+                          ]
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "Oracle"
+                            }
+                          ]
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "PostgreSQL"
+                            }
+                          ]
+                        },
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "SQL Server"
+                            }
+                          ]
+                        }
+                      ],
+                      "roles": [],
+                      "style": null,
+                      "title": null
+                    },
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The connector cannot process change event messages from any other Debezium connectors, including the Debezium MongoDB source connector."
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "The MongoDB sink connector can consume only change events that originate from the Debezium connectors for the following relational databases:"
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Relational database / RDBMS source connectors only"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Although the connector can process basic schema changes, advanced schema evolution scenarios might require manual intervention or specific configuration. Because MongoDB is schemaless, it has only a limited ability to handle schema evolution."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Schema evolution"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "The connector processes individual change events in chronological order, based on the order in which operations are committed in the source system. Although MongoDB supports transactions, the Debezium MongoDB connector does not provide transactional guarantees across multiple CDC events or across multiple documents within a single sink task."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Transaction Support"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-limitations",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Limitations"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Deploy a basic instance of the MongoDB sink connector for testing."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following components are available and running in your environment:"
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Prerequisites"
+              }
+            ]
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka cluster"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka Connect"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A MongoDB instance."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium relational database connector"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium MongoDB connector"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configure and start a Debezium source connector, for example, a Debezium PostgreSQL Connector, to stream changes from a relational database to Kafka."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The following example provides a minimal configuration for a Debezium MongoDB sink connector. Replace the placeholders in the example with the actual values for your environment."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{\n  \"name\": \"mongodb-sink-connector\",\n  \"config\": {\n    \"connector.class\": \"io.debezium.connector.mongodb.sink.MongoDbSinkConnector\",\n    \"topics.regex\": \"server1\\.inventory\\..*\",\n    \"mongodb.connection.string\": \"mongodb://localhost:27017\",\n    \"sink.database\": \"debezium\"\n  }\n}"
+                      }
+                    ],
+                    "language": "json",
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configure and start the Debezium MongoDB sink connector to consume events that the source connector emits to Kafka, and send them to a MongoDB sink database."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Procedure"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "quick-start",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Quick Start (using Kafka Connect)"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The MongoDB sink connector accepts a variety of configuration options, as described in following tables."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "connector.class"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "No default value"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Must be set to "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "io.debezium.connector.mongodb.sink.MongoDbSinkConnector"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "tasks.max"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "1"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Maximum number of tasks."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "topics"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "topics.regex"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "No default value"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "List of Kafka topics to consume from. If you set this value to "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "topics.regex"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", the connector consumes from all topics that match the regular expression."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 1. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "45"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Default"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Required Kafka Connect sink connector configuration properties"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-connection-string",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "mongodb.connection.string"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-connection-string"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "No default value"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "MongoDB connection string (URI) that the sink uses to connect to MongoDB. This URI follows the standard MongoDB connection string format."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Example: "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "mongodb://localhost:27017/?replicaSet=my-replica-set"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-sink-database",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "sink.database"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-sink-database"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "No default value"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Name of the target MongoDB database."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 2. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "45"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Default"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Required MongoDB connection properties"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-collection-naming-strategy",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "collection.naming.strategy"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-collection-naming-strategy"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "io.debezium.sink.naming.DefaultCollectionNamingStrategy"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Specifies the strategy that the connector uses to derive the name of the target MongoDB collection from the name of the Kafka topic."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Specify one of the following values:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "The connector takes the table name directly from the topic name, replacing dot (period) characters in the name of the source topic with underscores."
+                                }
+                              ]
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "io.debezium.sink.naming.DefaultCollectionNamingStrategy"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "You can provide your own "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "CollectionNameStrategy"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " implementation."
+                                }
+                              ]
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Custom implementation"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-collection-name-format",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "collection.name.format"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-collection-name-format"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "${topic}"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Template for deriving the target collection name from the Kafka topic name."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-column-naming-strategy",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "column.naming.strategy"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-column-naming-strategy"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "io.debezium.sink.naming.DefaultColumnNamingStrategy"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Specifies the strategy that the connector uses to name columns in the target collection."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Specify one of the following values:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "dlist",
+                        "id": null,
+                        "items": [
+                          {
+                            "description": {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Use the original field name as the column name."
+                                }
+                              ]
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "io.debezium.sink.naming.DefaultColumnNamingStrategy"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            ]
+                          },
+                          {
+                            "description": {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Specify a custom "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "CollectionNameStrategy"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " implementation."
+                                }
+                              ]
+                            },
+                            "terms": [
+                              [
+                                {
+                                  "kind": "text",
+                                  "value": "Custom implementation"
+                                }
+                              ]
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 3. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "45"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Default"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Sink behavior configuration"
+              }
+            ],
+            "width": 100
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-field-include-list",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "field.include.list"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-field-include-list"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "empty string"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "An optional, comma-separated list of field names that match the fully-qualified names of fields to include from the change event value. Fully-qualified names for fields are of the form "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "fieldName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "topicName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ":"
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "fieldName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If you include this property in the configuration, do not set the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "field.exclude.list"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " property."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-field-exclude-list",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "field.exclude.list"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-field-exclude-list"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "empty string"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "An optional, comma-separated list of field names that match the fully-qualified names of fields to exclude from the change event value. Fully-qualified names for fields are of the form "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "fieldName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "topicName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ":"
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "fieldName"
+                                  }
+                                ],
+                                "kind": "emphasis",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "If you include this property in the configuration, do not set the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "field.include.list"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " property."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-batch-size",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "batch.size"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-batch-size"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "2048"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Maximum number of records to write in a single batch."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 4. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "45"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Default"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Common sink options"
+              }
+            ],
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example demonstrates a connector configuration that reads change events from specific topics in a relational database and writes the resulting documents to a MongoDB sink database. The example configures the connector to capture change events from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dbserver1.inventory.customers"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dbserver1.inventory.orders"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dbserver1.inventory.products"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " topics and writes the data to documents in a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "debezium"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " collection in the MongoDB sink database."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how you might configure the connector to read change events from three specific topics from the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dbserver1.inventory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " database to modify a collection in the MongoDB sink database named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "debezium"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n    \"name\": \"mongodb-sink-connector\",\n    \"config\": {\n        \"connector.class\": \"io.debezium.connector.mongodb.sink.MongoDbSinkConnector\",\n        \"topics\": \"dbserver1.inventory.customers,dbserver1.inventory.orders,dbserver1.inventory.products\",\n        \"mongodb.connection.string\": \"mongodb://localhost:27017\",\n        \"sink.database\": \"debezium\"\n    }\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-examples",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Example configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This release of the connector does not expose any metrics."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-monitoring",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Monitoring"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the connector processes events, it maps data to specific fields in the target MongoDB document."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Keys from Debezium change events, such as Kafka message keys, are mapped to the MongoDB "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "_id"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " field by default."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Values are mapped into MongoDB documents."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Updates and deletes are resolved based on the key field mapping."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows an event key in a Kafka topic:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n    \"userId\": 1,\n    \"orderId\": 1\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Based on the mapping logic, the preceding key is mapped to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "_id"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " field in a MongoDB document, as showin in the following example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n    \"_id\": {\n        \"userId\": 1,\n        \"orderId\": 1\n    }\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-key-field-mapping",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Key field mapping"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium MongoDB sink connector can consume records serialized as CloudEvents. Debezium can emit change events in CloudEvents format, so that the event payload is encapsulated in a standardized envelope."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you enable CloudEvents on the source connector, the MongoDB sink connector parses the CloudEvents envelope."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The actual Debezium event payload is extracted from the data section."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The event is then applied to the target MongoDB collection, following the standard insert, update, or delete semantics."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This process makes it possible to integrate Debezium with broader event-driven systems while still persisting the resulting events in MongoDB."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": "mongodb-sink-property-cloud-events",
+                            "kind": "anchor"
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "cloud.events.schema.name.pattern"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "#mongodb-sink-property-cloud-events"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": ".*CloudEvents\\.Envelope$"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Regular expression pattern to identify CloudEvents messages by matching the schema name with this pattern."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": [
+              {
+                "kind": "text",
+                "value": "Table 5. "
+              }
+            ],
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "30"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "25"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": "asciidoc",
+                "valign": "top",
+                "width": "45"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Default"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "CloudEvents sink options"
+              }
+            ],
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "mongodb-sink-cloudevents",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Using CloudEvents with Debezium MongoDB Sink Connector"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Debezium sink connector for MongoDB"
+      }
+    ]
+  }
+}

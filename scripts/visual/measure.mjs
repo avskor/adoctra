@@ -1,7 +1,8 @@
 // Browser driver of the visual-v1 profile; scripts/visual.py owns the corpus,
 // the comparison and the baseline. Input: a JSON job file
 //   { "pairs": [{ "id", "ruby", "adoctra" }], "viewports": [{ "name", "width", "height" }],
-//     "out": "<screenshot dir>", "threshold": 0.1, "jobs": 4 }
+//     "out": "<screenshot dir>", "threshold": 0.1, "jobs": 4, "keep": false }
+// Without "keep" each pair's screenshots are removed once compared.
 // Output (stdout): one JSON object per pair and viewport.
 //
 // Every non-blank word rendered in the page is measured with a DOM Range: its
@@ -10,7 +11,7 @@
 // only visible to the pixel comparison. Pages load offline: any request that
 // is not a file: URL is aborted and reported, on both sides alike.
 import { chromium } from 'playwright-core';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -73,8 +74,14 @@ function extract(props) {
 }
 
 // pixelmatch's YIQ colour distance without anti-aliasing detection; both
-// images are placed on a white canvas of the larger size.
+// images are placed on a white canvas of the larger size. The pages are
+// compared in bands of rows, so a very tall page (a Debezium connector
+// reference is ~185000 px tall on mobile) does not hold full-size pixel
+// arrays at once; every pixel is still counted. The diff image, only a
+// diagnostic, is scaled down to at most DIFF_PIXELS pixels for such a page.
 function compare(a, b, threshold) {
+  const BAND = 2048;
+  const DIFF_PIXELS = 16e6;
   const load = (src) => new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
@@ -84,46 +91,57 @@ function compare(a, b, threshold) {
   return Promise.all([load(a), load(b)]).then(([ia, ib]) => {
     const w = Math.max(ia.width, ib.width);
     const h = Math.max(ia.height, ib.height);
-    const pixels = (img) => {
+    const canvas = (width, height) => {
       const c = document.createElement('canvas');
-      c.width = w;
-      c.height = h;
-      const g = c.getContext('2d');
-      g.fillStyle = '#fff';
-      g.fillRect(0, 0, w, h);
-      g.drawImage(img, 0, 0);
-      return g.getImageData(0, 0, w, h).data;
+      c.width = width;
+      c.height = height;
+      return [c, c.getContext('2d', { willReadFrequently: true })];
     };
-    const pa = pixels(ia);
-    const pb = pixels(ib);
-    const out = document.createElement('canvas');
-    out.width = w;
-    out.height = h;
-    const og = out.getContext('2d');
-    const diff = og.createImageData(w, h);
-    const out8 = diff.data;
+    const [, ga] = canvas(w, BAND);
+    const [, gb] = canvas(w, BAND);
+    const [bandCanvas, gd] = canvas(w, BAND);
+    const scale = Math.min(1, Math.sqrt(DIFF_PIXELS / (w * h)));
+    const [out, og] = canvas(Math.max(1, Math.round(w * scale)), Math.max(1, Math.round(h * scale)));
+    const rows = (g, img, top, height) => {
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, w, height);
+      g.drawImage(img, 0, -top);
+      return g.getImageData(0, 0, w, height).data;
+    };
     const max = 35215 * threshold * threshold;
     let different = 0;
-    for (let i = 0; i < pa.length; i += 4) {
-      const dr = pa[i] - pb[i];
-      const dg = pa[i + 1] - pb[i + 1];
-      const db = pa[i + 2] - pb[i + 2];
-      const y = dr * 0.29889531 + dg * 0.58662247 + db * 0.11448223;
-      const iq = dr * 0.59597799 - dg * 0.2741761 - db * 0.32180189;
-      const q = dr * 0.21147017 - dg * 0.52261711 + db * 0.31114694;
-      const delta = 0.5053 * y * y + 0.299 * iq * iq + 0.1957 * q * q;
-      if (delta > max) {
-        different++;
-        out8[i] = 255;
-        out8[i + 1] = 0;
-        out8[i + 2] = 0;
-      } else {
-        const grey = 255 - (255 - (pa[i] + pa[i + 1] + pa[i + 2]) / 3) * 0.1;
-        out8[i] = out8[i + 1] = out8[i + 2] = grey;
+    for (let top = 0; top < h; top += BAND) {
+      const height = Math.min(BAND, h - top);
+      const pa = rows(ga, ia, top, height);
+      const pb = rows(gb, ib, top, height);
+      const diff = gd.createImageData(w, height);
+      const out8 = diff.data;
+      for (let i = 0; i < pa.length; i += 4) {
+        const dr = pa[i] - pb[i];
+        const dg = pa[i + 1] - pb[i + 1];
+        const db = pa[i + 2] - pb[i + 2];
+        const y = dr * 0.29889531 + dg * 0.58662247 + db * 0.11448223;
+        const iq = dr * 0.59597799 - dg * 0.2741761 - db * 0.32180189;
+        const q = dr * 0.21147017 - dg * 0.52261711 + db * 0.31114694;
+        const delta = 0.5053 * y * y + 0.299 * iq * iq + 0.1957 * q * q;
+        if (delta > max) {
+          different++;
+          out8[i] = 255;
+          out8[i + 1] = 0;
+          out8[i + 2] = 0;
+        } else {
+          const grey = 255 - (255 - (pa[i] + pa[i + 1] + pa[i + 2]) / 3) * 0.1;
+          out8[i] = out8[i + 1] = out8[i + 2] = grey;
+        }
+        out8[i + 3] = 255;
       }
-      out8[i + 3] = 255;
+      if (scale === 1) {
+        og.putImageData(diff, 0, top);
+      } else {
+        gd.putImageData(diff, 0, 0);
+        og.drawImage(bandCanvas, 0, 0, w, height, 0, top * scale, w * scale, height * scale);
+      }
     }
-    og.putImageData(diff, 0, 0);
     return { width: w, height: h, different, total: w * h, image: out.toDataURL('image/png') };
   });
 }
@@ -190,7 +208,11 @@ async function main() {
         const png = (side) => 'data:image/png;base64,' + readFileSync(`${base}-${side}.png`).toString('base64');
         const { image, ...pixels } = await scratch.evaluate(
           ([a, b, t]) => compare(a, b, t), [png('ruby'), png('adoctra'), job.threshold]);
-        writeFileSync(`${base}-diff.png`, Buffer.from(image.split(',')[1], 'base64'));
+        if (job.keep) {
+          writeFileSync(`${base}-diff.png`, Buffer.from(image.split(',')[1], 'base64'));
+        } else {
+          for (const side of ['ruby', 'adoctra']) rmSync(`${base}-${side}.png`, { force: true });
+        }
         process.stdout.write(JSON.stringify({ id: pair.id, viewport: viewport.name, ruby, adoctra, pixels }) + '\n');
       } catch (error) {
         process.stdout.write(JSON.stringify({ id: pair.id, viewport: viewport.name, error: String(error) }) + '\n');

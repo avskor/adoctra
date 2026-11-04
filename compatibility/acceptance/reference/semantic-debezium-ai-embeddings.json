@@ -1,0 +1,3040 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_behavior",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Behavior"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Configuration"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_general_configuration_options",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "General configuration options"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "_model_provider_configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Model provider configuration"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_hugging_face",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Hugging Face"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_ollama",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Ollama"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_onnx_minilm",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "ONNX MiniLM"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_openai",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "OpenAI"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_voyage_ai",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Voyage AI"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One important task that must be performed to prepare content for use in large language models, or for natural language processing in general, is to convert text to a numeric representation, also known as text vectorization. One way to implement this conversion is through so-called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "text embeddings"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", a process in which text is converted to high-dimensional numerical vectors. Representing text as a vector enables computers to perform semantic similarity searches and other advanced operations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium offers a built-in feature to transform specified text fields into numerical embeddings vectors, and to add the resulting embeddings to the event record. Embedding inference is performed according to the embeddings model served by the configured provider. Debezium offers several embeddings model providers."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium can use a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "single message transformation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://kafka.apache.org/documentation/#connect_transforms"
+              },
+              {
+                "kind": "text",
+                "value": " (SMT) to generate embeddings. To interact with different embeddings providers, this Embeddings transformation uses the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "langchain4j"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://docs.langchain4j.dev/"
+              },
+              {
+                "kind": "text",
+                "value": " framework."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Embeddings transformation requires Java 21 or higher."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "important"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Embeddings transformation takes as input specific fields in the original event record, and passes the text content of those fields to the configured embedding model for inference. That is, the SMT creates embeddings from the text contained in the specified fields. The resulting embeddings are appended to the record. The original source field is also preserved in the record."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The source field must be a string field. The value of an embedding field is a vector of floating-point 32-bit numbers. The size of the vector depends on the selected model. To provide the internal representation of an embedding, Debezium uses the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FloatVector"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/debezium/blob/main/debezium-connector-common/src/main/java/io/debezium/data/vector/FloatVector.java"
+              },
+              {
+                "kind": "text",
+                "value": " data type. The schema type of the embedding field in the record is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "io.debezium.data.FloatVector"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Both source field and embedding field specifications support nested structures, such as, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "after.product_description_embedding"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_behavior",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Behavior"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To configure a connector to use the embeddings transformation, add the following lines to your connector configuration:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transforms=embeddings,\ntransforms.embeddings.type=io.debezium.ai.embeddings.FieldToEmbedding"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You must specify at least one field to use as the input for the embedding. Destination field where the embedding will be placed is not mandatory. If it’s not specified, message value will contain only the embedding itself. However, it’s recommended to specify the embedding destination field, for example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transforms.embeddings.field.source=after.product\ntransforms.embeddings.field.embedding=after.product_embedding"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Finally, you must place the model provider JAR file in the connector class path, and configure the provider. For example, for the Ollama provider, add "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "debezium-ai-embeddings-ollama-$VERSION.jar"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to your connector class path, and add the Ollama URL and model name to the connector configuration, as shown in the following example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transforms.embeddings.ollama.url=http://localhost:11434\ntransforms.embeddings.ollama.model.name=all-minilm"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows what the full configuration for an Ollama provider might look like:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transforms=embeddings,\ntransforms.embeddings.type=io.debezium.ai.embeddings.FieldToEmbedding\ntransforms.embeddings.field.source=after.product\ntransforms.embeddings.field.embedding=after.product_embedding\ntransforms.embeddings.ollama.url=http://localhost:11434\ntransforms.embeddings.ollama.model.name=all-minilm"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-source-field",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.field.source"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-source-field"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Specifies the field in the source record to use as an input for the embeddings. The data type of the specified field must be "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "string"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": "."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-embedding-field",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.field.embedding"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-embedding-field"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Specifies the name of the field that the SMT adds to the record to contain the text embedding. If no value is specified, the resulting record contains only the embedding value."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 1. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Option"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Descriptions of embedding SMT configuration options"
+                  }
+                ],
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_general_configuration_options",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "General configuration options"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Embeddings provided by models available via "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hugging Face"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://huggingface.co//"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-huggingface-access-token",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.huggingface.access.token"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-huggingface-access-token"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Hugging Face access token."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-huggingface-model-name",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.huggingface.model.name"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-huggingface-model-name"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Name of the embedding model. Use the REST API to retrieve the list of available models. Specify the provider in the REST call, for example, "
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Hugging Face inference provider"
+                                  }
+                                ],
+                                "kind": "link",
+                                "target": "https://huggingface.co/api/models?inference_provider=hf-inference"
+                              },
+                              {
+                                "kind": "text",
+                                "value": "."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-huggingface-baseurl",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.huggingface.baseUrl"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-huggingface-baseurl"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "https://api-inference.huggingface.co/"
+                                  }
+                                ],
+                                "kind": "link",
+                                "target": "https://api-inference.huggingface.co/"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The base Hugging Face inference API URL."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-huggingface-operation-timeout-ms",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.huggingface.operation.timeout.ms"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-huggingface-operation-timeout-ms"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "15000 (15 seconds)"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Maximum amount of time in milliseconds to wait for the embeddings reply."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 2. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Option"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Configuration options for Hugging Face embeddings"
+                  }
+                ],
+                "width": 100
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Hugging Face started to support different "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "embedding inference providers"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://huggingface.co/blog/inference-providers"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ", including "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "external providers"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://huggingface.co/docs/inference-providers/en/index"
+                      },
+                      {
+                        "kind": "text",
+                        "value": ". However, the LangChain4j framework does not yet support external providers. As a result, the only inference provider currently available for use with the Debezium is the Hugging Face provider."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "_hugging_face",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Hugging Face"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Supports any model provided by "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Ollama"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://ollama.com/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " server."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-ollama-url",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.ollama.url"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-ollama-url"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "URL of the Ollama server, including port number, for example, "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "http://localhost:11434"
+                                      }
+                                    ],
+                                    "kind": "link",
+                                    "target": "http://localhost:11434"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": "."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-ollama-model-name",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.ollama.model.name"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-ollama-model-name"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Name of the embedding model."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-ollama-operation-timeout-ms",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.ollama.operation.timeout.ms"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-ollama-operation-timeout-ms"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "15000 (15 seconds)"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Maximum amount of time in milliseconds to wait for the embeddings reply."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 3. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Option"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Ollama embeddings configuration options"
+                  }
+                ],
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_ollama",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Ollama"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Provides the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ONNX in-process"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.langchain4j.dev/integrations/embedding-models/in-process"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "all-minilm-l6-v2"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " model, which is included directly in the jar file. No other configuration besides the general one is needed."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This model is especially suited to prototyping and testing, because it does not depend on any external infrastructure or remote requests."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_onnx_minilm",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "ONNX MiniLM"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Embeddings provided by "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OpenAI"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://platform.openai.com/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " models."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-openai-api-key",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.openai.api.key"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-openai-api-key"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The OpenAI API key."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-openai-model-name",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.openai.model.name"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-openai-model-name"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Name of the embedding model. The list of OpenAI embedding models can be found in the "
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "OpenAI Embeddings documentation"
+                                  }
+                                ],
+                                "kind": "link",
+                                "target": "https://platform.openai.com/docs/guides/embeddings"
+                              },
+                              {
+                                "kind": "text",
+                                "value": "."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-openai-baseurl",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.openai.baseUrl"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-openai-baseurl"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Default OpenAI API URL"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Base OpenAI API URL. If not provided, the default OpenAI client URL is used."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-openai-organization-id",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.openai.organization.id"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-openai-organization-id"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Organization ID for the OpenAI API."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-openai-operation-timeout-ms",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.openai.operation.timeout.ms"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-openai-operation-timeout-ms"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "15000 (15 seconds)"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Maximum amount of time in milliseconds to wait for the embeddings reply."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 4. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Option"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "OpenAI embeddings configuration options"
+                  }
+                ],
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_openai",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "OpenAI"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Embeddings provided by "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Voyage AI"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.voyageai.com/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " models."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-voyageai-access-token",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.voyageai.access.token"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-voyageai-access-token"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The Voyage AI access token."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-voyageai-model-name",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.voyageai.model.name"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-voyageai-model-name"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "No default value"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Name of the embedding model. The list of Voyage AI models can be found in the "
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "Voyage AI Text Embeddings documentation"
+                                  }
+                                ],
+                                "kind": "link",
+                                "target": "https://docs.voyageai.com/docs/embeddings"
+                              },
+                              {
+                                "kind": "text",
+                                "value": "."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-voyageai-baseurl",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.voyageai.baseUrl"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-voyageai-baseurl"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "https://api.voyageai.com/v1/"
+                                  }
+                                ],
+                                "kind": "link",
+                                "target": "https://api.voyageai.com/v1/"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Base Voyage AI API server."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": "embeddings-voyageai-operation-timeout-ms",
+                                "kind": "anchor"
+                              },
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "embeddings.voyageai.operation.timeout.ms"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "#embeddings-voyageai-operation-timeout-ms"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "15000 (15 seconds)"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Maximum amount of time in milliseconds to wait for the embeddings reply."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": [
+                  {
+                    "kind": "text",
+                    "value": "Table 5. "
+                  }
+                ],
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Option"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Description"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [
+                  "header"
+                ],
+                "roles": [],
+                "stripes": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Voyage AI embeddings configuration options"
+                  }
+                ],
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_voyage_ai",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Voyage AI"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_model_provider_configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Model provider configuration"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Embeddings Transformation"
+      }
+    ]
+  }
+}

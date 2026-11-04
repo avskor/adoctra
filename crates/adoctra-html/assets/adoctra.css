@@ -277,16 +277,17 @@ pre:is(.listing, .literalblock, .highlight) {
 }
 pre.nowrap { white-space: pre; overflow-wrap: normal; }
 /* In an admonition Ruby's verbatim wrapper inherits the content cell's
-   17px, so the sizes and margin are relative to it again. */
-.admonition-content > pre:is(.listing, .literalblock, .highlight) {
+   17px (at any depth: an open block or list in it keeps that size), so the
+   sizes and margin are relative to it again. */
+.admonition-content pre:is(.listing, .literalblock, .highlight) {
   margin-block-end: 1.328125rem; /* 1.25em of the 17px wrapper */
   font-size: 0.8125em;
 }
 @media screen and (min-width: 768px) {
-  .admonition-content > pre:is(.listing, .literalblock, .highlight) { font-size: 0.90625em; }
+  .admonition-content pre:is(.listing, .literalblock, .highlight) { font-size: 0.90625em; }
 }
 @media screen and (min-width: 1280px) {
-  .admonition-content > pre:is(.listing, .literalblock, .highlight) { font-size: 1em; }
+  .admonition-content pre:is(.listing, .literalblock, .highlight) { font-size: 1em; }
 }
 /* Client-side highlighters, like Ruby's stylesheet: a highlight.js theme
    paints the `code` (the padding moves there), prettify's theme border and
@@ -933,6 +934,9 @@ pre + ol.colist { margin-block-start: -0.5em; }
    and cells at the 16px base. */
 ol.colist.icons { list-style: none; padding-inline-start: 0; margin-inline-start: 0; }
 ol.colist.icons > li { display: grid; grid-template-columns: auto 1fr; margin-block-end: 0; }
+/* Ruby's icon callouts are a table, whose 1.25em margin (16px text) stays
+   inside a list item, unlike a nested list's 0.625em. */
+li ol.colist.icons { margin-block-end: 1.25rem; }
 ol.colist.icons > li > .colist-icon { padding: 0.4em 0.75em 0; line-height: 1; font-size: 1rem; }
 ol.colist.icons > li > .colist-icon img { max-width: none; vertical-align: middle; }
 ol.colist.icons > li > div { padding: 0.25em 0; margin-block-start: 0; }

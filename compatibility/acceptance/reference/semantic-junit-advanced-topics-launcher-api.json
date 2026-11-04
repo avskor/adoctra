@@ -1,0 +1,4895 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "One of the prominent goals of the JUnit Platform is to make the interface between JUnit and its programmatic clients – build tools and IDEs – more powerful and stable. The purpose is to decouple the internals of discovering and executing tests from all the filtering and configuration that is necessary from the outside."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JUnit Platform provides a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API that can be used to discover, filter, and execute tests. Moreover, third party test libraries – like Spock or Cucumber – can plug into the JUnit Platform’s launching infrastructure by providing a custom "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestEngine"
+                  }
+                ],
+                "kind": "xref",
+                "target": "advanced-topics/engines.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "launcher api diagram"
+              }
+            ],
+            "attributes": {},
+            "caption": null,
+            "context": "image",
+            "id": null,
+            "roles": [
+              "text-center"
+            ],
+            "src": "launcher-api-diagram.svg",
+            "svg": null,
+            "target": "launcher-api-diagram.svg",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The launcher API is in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-platform-launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/package-summary.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " module."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "An example consumer of the launcher API is the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ConsoleLauncher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.console/org/junit/platform/console/ConsoleLauncher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit-platform-console"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.console/org/junit/platform/console/package-summary.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " project."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Having "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "test discovery"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as a dedicated feature of the platform frees IDEs and build tools from most of the difficulties they had to go through to identify test classes and test methods in previous versions of JUnit."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Usage Example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import static org.junit.platform.engine.discovery.ClassNameFilter.includeClassNamePatterns;\nimport static org.junit.platform.engine.discovery.DiscoverySelectors.selectClass;\nimport static org.junit.platform.engine.discovery.DiscoverySelectors.selectPackage;\nimport static org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder.discoveryRequest;\n\nimport org.junit.platform.launcher.LauncherDiscoveryRequest;\nimport org.junit.platform.launcher.LauncherSession;\nimport org.junit.platform.launcher.TestPlan;\nimport org.junit.platform.launcher.core.LauncherFactory;"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "LauncherDiscoveryRequest discoveryRequest = discoveryRequest()\n\t.selectors(\n\t\tselectPackage(\"com.example.mytests\"),\n\t\tselectClass(MyTestClass.class)\n\t)\n\t.filters(\n\t\tincludeClassNamePatterns(\".*Tests\")\n\t)\n\t.build();\n\ntry (LauncherSession session = LauncherFactory.openSession()) {\n\tTestPlan testPlan = session.getLauncher().discover(discoveryRequest);\n\n\t// ... discover additional test plans or execute tests\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can select classes, methods, and all classes in a package or even search for all tests in the class-path or module-path. Discovery takes place across all participating test engines."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The resulting "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestPlan"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is a hierarchical (and read-only) description of all engines, classes, and test methods that fit the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryRequest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The client can traverse the tree, retrieve details about a node, and get a link to the original source (like class, method, or file position). Every node in the test plan has a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "unique ID"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that can be used to invoke a particular test or group of tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Clients can register one or more "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryRequestBuilder"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherDiscoveryRequestBuilder.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to gain insight into events that occur during test discovery. By default, the builder registers an \"abort on failure\" listener that aborts test discovery after the first discovery failure is encountered. The default "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be changed via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.platform.discovery.listener.default"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "discovery",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Discovering Tests"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To execute tests, clients can use the same "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryRequest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as in the discovery phase or create a new request. Test progress and reporting can be achieved by registering one or more "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as in the following example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "LauncherDiscoveryRequest discoveryRequest = LauncherDiscoveryRequestBuilder.request()\n\t.selectors(\n\t\tselectPackage(\"com.example.mytests\"),\n\t\tselectClass(MyTestClass.class)\n\t)\n\t.filters(\n\t\tincludeClassNamePatterns(\".*Tests\")\n\t)\n\t.build();\n\nSummaryGeneratingListener listener = new SummaryGeneratingListener();\n\ntry (LauncherSession session = LauncherFactory.openSession()) {\n\tLauncher launcher = session.getLauncher();\n\t// Register one ore more listeners of your choice.\n\tlauncher.registerTestExecutionListeners(listener);\n\t// Discover tests and build a test plan.\n\tTestPlan testPlan = launcher.discover(discoveryRequest);\n\t// Execute the test plan.\n\tlauncher.execute(testPlan);\n\t// Alternatively, execute the discovery request directly.\n\tlauncher.execute(discoveryRequest);\n}\n\nTestExecutionSummary summary = listener.getSummary();\n// Do something with the summary..."
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There is no return value for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method, but you can use a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to aggregate the results. For examples see the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "SummaryGeneratingListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/listeners/SummaryGeneratingListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LegacyXmlReportGeneratingListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.reporting/org/junit/platform/reporting/legacy/xml/LegacyXmlReportGeneratingListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "UniqueIdTrackingListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/listeners/UniqueIdTrackingListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods are called sequentially. Methods for start events are called in registration order while methods for finish events are called in reverse order. Test case execution won’t start before all "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "executionStarted"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " calls have returned."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "execution",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Executing Tests"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See the dedicated section on "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestEngine registration"
+                  }
+                ],
+                "kind": "xref",
+                "target": "advanced-topics/engines.html#registration"
+              },
+              {
+                "kind": "text",
+                "value": " for details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "engines-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a TestEngine"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to specifying post-discovery filters as part of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryRequest"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " passed to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostDiscoveryFilter"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/PostDiscoveryFilter.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations will be discovered at runtime via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism and automatically applied by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in addition to those that are part of the request."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "example.CustomTagFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PostDiscoveryFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and declared within the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/META-INF/services/org.junit.platform.launcher.PostDiscoveryFilter"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file is loaded and applied automatically."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "post-discovery-filters-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a PostDiscoveryFilter"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Registered implementations of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSessionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSessionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are notified when a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSession"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSession.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is opened (before a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " first discovers and executes tests) and closed (when no more tests will be discovered or executed). They can be registered programmatically via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherConfig"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherConfig.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is passed to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherFactory"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherFactory.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", or they can be discovered at runtime via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism and automatically registered with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherSession"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (unless automatic registration is disabled.)"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following build tools and IDEs are known to provide full support for "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSession"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Gradle 4.6 and later"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Maven Surefire/Failsafe 3.0.0-M6 and later"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IntelliJ IDEA 2017.3 and later"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Other tools might also work but have not been tested explicitly."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "launcher-session-listeners-tool-support",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Tool Support"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSessionListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is well suited for implementing once-per-JVM setup/teardown behavior since it’s called before the first and after the last test in a launcher session, respectively. The scope of a launcher session depends on the used IDE or build tool but usually corresponds to the lifecycle of the test JVM. A custom listener that starts an HTTP server before executing the first test and stops it after the last test has been executed, could look like this:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package example.session;\n\nimport static java.net.InetAddress.getLoopbackAddress;\n\nimport java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.net.InetSocketAddress;\nimport java.util.concurrent.ExecutorService;\nimport java.util.concurrent.Executors;\n\nimport com.sun.net.httpserver.HttpServer;\n\nimport org.junit.platform.engine.support.store.Namespace;\nimport org.junit.platform.engine.support.store.NamespacedHierarchicalStore;\nimport org.junit.platform.launcher.LauncherSession;\nimport org.junit.platform.launcher.LauncherSessionListener;\nimport org.junit.platform.launcher.TestExecutionListener;\nimport org.junit.platform.launcher.TestPlan;\n\npublic class GlobalSetupTeardownListener implements LauncherSessionListener {\n\n\t@Override\n\tpublic void launcherSessionOpened(LauncherSession session) {\n\t\t// Avoid setup for test discovery by delaying it until tests are about to be executed\n\t\tsession.getLauncher().registerTestExecutionListeners(new TestExecutionListener() {\n\t\t\t@Override\n\t\t\tpublic void testPlanExecutionStarted(TestPlan testPlan) {\n\t\t\t\tNamespacedHierarchicalStore<Namespace> store = session.getStore(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO1-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t\tstore.computeIfAbsent(Namespace.GLOBAL, \"httpServer\", key -> { "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO1-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t\t\tInetSocketAddress address = new InetSocketAddress(getLoopbackAddress(), 0);\n\t\t\t\t\tHttpServer server;\n\t\t\t\t\ttry {\n\t\t\t\t\t\tserver = HttpServer.create(address, 0);\n\t\t\t\t\t}\n\t\t\t\t\tcatch (IOException e) {\n\t\t\t\t\t\tthrow new UncheckedIOException(\"Failed to start HTTP server\", e);\n\t\t\t\t\t}\n\t\t\t\t\tserver.createContext(\"/test\", exchange -> {\n\t\t\t\t\t\texchange.sendResponseHeaders(204, -1);\n\t\t\t\t\t\texchange.close();\n\t\t\t\t\t});\n\t\t\t\t\tExecutorService executorService = Executors.newCachedThreadPool();\n\t\t\t\t\tserver.setExecutor(executorService);\n\t\t\t\t\tserver.start(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO1-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\n\t\t\t\t\treturn new CloseableHttpServer(server, executorService);\n\t\t\t\t});\n\t\t\t}\n\t\t});\n\t}\n\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "src/test/java/example/session/GlobalSetupTeardownListener.java"
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Get the store from the launcher session"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Lazily create the HTTP server and put it into the store"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Start the HTTP server"
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It uses a wrapper class to ensure the server is stopped when the launcher session is closed:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package example.session;\n\nimport java.util.concurrent.ExecutorService;\n\nimport com.sun.net.httpserver.HttpServer;\n\npublic class CloseableHttpServer implements AutoCloseable {\n\n\tprivate final HttpServer server;\n\tprivate final ExecutorService executorService;\n\n\tCloseableHttpServer(HttpServer server, ExecutorService executorService) {\n\t\tthis.server = server;\n\t\tthis.executorService = executorService;\n\t}\n\n\tpublic HttpServer getServer() {\n\t\treturn server;\n\t}\n\n\t@Override\n\tpublic void close() { "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO2-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\tserver.stop(0); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO2-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\texecutorService.shutdownNow();\n\t}\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "src/test/java/example/session/CloseableHttpServer.java"
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "close()"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method is called when the launcher session is closed"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Stop the HTTP server"
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This sample uses the HTTP server implementation from the jdk.httpserver module that comes with the JDK but would work similarly with any other server or resource. In order for the listener to be picked up by JUnit Platform, you need to register it as a service by adding a resource file with the following name and contents to your test runtime classpath (e.g. by adding the file to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "src/test/resources"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "):"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "example.session.GlobalSetupTeardownListener"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "src/test/resources/META-INF/services/org.junit.platform.launcher.LauncherSessionListener"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can now use the resource from your test:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "package example.session;\n\nimport static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport java.io.IOException;\nimport java.net.HttpURLConnection;\nimport java.net.URI;\nimport java.net.URL;\n\nimport com.sun.net.httpserver.HttpServer;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.extension.ExtendWith;\nimport org.junit.jupiter.api.extension.ExtensionContext;\nimport org.junit.jupiter.api.extension.ParameterContext;\nimport org.junit.jupiter.api.extension.ParameterResolver;\n\n@ExtendWith(HttpServerParameterResolver.class)\nclass HttpTests {\n\n\t@Test\n\tvoid respondsWith204(HttpServer server) throws IOException {\n\t\tString host = server.getAddress().getHostString(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO3-1",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\tint port = server.getAddress().getPort(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO3-2",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\tURL url = URI.create(\"http://\" + host + \":\" + port + \"/test\").toURL();\n\n\t\tHttpURLConnection connection = (HttpURLConnection) url.openConnection();\n\t\tconnection.setRequestMethod(\"GET\");\n\t\tint responseCode = connection.getResponseCode(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO3-3",
+                    "kind": "callout",
+                    "number": "4",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\n\t\tassertEquals(204, responseCode); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO3-4",
+                    "kind": "callout",
+                    "number": "5",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t}\n}\n\nclass HttpServerParameterResolver implements ParameterResolver {\n\t@Override\n\tpublic boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {\n\t\treturn HttpServer.class.equals(parameterContext.getParameter().getType());\n\t}\n\n\t@Override\n\tpublic Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {\n\t\treturn extensionContext\n\t\t\t\t.getStore(ExtensionContext.Namespace.GLOBAL)\n\t\t\t\t.get(\"httpServer\", CloseableHttpServer.class) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO3-5",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t\t.getServer();\n\t}\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "src/test/java/example/session/HttpTests.java"
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO3-5"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Retrieve the HTTP server instance from the store"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO3-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Get the host string directly from the injected HTTP server instance"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO3-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Get the port number directly from the injected HTTP server instance"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO3-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Send a request to the server"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO3-4"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Check the status code of the response"
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "launcher-session-listeners-tool-example-usage",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Example Usage"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "launcher-session-listeners-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a LauncherSessionListener"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to intercept the creation of instances of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSessionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSessionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and calls to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "discover"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods of the former, clients can register custom implementations of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherInterceptor"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherInterceptor.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.platform.launcher.interceptors.enabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Since interceptors are registered before the test run starts, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit.platform.launcher.interceptors.enabled"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameter"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can only be supplied as a JVM system property or via the JUnit Platform configuration file (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "running-tests/configuration-parameters.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details). This "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameter"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " cannot be supplied in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryRequest"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that is passed to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launcher"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A typical use case is to create a custom interceptor to replace the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ClassLoader"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " used by the JUnit Platform to load test classes and engine implementations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.net.URI;\nimport java.net.URL;\nimport java.net.URLClassLoader;\n\nimport org.junit.platform.launcher.LauncherInterceptor;\n\npublic class CustomLauncherInterceptor implements LauncherInterceptor {\n\n\tprivate final URLClassLoader customClassLoader;\n\n\tpublic CustomLauncherInterceptor() throws Exception {\n\t\tClassLoader parent = Thread.currentThread().getContextClassLoader();\n\t\tcustomClassLoader = new URLClassLoader(new URL[] { URI.create(\"some.jar\").toURL() }, parent);\n\t}\n\n\t@Override\n\tpublic <T> T intercept(Invocation<T> invocation) {\n\t\tThread currentThread = Thread.currentThread();\n\t\tClassLoader originalClassLoader = currentThread.getContextClassLoader();\n\t\tcurrentThread.setContextClassLoader(customClassLoader);\n\t\ttry {\n\t\t\treturn invocation.proceed();\n\t\t}\n\t\tfinally {\n\t\t\tcurrentThread.setContextClassLoader(originalClassLoader);\n\t\t}\n\t}\n\n\t@Override\n\tpublic void close() {\n\t\ttry {\n\t\t\tcustomClassLoader.close();\n\t\t}\n\t\tcatch (IOException e) {\n\t\t\tthrow new UncheckedIOException(\"Failed to close custom class loader\", e);\n\t\t}\n\t}\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "launcher-interceptors-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a LauncherInterceptor"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to specifying discovery listeners as part of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryRequest"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or registering them programmatically via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, custom "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations can be discovered at runtime via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism and automatically registered with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " created via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherFactory"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherFactory.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "example.CustomLauncherDiscoveryListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and declared within the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/META-INF/services/org.junit.platform.launcher.LauncherDiscoveryListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file is loaded and registered automatically."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "launcher-discovery-listeners-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a LauncherDiscoveryListener"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to the public "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API method for registering test execution listeners programmatically, custom "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " implementations will be discovered at runtime via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism and automatically registered with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " created via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherFactory"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherFactory.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "example.CustomTestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and declared within the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "/META-INF/services/org.junit.platform.launcher.TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file is loaded and registered automatically."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "listeners-custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Registering a TestExecutionListener"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is registered programmatically via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, the listener may provide programmatic ways for it to be configured — for example, via its constructor, setter methods, etc. However, when a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is registered automatically via Java’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ServiceLoader"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " mechanism (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Registering a TestExecutionListener"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#listeners-custom"
+              },
+              {
+                "kind": "text",
+                "value": "), there is no way for the user to directly configure the listener. In such cases, the author of a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestExecutionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " may choose to make the listener configurable via "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameters"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": ". The listener can then access the configuration parameters via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestPlan"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " supplied to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testPlanExecutionStarted(TestPlan)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "testPlanExecutionFinished(TestPlan)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " callback methods. See the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "UniqueIdTrackingListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/listeners/UniqueIdTrackingListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " for an example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "listeners-config",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuring a TestExecutionListener"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Sometimes it can be useful to run a test suite "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "without"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " certain execution listeners being active. For example, you might have custom a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that sends the test results to an external system for reporting purposes, and while debugging you might not want these "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "debug"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " results to be reported. To do this, provide a pattern for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.platform.execution.listeners.deactivate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameter"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to specify which execution listeners should be deactivated (i.e. not registered) for the current test run."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Only listeners registered via the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "{jdk-javadoc-base-url}/java.base/java/util/ServiceLoader.html[ServiceLoader]"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " mechanism within the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/META-INF/services/org.junit.platform.launcher.TestExecutionListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file can be deactivated. In other words, any "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " registered explicitly via the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherDiscoveryRequest"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " cannot be deactivated via the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit.platform.execution.listeners.deactivate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameter"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In addition, since execution listeners are registered before the test run starts, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "junit.platform.execution.listeners.deactivate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameter"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can only be supplied as a JVM system property or via the JUnit Platform configuration file (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "running-tests/configuration-parameters.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details). This "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "configuration parameter"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " cannot be supplied in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherDiscoveryRequest"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that is passed to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launcher"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Refer to "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Pattern Matching Syntax"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "running-tests/configuration-parameters.html#pattern"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "listeners-custom-deactivation-pattern",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Pattern Matching Syntax"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "listeners-custom-deactivation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Deactivating a TestExecutionListener"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you require fine-grained control over automatic detection and registration of test engines and listeners, you may create an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherConfig"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherConfig.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and supply that to the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherFactory"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherFactory.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Typically, an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherConfig"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is created via the built-in fluent "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "builder"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, as demonstrated in the following example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "LauncherConfig launcherConfig = LauncherConfig.builder()\n\t.enableTestEngineAutoRegistration(false)\n\t.enableLauncherSessionListenerAutoRegistration(false)\n\t.enableLauncherDiscoveryListenerAutoRegistration(false)\n\t.enablePostDiscoveryFilterAutoRegistration(false)\n\t.enableTestExecutionListenerAutoRegistration(false)\n\t.addTestEngines(new CustomTestEngine())\n\t.addLauncherSessionListeners(new CustomLauncherSessionListener())\n\t.addLauncherDiscoveryListeners(new CustomLauncherDiscoveryListener())\n\t.addPostDiscoveryFilters(new CustomPostDiscoveryFilter())\n\t.addTestExecutionListeners(new LegacyXmlReportGeneratingListener(reportsDir, out))\n\t.addTestExecutionListeners(new CustomTestExecutionListener())\n\t.build();\n\nLauncherDiscoveryRequest discoveryRequest = LauncherDiscoveryRequestBuilder.request()\n\t.selectors(selectPackage(\"com.example.mytests\"))\n\t.build();\n\ntry (LauncherSession session = LauncherFactory.openSession(launcherConfig)) {\n\tsession.getLauncher().execute(discoveryRequest);\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "launcher-config",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuring the Launcher"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When running tests via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API, you can enable "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dry-run mode"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.platform.execution.dryRun.enabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": " to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In this mode, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/Launcher.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will not actually execute any tests but will notify registered "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "TestExecutionListener"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instances as if all tests had been skipped and their containers had been successful. This can be useful to test changes in the configuration of a build or to verify a listener is called as expected without having to wait for all tests to be executed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "dry-run-mode",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Dry-Run Mode"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When running tests on the JUnit Platform, multiple test engines may need to access shared resources. Rather than initializing these resources multiple times, JUnit Platform provides mechanisms to share state across test engines efficiently. Test engines can use the Platform’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespacedHierarchicalStore"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/support/store/NamespacedHierarchicalStore.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API to lazily initialize and share resources, ensuring they are created only once regardless of execution order. Any resource that is put into the store and implements "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " will be closed automatically when the execution is finished."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Jupiter engine allows read and write access to such resources via its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Store"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.Store.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example demonstrates two custom test engines sharing a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ServerSocket"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " resource. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FirstCustomEngine"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attempts to retrieve an existing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ServerSocket"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " from the global store or creates a new one if it doesn’t exist:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import static java.net.InetAddress.getLoopbackAddress;\nimport static org.junit.platform.engine.TestExecutionResult.successful;\n\nimport java.io.IOException;\nimport java.io.UncheckedIOException;\nimport java.net.ServerSocket;\n\nimport org.jspecify.annotations.Nullable;\nimport org.junit.platform.engine.EngineDiscoveryRequest;\nimport org.junit.platform.engine.ExecutionRequest;\nimport org.junit.platform.engine.TestDescriptor;\nimport org.junit.platform.engine.TestEngine;\nimport org.junit.platform.engine.UniqueId;\nimport org.junit.platform.engine.support.descriptor.EngineDescriptor;\nimport org.junit.platform.engine.support.store.Namespace;\nimport org.junit.platform.engine.support.store.NamespacedHierarchicalStore;\n\n/**\n * First custom test engine implementation.\n */\npublic class FirstCustomEngine implements TestEngine {\n\n\tpublic ServerSocket socket;\n\n\t@Override\n\tpublic String getId() {\n\t\treturn \"first-custom-test-engine\";\n\t}\n\n\tpublic ServerSocket getSocket() {\n\t\treturn this.socket;\n\t}\n\n\t@Override\n\tpublic TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {\n\t\treturn new EngineDescriptor(uniqueId, \"First Custom Test Engine\");\n\t}\n\n\t@Override\n\tpublic void execute(ExecutionRequest request) {\n\t\trequest.getEngineExecutionListener()\n\t\t\t\t.executionStarted(request.getRootTestDescriptor());\n\n\t\tNamespacedHierarchicalStore<Namespace> store = request.getStore();\n\t\tsocket = store.computeIfAbsent(Namespace.GLOBAL, \"serverSocket\", key -> {\n\t\t\ttry {\n\t\t\t\treturn new ServerSocket(0, 50, getLoopbackAddress());\n\t\t\t}\n\t\t\tcatch (IOException e) {\n\t\t\t\tthrow new UncheckedIOException(\"Failed to start ServerSocket\", e);\n\t\t\t}\n\t\t}, ServerSocket.class);\n\n\t\trequest.getEngineExecutionListener()\n\t\t\t\t.executionFinished(request.getRootTestDescriptor(), successful());\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SecondCustomEngine"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " follows the same pattern, ensuring that regardless whether it runs before or after "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "FirstCustomEngine"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", it will use the same socket instance:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "/**\n * Second custom test engine implementation.\n */\npublic class SecondCustomEngine implements TestEngine {\n\n\tpublic ServerSocket socket;\n\n\t@Override\n\tpublic String getId() {\n\t\treturn \"second-custom-test-engine\";\n\t}\n\n\tpublic ServerSocket getSocket() {\n\t\treturn this.socket;\n\t}\n\n\t@Override\n\tpublic TestDescriptor discover(EngineDiscoveryRequest discoveryRequest, UniqueId uniqueId) {\n\t\treturn new EngineDescriptor(uniqueId, \"Second Custom Test Engine\");\n\t}\n\n\t@Override\n\tpublic void execute(ExecutionRequest request) {\n\t\trequest.getEngineExecutionListener()\n\t\t\t\t.executionStarted(request.getRootTestDescriptor());\n\n\t\tNamespacedHierarchicalStore<Namespace> store = request.getStore();\n\t\tsocket = store.computeIfAbsent(Namespace.GLOBAL, \"serverSocket\", key -> {\n\t\t\ttry {\n\t\t\t\treturn new ServerSocket(0, 50, getLoopbackAddress());\n\t\t\t}\n\t\t\tcatch (IOException e) {\n\t\t\t\tthrow new UncheckedIOException(\"Failed to start ServerSocket\", e);\n\t\t\t}\n\t\t}, ServerSocket.class);\n\n\t\trequest.getEngineExecutionListener()\n\t\t\t\t.executionFinished(request.getRootTestDescriptor(), successful());\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this case, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ServerSocket"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " can be stored directly in the global store while ensuring since it gets closed because it implements "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". If you need to use a type that does not do so, you can wrap it in a custom class that implements "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and delegates to the original type. This is important to ensure that the resource is closed properly when the test run is finished."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For illustration, the following test verifies that both engines are sharing the same "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ServerSocket"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance and that it’s closed after "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher.execute()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " returns:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Test\nvoid runBothCustomEnginesTest() {\n\tFirstCustomEngine firstCustomEngine = new FirstCustomEngine();\n\tSecondCustomEngine secondCustomEngine = new SecondCustomEngine();\n\n\tLauncherConfig launcherConfig = LauncherConfig.builder()\n\t\t\t.addTestEngines(firstCustomEngine, secondCustomEngine)\n\t\t\t.enableTestEngineAutoRegistration(false)\n\t\t\t.build();\n\n\tLauncherDiscoveryRequest discoveryRequest = discoveryRequest()\n\t\t\t.selectors(selectPackage(\"com.example.mytests\"))\n\t\t\t.build();\n\n\tLauncher launcher = LauncherFactory.create(launcherConfig);\n\tlauncher.execute(discoveryRequest);\n\n\tassertSame(firstCustomEngine.getSocket(), secondCustomEngine.getSocket());\n\tassertTrue(firstCustomEngine.getSocket().isClosed(), \"socket should be closed\");\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By using the Platform’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NamespacedHierarchicalStore"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/support/store/NamespacedHierarchicalStore.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " API with shared namespaces in this way, test engines can coordinate resource creation and sharing without direct dependencies between them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, it’s possible to inject resources into test engines by "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "registering a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherSessionListener"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "#launcher-session-listeners-custom"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "managing-state-across-test-engines",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Managing State Across Test Engines"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The launcher API provides the ability to cancel a running test execution mid-flight while allowing engines to clean up resources. To request an execution to be cancelled, you need to call "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "cancel()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " on the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CancellationToken"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/CancellationToken.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is passed to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Launcher.execute"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as part of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LauncherExecutionRequest"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, implementing a listener that cancels test execution after the first test failed can be achieved as follows."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "CancellationToken cancellationToken = CancellationToken.create(); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO4-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\nTestExecutionListener failFastListener = new TestExecutionListener() {\n\t@Override\n\tpublic void executionFinished(TestIdentifier identifier, TestExecutionResult result) {\n\t\tif (result.getStatus() == FAILED) {\n\t\t\tcancellationToken.cancel(); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO4-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t\t}\n\t}\n};\n\nLauncherExecutionRequest executionRequest = LauncherDiscoveryRequestBuilder.request()\n\t\t.selectors(selectClass(MyTestClass.class))\n\t\t.forExecution()\n\t\t.cancellationToken(cancellationToken) "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO4-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t\t.listeners(failFastListener) "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO4-4",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\t\t.build();\n\ntry (LauncherSession session = LauncherFactory.openSession()) {\n\tsession.getLauncher().execute(executionRequest); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO4-5",
+                "kind": "callout",
+                "number": "5",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CancellationToken"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/CancellationToken.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Implement a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestExecutionListener"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestExecutionListener.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that calls "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cancel()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " when a test fails"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-3"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Register the cancellation token"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-4"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Register the listener"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO4-5"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Pass the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherExecutionRequest"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher.execute"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cancelling tests relies on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "advanced-topics/engines.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "advanced-topics/engines.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " checking and responding to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "CancellationToken"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/CancellationToken.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " appropriately (see "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Test Engine Requirements"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "advanced-topics/engines.html#requirements-cancellation"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for details). The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Launcher"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " will also check the token and cancel test execution when multiple test engines are present at runtime."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "At the time of writing, the following test engines support cancellation:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "junit-jupiter-engine"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.jupiter.engine/org/junit/jupiter/engine/package-summary.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "junit-vintage-engine"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.vintage.engine/org/junit/vintage/engine/package-summary.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "junit-platform-suite-engine"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.suite.engine/org/junit/platform/suite/engine/package-summary.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "testng-engine"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/junit-team/testng-engine"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (version 1.1.0 and later)"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Any "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "TestEngine"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/TestEngine.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " extending "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "HierarchicalTestEngine"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.engine/org/junit/platform/engine/support/hierarchical/HierarchicalTestEngine.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " such as Spock and Cucumber"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Test Engine Support for Cancellation"
+              }
+            ],
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Rather than building a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherExecutionRequest"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " by starting with a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherDiscoveryRequestBuilder"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherDiscoveryRequestBuilder.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and calling "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "forExecution()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", you can create a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherExecutionRequestBuilder"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherExecutionRequestBuilder.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " from a previously built "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherDiscoveryRequest"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryRequest discoveryRequest = LauncherDiscoveryRequestBuilder.request()\n\t\t.selectors(selectClass(MyTestClass.class))\n\t\t.build(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO5-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\nLauncherExecutionRequest executionRequest = LauncherExecutionRequestBuilder.request(discoveryRequest) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO5-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t.cancellationToken(cancellationToken) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO5-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t.listeners(failFastListener) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO5-4",
+                    "kind": "callout",
+                    "number": "4",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t.build();\n\ntry (LauncherSession session = LauncherFactory.openSession()) {\n\tsession.getLauncher().execute(executionRequest); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO5-5",
+                    "kind": "callout",
+                    "number": "5",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO5-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Build a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherDiscoveryRequest"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO5-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherExecutionRequestBuilder"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherExecutionRequestBuilder.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " with it"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO5-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register the cancellation token"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO5-4"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register the listener"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO5-5"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Pass the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherExecutionRequest"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launcher.execute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "launcher-cancellation-execution-request-from-discovery-request",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Building a LauncherExecutionRequest from a LauncherDiscoveryRequest"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alternatively, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "LauncherExecutionRequestBuilder"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherExecutionRequestBuilder.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " can be created from a previously discovered "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "TestPlan"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestPlan.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherDiscoveryRequest discoveryRequest = LauncherDiscoveryRequestBuilder.request()\n\t\t.selectors(selectClass(MyTestClass.class))\n\t\t.build(); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\ntry (LauncherSession session = LauncherFactory.openSession()) {\n\tvar launcher = session.getLauncher();\n\tTestPlan testPlan = launcher.discover(discoveryRequest); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\tLauncherExecutionRequest executionRequest = LauncherExecutionRequestBuilder.request(testPlan) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t.cancellationToken(cancellationToken) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-4",
+                    "kind": "callout",
+                    "number": "4",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t.listeners(failFastListener) "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-5",
+                    "kind": "callout",
+                    "number": "5",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\t\t\t.build();\n\tlauncher.execute(executionRequest); "
+                  },
+                  {
+                    "guard": "// ",
+                    "icons": null,
+                    "id": "CO6-6",
+                    "kind": "callout",
+                    "number": "6",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Build a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherDiscoveryRequest"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherDiscoveryRequest.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Discover a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "TestPlan"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/TestPlan.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " via "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launcher.discover"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherExecutionRequestBuilder"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/core/LauncherExecutionRequestBuilder.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " with it"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-4"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register the cancellation token"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-5"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register the listener"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO6-6"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Pass the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "LauncherExecutionRequest"
+                              }
+                            ],
+                            "kind": "xref",
+                            "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Launcher.execute"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "launcher-cancellation-execution-request-from-test-plan",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Building a LauncherExecutionRequest from a TestPlan"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "launcher-cancellation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Cancelling a Running Test Execution"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "JUnit Platform Launcher API"
+      }
+    ]
+  }
+}

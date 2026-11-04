@@ -1,0 +1,1384 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you configure a single message transformation (SMT) for a connector, you can define a predicate for the transformation. The predicate specifies how to apply the transformation conditionally to a subset of the messages that the connector processes. You can assign predicates to transformations that you configure for source connectors, such as Debezium, or to sink connectors."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium provides several single message transformations (SMTs) that you can use to modify event records before Kafka Connect saves the records to Kafka topics. By default, when you configure one of these SMTs for a Debezium connector, Kafka Connect applies that transformation to every record that the connector emits. However, there might be instances in which you want to apply a transformation selectively, so that it modifies only that subset of change event messages that share a common characteristic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, for a Debezium connector, you might want to run the transformation only on event messages from a specific table or that include a specific header key. In environments that run Apache Kafka 2.6 or greater, you can append a predicate statement to a transformation to instruct Kafka Connect to apply the SMT only to certain records. In the predicate, you specify a condition that Kafka Connect uses to evaluate each message that it processes. When a Debezium connector emits a change event message, Kafka Connect checks the message against the configured predicate condition. If the condition is true for the event message, Kafka Connect applies the transformation, and then writes the message to a Kafka topic. Messages that do not match the condition are sent to Kafka unmodified."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The situation is similar for predicates that you define for a sink connector SMT. The connector reads messages from a Kafka topic and Kafka Connect evaluates the messages against the predicate condition. If a message matches the condition, Kafka Connect applies the transformation and then passes the messages to the sink connector."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After you define a predicate, you can reuse it and apply it to multiple transforms. Predicates also include a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "negate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option that you can use to invert a predicate so that the predicate condition is applied only to records that do "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " match the condition that is defined in the predicate statement. You can use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "negate"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " option to pair the predicate with other transforms that are based on negating the condition."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Predicates include the following elements:"
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Predicate elements"
+              }
+            ]
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "predicates"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " prefix"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Alias (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "isOutboxTable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Type (for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.apache.kafka.connect.transforms.predicates.TopicNameMatches"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Kafka Connect provides a set of default predicate types, which you can supplement by defining your own custom predicates."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Condition statement and any additional configuration properties, depending on the type of predicate (for example, a regex naming pattern)"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following predicate types are available by default:"
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default predicate types"
+              }
+            ]
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Specifies a key name in the header in the event message that you want Kafka Connect to evaluate. The predicate evaluates to true for any records that include a header key that has the specified name."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "HasHeaderKey"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": "record-is-tombstone",
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "context": "paragraph",
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "A tombstone in Kafka is a record that has a key with a 0-byte, "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "null"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " payload. When a Debezium connector processes a delete operation in the source database, the connector emits two change events for the delete operation:"
+                        }
+                      ],
+                      "roles": [],
+                      "title": null
+                    },
+                    {
+                      "context": "ulist",
+                      "id": null,
+                      "items": [
+                        {
+                          "blocks": [],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "A delete operation ("
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "\"op\" : \"d\""
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": ") event that provides the previous value of the database record."
+                            }
+                          ]
+                        },
+                        {
+                          "blocks": [
+                            {
+                              "context": "paragraph",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "The tombstone represents a delete marker for the row. When "
+                                },
+                                {
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "log compaction"
+                                    }
+                                  ],
+                                  "kind": "link",
+                                  "target": "https://kafka.apache.org/documentation#compaction"
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " is enabled for Kafka, during compaction Kafka removes all events that share the same key as the tombstone. Log compaction occurs periodically, with the compaction interval controlled by the "
+                                },
+                                {
+                                  "inlines": [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "delete.retention.ms"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ],
+                                  "kind": "link",
+                                  "target": "https://kafka.apache.org/documentation#topicconfigs_delete.retention.ms"
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " setting for the topic."
+                                }
+                              ],
+                              "roles": [],
+                              "title": null
+                            },
+                            {
+                              "context": "paragraph",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Although it is possible to "
+                                },
+                                {
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "configure Debezium so that it does not emit tombstone events"
+                                    }
+                                  ],
+                                  "kind": "xref",
+                                  "target": "#ignoring-tombstone-events"
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": ", it’s best to permit Debezium to emit tombstones to maintain the expected behavior during log compaction. Suppressing tombstones prevents Kafka from removing records for a deleted key during log compaction. If your environment includes sink connectors that cannot process tombstones, you can configure the sink connector to use an SMT with the "
+                                },
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "RecordIsTombstone"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                },
+                                {
+                                  "kind": "text",
+                                  "value": " predicate to filter out the tombstone records."
+                                }
+                              ],
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "A tombstone event that has the same key, but a "
+                            },
+                            {
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "null"
+                                }
+                              ],
+                              "kind": "monospace",
+                              "roles": []
+                            },
+                            {
+                              "kind": "text",
+                              "value": " value."
+                            }
+                          ]
+                        }
+                      ],
+                      "roles": [],
+                      "style": null,
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Matches Kafka "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "tombstone"
+                        }
+                      ],
+                      "kind": "emphasis",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " records. The predicate evaluates to "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "true"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " for any record that has a "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "null"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " value. Use this predicate in combination with a filter SMT to remove tombstone records. This predicate has no configuration parameters."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "RecordIsTombstone"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "A regular expression that specifies the name of a topic that you want Kafka Connect to match. The predicate is true for connector records in which the topic name matches the specified regular expression. Use this predicate to apply an SMT to records based on the name of the source table."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "TopicNameMatches"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "KIP-585: Filter and Conditional SMTs"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-585%3A+Filter+and+Conditional+SMTs"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Apache Kafka documentation for Kafka Connect predicates"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#connect_predicates"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Additional resources"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_smt_predicates",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "SMT predicates"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Configuring Kafka Connect predicates is similar to configuring transforms. You specify a predicate alias, associate the alias with a transform, and then define the type and configuration for the predicate."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Debezium environment runs Apache Kafka 2.6 or greater."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An SMT is configured for the Debezium connector."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Prerequisites"
+              }
+            ]
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the Debezium connector configuration, specify a predicate alias for the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "predicates"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " parameter, for example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "IsOutboxTable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transforms."
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<TRANSFORM_ALIAS>"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ".predicate="
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<PREDICATE_ALIAS>"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For example:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transforms.outbox.predicate=IsOutboxTable"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Associate the predicate alias with the transform that you want to apply conditionally, by appending the predicate alias to the transform alias in the connector configuration:"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "olist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [
+                          {
+                            "context": "ulist",
+                            "id": null,
+                            "items": [
+                              {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "HasHeaderKey"
+                                  }
+                                ]
+                              },
+                              {
+                                "blocks": [],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "RecordIsTombstone"
+                                  }
+                                ]
+                              },
+                              {
+                                "blocks": [
+                                  {
+                                    "context": "paragraph",
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "For example:"
+                                      }
+                                    ],
+                                    "roles": [],
+                                    "title": null
+                                  },
+                                  {
+                                    "context": "listing",
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "predicates.IsOutboxTable.type=org.apache.kafka.connect.transforms.predicates.TopicNameMatches"
+                                      }
+                                    ],
+                                    "language": null,
+                                    "roles": [],
+                                    "title": null
+                                  }
+                                ],
+                                "checkbox": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "TopicNameMatches"
+                                  }
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "style": null,
+                            "title": null
+                          }
+                        ],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "For the type, specify one of the following default types that are available in Kafka Connect:"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "For example:"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "predicates.IsOutboxTable.pattern=outbox.event.*"
+                              }
+                            ],
+                            "language": null,
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "For the TopicNameMatch or "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "HasHeaderKey"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " predicates, specify a regular expression for the topic or header name that you want to match."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": "loweralpha",
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Configure the predicate by specifying its type and providing values for configuration parameters."
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For example:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transforms.outbox.negate=true"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The preceding property inverts the set of records that the predicate matches, so that Kafka Connect applies the transform to any record that does not match the condition specified in the predicate."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to negate a condition, append the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "negate"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " keyword to the transform alias and set it to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Procedure"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows a Debezium connector configuration that applies the outbox event router transformation only to messages that Debezium emits to the Kafka "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "outbox.event.order"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " topic."
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Example: TopicNameMatch predicate for the outbox event router transformation"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Because the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TopicNameMatch"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " predicate evaluates to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " only for messages from the outbox table ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "outbox.event.*"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "), the transformation is not applied to messages that originate from other tables in the database."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "transforms=outbox\ntransforms.outbox.predicate=IsOutboxTable\ntransforms.outbox.type=io.debezium.transforms.outbox.EventRouter\npredicates=IsOutboxTable\npredicates.IsOutboxTable.type=org.apache.kafka.connect.transforms.predicates.TopicNameMatches\npredicates.IsOutboxTable.pattern=outbox.event.*"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "defining-smt-predicates",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Defining SMT predicates"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can control whether Debezium emits tombstone events, and how long Kafka retains them. Depending on your data pipeline, you might want to set the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "tombstones.on.delete"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property for a connector so that Debezium does not emit tombstone events."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whether you enable Debezium to emit tombstones depends on how topics are consumed in your environment and by the characteristics of the sink consumer. Some sink connectors rely on tombstone events to remove records from downstream data stores. In cases where sink connectors rely on tombstone records to indicate when to delete records in downstream data stores, configure Debezium to emit them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When you configure Debezium to generate tombstones, further configuration is required to ensure that sink connectors receive the tombstone events. The retention policy for a topic must be set so that the connector has time to read event messages before Kafka removes them during log compaction. The length of time that a topic retains tombstones before compaction is controlled by the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "delete.retention.ms"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://kafka.apache.org/documentation#topicconfigs_delete.retention.ms"
+              },
+              {
+                "kind": "text",
+                "value": " property for the topic."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "tombstones.on.delete"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property for a connector is set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " so that the connector generates a tombstone after each delete event. If you set the property to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to prevent Debezium from saving tombstone records to Kafka topics, the absence of tombstone records might lead to unintended consequences. Kafka relies on tombstone during log compaction to remove records that are related to a deleted key."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you need to support sink connectors or downstream Kafka consumers that cannot process records with null values, rather than preventing Debezium from emitting tombstones, consider configuring an SMT for the connector with a predicate that uses the "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RecordIsTombstone"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "#record-is-tombstone"
+              },
+              {
+                "kind": "text",
+                "value": " predicate type to remove tombstone messages before consumers read them."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "For example:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "listing",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "“tombstones.on.delete”: “false”"
+                      }
+                    ],
+                    "language": null,
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To prevent Debezium from emitting tombstone events for deleted database records, set the connector option "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tombstones.on.delete"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "false"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Procedure"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "ignoring-tombstone-events",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Ignoring tombstone events"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Applying transformations selectively"
+      }
+    ]
+  }
+}

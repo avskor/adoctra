@@ -1,0 +1,1158 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JUnit Jupiter provides robust support for handling test exceptions. This includes the built-in mechanisms for managing test failures due to exceptions, the role of exceptions in implementing assertions and assumptions, and how to specifically assert non-throwing conditions in code."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In JUnit Jupiter, if an exception is thrown from a test method, a lifecycle method, or an extension and not caught within that test method, lifecycle method, or extension, the framework will mark the test or test class as failed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Failed assumptions deviate from this general rule."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In contrast to failed assertions, failed assumptions do not result in a test failure; rather, a failed assumption results in a test being aborted."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "writing-tests/assumptions.html"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "writing-tests/assumptions.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for further details and examples."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the following example, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "failsDueToUncaughtException()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method throws an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ArithmeticException"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Since the exception is not caught within the test method, JUnit Jupiter will mark the test as failed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "private final Calculator calculator = new Calculator();\n\n@Test\nvoid failsDueToUncaughtException() {\n\t// The following throws an ArithmeticException due to division by\n\t// zero, which causes a test failure.\n\tcalculator.divide(1, 0);\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "private val calculator = Calculator()\n\n@Test\nfun failsDueToUncaughtException() {\n    // The following throws an ArithmeticException due to division by\n    // zero, which causes a test failure.\n    calculator.divide(1, 0)\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It’s important to note that specifying a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "throws"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " clause in the test method has no effect on the outcome of the test. JUnit Jupiter does not interpret a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "throws"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " clause as an expectation or assertion about what exceptions the test method should throw. A test fails only if an exception is thrown unexpectedly or if an assertion fails."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "uncaught",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Uncaught Exceptions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Assertions in JUnit Jupiter are implemented using exceptions. The framework provides a set of assertion methods in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.junit.jupiter.api.Assertions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class, which throw "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertionError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " when an assertion fails. This mechanism is a core aspect of how JUnit handles assertion failures as exceptions. See the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "writing-tests/assertions.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/assertions.html"
+              },
+              {
+                "kind": "text",
+                "value": " section for further information about JUnit Jupiter’s assertion support."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Third-party assertion libraries may choose to throw an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertionError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to signal a failed assertion; however, they may also choose to throw different types of exceptions to signal failures. See also: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Third-party Assertion Libraries"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/assertions.html#third-party"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JUnit Jupiter itself does not differentiate between failed assertions ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertionError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") and other types of exceptions. All uncaught exceptions lead to a test failure. However, Integrated Development Environments (IDEs) and other tools may distinguish between these two types of failures by checking whether the thrown exception is an instance of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertionError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the following example, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "failsDueToUncaughtAssertionError()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method throws an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AssertionError"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Since the exception is not caught within the test method, JUnit Jupiter will mark the test as failed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "private final Calculator calculator = new Calculator();\n\n@Test\nvoid failsDueToUncaughtAssertionError() {\n\t// The following incorrect assertion will cause a test failure.\n\t// The expected value should be 2 instead of 99.\n\tassertEquals(99, calculator.add(1, 1));\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "private val calculator = Calculator()\n\n@Test\nfun failsDueToUncaughtAssertionError() {\n    // The following incorrect assertion will cause a test failure.\n    // The expected value should be 2 instead of 99.\n    assertEquals(99, calculator.add(1, 1))\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "failed-assertions",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Failed Assertions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "JUnit Jupiter offers specialized assertions for testing that specific exceptions are thrown under expected conditions. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertThrows()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertThrowsExactly()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " assertions are critical tools for validating that your code responds correctly to error conditions by throwing the appropriate exceptions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "assertThrows()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method is used to verify that a particular type of exception is thrown during the execution of a provided executable block. It not only checks for the type of the thrown exception but also its subclasses, making it suitable for more generalized exception handling tests. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "assertThrows()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " assertion method returns the thrown exception object to allow performing additional assertions on it."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Test\nvoid testExpectedExceptionIsThrown() {\n\t// The following assertion succeeds because the code under assertion\n\t// throws the expected IllegalArgumentException.\n\t// The assertion also returns the thrown exception which can be used for\n\t// further assertions like asserting the exception message.\n\tIllegalArgumentException exception =\n\t\tassertThrows(IllegalArgumentException.class, () -> {\n\t\t\tthrow new IllegalArgumentException(\"expected message\");\n\t\t});\n\tassertEquals(\"expected message\", exception.getMessage());\n\n\t// The following assertion also succeeds because the code under assertion\n\t// throws IllegalArgumentException which is a subclass of RuntimeException.\n\tassertThrows(RuntimeException.class, () -> {\n\t\tthrow new IllegalArgumentException(\"expected message\");\n\t});\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Test\nfun testExpectedExceptionIsThrown() {\n    // The following assertion succeeds because the code under assertion\n    // throws the expected IllegalArgumentException.\n    // The assertion also returns the thrown exception which can be used for\n    // further assertions like asserting the exception message.\n    val exception =\n        assertThrows<IllegalArgumentException> {\n            throw IllegalArgumentException(\"expected message\")\n        }\n    assertEquals(\"expected message\", exception.message)\n\n    // The following assertion also succeeds because the code under assertion\n    // throws IllegalArgumentException which is a subclass of RuntimeException.\n    assertThrows<RuntimeException> {\n        throw IllegalArgumentException(\"expected message\")\n    }\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "expected-assertThrows",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertThrows()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "assertThrowsExactly()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method is used when you need to assert that the exception thrown is exactly of a specific type, not allowing for subclasses of the expected exception type. This is useful when precise exception handling behavior needs to be validated. Similar to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "assertThrows()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "assertThrowsExactly()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " assertion method also returns the thrown exception object to allow performing additional assertions on it."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Test\nvoid testExpectedExceptionIsThrown() {\n\t// The following assertion succeeds because the code under assertion throws\n\t// IllegalArgumentException which is exactly equal to the expected type.\n\t// The assertion also returns the thrown exception which can be used for\n\t// further assertions like asserting the exception message.\n\tIllegalArgumentException exception =\n\t\tassertThrowsExactly(IllegalArgumentException.class, () -> {\n\t\t\tthrow new IllegalArgumentException(\"expected message\");\n\t\t});\n\tassertEquals(\"expected message\", exception.getMessage());\n\n\t// The following assertion fails because the assertion expects exactly\n\t// RuntimeException to be thrown, not subclasses of RuntimeException.\n\tassertThrowsExactly(RuntimeException.class, () -> {\n\t\tthrow new IllegalArgumentException(\"expected message\");\n\t});\n}"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@Test\nfun testExpectedExceptionIsThrown() {\n    // The following assertion succeeds because the code under assertion throws\n    // IllegalArgumentException which is exactly equal to the expected type.\n    // The assertion also returns the thrown exception which can be used for\n    // further assertions like asserting the exception message.\n    val exception =\n        assertThrowsExactly<IllegalArgumentException> {\n            throw IllegalArgumentException(\"expected message\")\n        }\n    assertEquals(\"expected message\", exception.message)\n\n    // The following assertion fails because the assertion expects exactly\n    // RuntimeException to be thrown, not subclasses of RuntimeException.\n    assertThrowsExactly<RuntimeException> {\n        throw IllegalArgumentException(\"expected message\")\n    }\n}"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "expected-assertThrowsExactly",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertThrowsExactly()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "expected",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Asserting Expected Exceptions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Although any exception thrown from a test method will cause the test to fail, there are certain use cases where it can be beneficial to explicitly assert that an exception is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "not"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " thrown for a given code block within a test method. The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertDoesNotThrow()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " assertion can be used when you want to verify that a particular piece of code does not throw any exceptions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\nvoid testExceptionIsNotThrown() {\n\tassertDoesNotThrow(() -> {\n\t\tshouldNotThrowException();\n\t});\n}\n\nvoid shouldNotThrowException() {\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\nfun testExceptionIsNotThrown() {\n    assertDoesNotThrow {\n        shouldNotThrowException()\n    }\n}\n\nfun shouldNotThrowException() {\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Third-party assertion libraries often provide similar support. For example, AssertJ has "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "assertThatNoException().isThrownBy(() → …​)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". See also: "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Third-party Assertion Libraries"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/assertions.html#third-party"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "not-expected",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Asserting That no Exception is Expected"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Exception Handling"
+      }
+    ]
+  }
+}

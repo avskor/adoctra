@@ -1,0 +1,1166 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "Usually, an extension is instantiated only once. So the question becomes relevant: How do you keep the state from one invocation of an extension to the next? The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtensionContext"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " API provides a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Store"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.Store.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " exactly for this purpose. Extensions may put values into a store for later retrieval."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "admonition",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "See the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TimingExtension"
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/test-lifecycle-callbacks.html#timing-extension"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for an example of using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Store"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " with a method-level scope."
+          }
+        ],
+        "roles": [],
+        "title": null,
+        "type": "tip"
+      },
+      {
+        "alt": [
+          {
+            "kind": "text",
+            "value": "UML diagram"
+          }
+        ],
+        "attributes": {},
+        "caption": [
+          {
+            "kind": "text",
+            "value": "Figure 1. "
+          }
+        ],
+        "context": "image",
+        "id": null,
+        "roles": [
+          "text-center"
+        ],
+        "src": "extensions_StoreHierarchy.svg",
+        "svg": null,
+        "target": "extensions_StoreHierarchy.svg",
+        "title": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExtensionContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Store"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " hierarchy"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "As illustrated by the diagram above, stores are hierarchical in nature. When looking up a value, if no value is stored in the current "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExtensionContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for the supplied key, the stores of the context’s ancestors will be queried for a value with the same key in the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Namespace"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " used to create this store. The root "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExtensionContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " represents the engine level so its "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Store"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " may be used to store or cache values that are used by multiple test classes or extension. The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StoreScope"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.StoreScope.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " enum allows to go beyond even that and access the stores on the level of the current "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherExecutionRequest"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherExecutionRequest.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " or "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherSession"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.platform.launcher/org/junit/platform/launcher/LauncherSession.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " which can be used to share data across test engines or inject data from a registered "
+          },
+          {
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "LauncherSessionListener"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              }
+            ],
+            "kind": "xref",
+            "target": "advanced-topics/launcher-api.html#launcher-session-listeners-custom"
+          },
+          {
+            "kind": "text",
+            "value": ", respectively. Please consult the Javadoc of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtensionContext"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Store"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.Store.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ", and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "StoreScope"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ExtensionContext.StoreScope.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " for details."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "An extension context store is bound to its extension context lifecycle. When an extension context lifecycle ends it closes its associated store."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All stored values that are instances of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " are notified by an invocation of their "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "close()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " method in the inverse order they were added in (unless the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "junit.jupiter.extensions.store.close.autocloseable.enabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "configuration parameter"
+                  }
+                ],
+                "kind": "xref",
+                "target": "running-tests/configuration-parameters.html"
+              },
+              {
+                "kind": "text",
+                "value": " is set to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Versions prior to 5.13 only supported "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CloseableResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", which is deprecated but still available for backward compatibility."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": "support",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Resource management via "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ],
+        "type": "note"
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "An example implementation of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "AutoCloseable"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is shown below, using an "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "HttpServer"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " resource."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class HttpServerResource implements AutoCloseable {\n\n\tprivate final HttpServer httpServer;\n\n\tHttpServerResource(int port) throws IOException {\n\t\tInetAddress loopbackAddress = InetAddress.getLoopbackAddress();\n\t\tthis.httpServer = HttpServer.create(new InetSocketAddress(loopbackAddress, port), 0);\n\t}\n\n\tHttpServer getHttpServer() {\n\t\treturn httpServer;\n\t}\n\n\tvoid start() {\n\t\t// Example handler\n\t\thttpServer.createContext(\"/example\", exchange -> {\n\t\t\tString body = \"This is a test\";\n\t\t\texchange.sendResponseHeaders(200, body.length());\n\t\t\ttry (OutputStream os = exchange.getResponseBody()) {\n\t\t\t\tos.write(body.getBytes(UTF_8));\n\t\t\t}\n\t\t});\n\t\thttpServer.setExecutor(null);\n\t\thttpServer.start();\n\t}\n\n\t@Override\n\tpublic void close() {\n\t\thttpServer.stop(0);\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class HttpServerResource(\n    port: Int\n) : AutoCloseable {\n    val httpServer: HttpServer\n\n    init {\n        val loopbackAddress = InetAddress.getLoopbackAddress()\n        httpServer = HttpServer.create(InetSocketAddress(loopbackAddress, port), 0)\n    }\n\n    fun start() {\n        // Example handler\n        httpServer.createContext(\"/example\") { exchange ->\n            val body = \"This is a test\"\n            exchange.sendResponseHeaders(200, body.length.toLong())\n            exchange.responseBody.use { os ->\n                os.write(body.toByteArray(Charsets.UTF_8))\n            }\n        }\n        httpServer.executor = null\n        httpServer.start()\n    }\n\n    override fun close() {\n        httpServer.stop(0)\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpServer"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " resource implementing "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "This resource can then be stored in the desired "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ExtensionContext"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": ". It may be stored at class or method level, if desired, but this may add unnecessary overhead for this type of resource. For this example it might be prudent to store it at root level and instantiate it lazily to ensure it’s only created once per test run and reused across different test classes and methods."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "public class HttpServerExtension implements ParameterResolver {\n\n\t@Override\n\tpublic boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {\n\t\treturn HttpServer.class.equals(parameterContext.getParameter().getType());\n\t}\n\n\t@Override\n\tpublic Object resolveParameter(ParameterContext parameterContext, ExtensionContext extensionContext) {\n\n\t\tExtensionContext rootContext = extensionContext.getRoot();\n\t\tExtensionContext.Store store = rootContext.getStore(Namespace.GLOBAL);\n\t\tClass<HttpServerResource> key = HttpServerResource.class;\n\t\tHttpServerResource resource = store.computeIfAbsent(key, __ -> {\n\t\t\ttry {\n\t\t\t\tHttpServerResource serverResource = new HttpServerResource(0);\n\t\t\t\tserverResource.start();\n\t\t\t\treturn serverResource;\n\t\t\t}\n\t\t\tcatch (IOException e) {\n\t\t\t\tthrow new UncheckedIOException(\"Failed to create HttpServerResource\", e);\n\t\t\t}\n\t\t}, HttpServerResource.class);\n\t\treturn resource.getHttpServer();\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "class HttpServerExtension : ParameterResolver {\n    override fun supportsParameter(\n        parameterContext: ParameterContext,\n        extensionContext: ExtensionContext\n    ): Boolean = HttpServer::class.java == parameterContext.parameter.type\n\n    override fun resolveParameter(\n        parameterContext: ParameterContext,\n        extensionContext: ExtensionContext\n    ): Any {\n        val rootContext = extensionContext.root\n        val store = rootContext.getStore(Namespace.GLOBAL)\n        val key = HttpServerResource::class.java\n        val resource =\n            store.computeIfAbsent(key, {\n                try {\n                    HttpServerResource(0).apply { start() }\n                } catch (e: IOException) {\n                    throw UncheckedIOException(\"Failed to create HttpServerResource\", e)\n                }\n            }, HttpServerResource::class.java)\n        return resource.httpServer\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Lazily storing in root context with "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Store.computeIfAbsent"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(HttpServerExtension.class)\npublic class HttpServerDemo {\n\n\t@Test\n\tvoid httpCall(HttpServer server) throws Exception {\n\t\tString hostName = server.getAddress().getHostName();\n\t\tint port = server.getAddress().getPort();\n\t\tString rawUrl = \"http://%s:%d/example\".formatted(hostName, port);\n\t\tURL requestUrl = URI.create(rawUrl).toURL();\n\n\t\tString responseBody = sendRequest(requestUrl);\n\n\t\tassertEquals(\"This is a test\", responseBody);\n\t}\n\n\tprivate static String sendRequest(URL url) throws IOException {\n\t\tHttpURLConnection connection = (HttpURLConnection) url.openConnection();\n\t\tint contentLength = connection.getContentLength();\n\t\ttry (InputStream response = url.openStream()) {\n\t\t\tbyte[] content = new byte[contentLength];\n\t\t\tassertEquals(contentLength, response.read(content));\n\t\t\treturn new String(content, UTF_8);\n\t\t}\n\t}\n}"
+                            }
+                          ],
+                          "language": "java",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Java"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [
+                    {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "@ExtendWith(HttpServerExtension::class)\nclass HttpServerDemo {\n    @Test\n    fun httpCall(server: HttpServer) {\n        val address = server.address\n        val requestUrl = URI(\"http://${address.hostName}:${address.port}/example\").toURL()\n\n        val responseBody = sendRequest(requestUrl)\n\n        assertEquals(\"This is a test\", responseBody)\n    }\n\n    private fun sendRequest(url: URL): String {\n        val connection = url.openConnection() as HttpURLConnection\n        val contentLength = connection.contentLength\n        url.openStream().use { response ->\n            val content = ByteArray(contentLength)\n            assertEquals(contentLength, response.read(content))\n            return String(content, Charsets.UTF_8)\n        }\n    }\n}"
+                            }
+                          ],
+                          "language": "kotlin",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "context": "open",
+                      "id": null,
+                      "roles": [],
+                      "title": null
+                    }
+                  ],
+                  "checkbox": null,
+                  "inlines": []
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Kotlin"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "example",
+        "id": null,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "A test case using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "HttpServerExtension"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The framework automatically closes resources stored in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtensionContext.Store"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that implement "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "AutoCloseable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". In versions prior to 5.13, only resources implementing "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Store.CloseableResource"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " were automatically closed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If you’re developing an extension that needs to support both JUnit Jupiter 5.13+ and earlier versions and your extension stores resources that need to be cleaned up, you should implement both interfaces:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "public class MyResource implements Store.CloseableResource, AutoCloseable {\n    @Override\n    public void close() throws Exception {\n        // Resource cleanup code\n    }\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "class MyResource : Store.CloseableResource, AutoCloseable {\n    override fun close() {\n        // Resource cleanup code\n    }\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This ensures that your resource will be properly closed regardless of which JUnit Jupiter version is being used."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "admonition",
+        "id": "migration",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Migration Note for Resource Cleanup"
+          }
+        ],
+        "type": "tip"
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Keeping State in Extensions"
+      }
+    ]
+  }
+}

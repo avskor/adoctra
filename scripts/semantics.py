@@ -77,7 +77,10 @@ def append_parts(parts, stack):
                 require(part['format'] in FORMATS)
                 node = {'kind': part['format'], 'id': lexical(part['id']) if 'id' in part else None,
                         'roles': lexical(part.get('role', '')).split(), 'inlines': []}
-                closing = ('close', part['format'])
+                # Parts and format nodes close alike: like Ruby's HTML read by
+                # a parser, a closing tag ends the innermost element of its
+                # format even when the two spans cross (```x```).
+                closing = ('format', part['format'])
             else:
                 allowed = {'kind', 'target', *LINK_METADATA}
                 if kind == 'open-xref':
@@ -95,7 +98,8 @@ def append_parts(parts, stack):
             stack.append((closing, node['inlines']))
         elif kind in {'close', 'close-link', 'close-xref'}:
             require(set(part) == ({'kind', 'format'} if kind == 'close' else {'kind'}))
-            require(len(stack) > 1 and stack[-1][0] == (kind, part.get('format')), 'unbalanced semantic parts')
+            closing = ('format', part['format']) if kind == 'close' else (kind, None)
+            require(len(stack) > 1 and stack[-1][0] == closing, 'unbalanced semantic parts')
             stack.pop()
         elif kind == 'line-break':
             require(set(part) == {'kind'})
@@ -112,6 +116,15 @@ def append_parts(parts, stack):
 def inline_projection(nodes):
     result = []
     stack = [(None, result)]
+    project_into(nodes, stack)
+    require(len(stack) == 1, 'unbalanced semantic parts')
+    return result
+
+
+def project_into(nodes, stack):
+    """Project `nodes` onto the open `stack`. A format node opens and closes
+    on the same stack as format parts, so spans crossing a node close by
+    format (see append_parts)."""
     for node in nodes:
         name = node['name']
         if name in {'text', 'substituted'}:
@@ -119,7 +132,13 @@ def inline_projection(nodes):
         elif name == 'raw':
             stack[-1][1].append({'kind': 'text', 'value': lexical(node['value'])})
         elif name in FORMATS:
-            stack[-1][1].append({'kind': name, 'id': None, 'roles': [], 'inlines': inline_projection(node['inlines'])})
+            projected = {'kind': name, 'id': None, 'roles': [], 'inlines': []}
+            stack[-1][1].append(projected)
+            stack.append((('format', name), projected['inlines']))
+            project_into(node['inlines'], stack)
+            # The node's own end closes the innermost open span of its format.
+            require(len(stack) > 1 and stack[-1][0] == ('format', name), 'unbalanced semantic parts')
+            stack.pop()
         elif name in {'link', 'xref'}:
             require(name == 'xref' or not node.get('role'), 'link role is outside inline-semantics-v1')
             projected = {'kind': name, 'target': node['target'], 'inlines': inline_projection(node['inlines'])}
@@ -132,8 +151,6 @@ def inline_projection(nodes):
             stack[-1][1].append(complex_inline(node, name))
         else:
             raise ValueError(f'unsupported semantic inline: {name}')
-    require(len(stack) == 1, 'unbalanced semantic parts')
-    return result
 
 
 def svg_projection(svg):
@@ -156,7 +173,8 @@ def image_fields(node):
     attrs = node.get('attributes', {})
     # pdfwidth/scaledwidth size the image in PDF and DocBook only (as in the
     # Ruby reference converter, they are accepted and not compared).
-    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt', 'fallback', 'format', 'pdfwidth', 'scaledwidth'},
+    # caption= is the block image's caption, compared as its own field.
+    require(set(attrs) <= IMAGE_ATTRIBUTES | {'id', 'role', 'alt', 'fallback', 'format', 'pdfwidth', 'scaledwidth', 'caption'},
             'image attributes are outside inline-semantics-v1')
     return {'target': lexical(node['target']), 'src': lexical(node['src']),
             'alt': parts_projection(node['parts']) if 'parts' in node else [{'kind': 'text', 'value': lexical(node['alt'])}],
@@ -287,6 +305,15 @@ def cell_projection(cell, group):
     return result
 
 
+def caption_projection(block):
+    """A table's or block image's caption label, or None."""
+    if block.get('caption_parts') is not None:
+        return canonical(parts_projection(block['caption_parts']), prose=False)
+    if block.get('caption') is not None:
+        return canonical([{'kind': 'text', 'value': lexical(block['caption'])}], prose=False)
+    return None
+
+
 def block_projection(block):
     context = block['name']
     if context == 'list':
@@ -335,10 +362,7 @@ def block_projection(block):
             result['style'] = block.get('style') or ('arabic' if context == 'olist' else None)
             result['items'] = [item_projection(item, callout=context == 'colist') for item in block['items']]
     elif context == 'table':
-        if block.get('caption_parts') is not None:
-            result['caption'] = canonical(parts_projection(block['caption_parts']), prose=False)
-        else:
-            result['caption'] = canonical([{'kind': 'text', 'value': lexical(block['caption'])}], prose=False) if block.get('caption') is not None else None
+        result['caption'] = caption_projection(block)
         attrs = block.get('attributes', {})
         result.update({key: block[key] for key in ['frame', 'grid', 'stripes', 'width']})
         result['explicit_width'] = 'width' in attrs
@@ -358,6 +382,8 @@ def block_projection(block):
         fields = image_fields(block)
         fields['alt'] = canonical(fields['alt'], prose=False)
         result.update(fields)
+        # `Figure N.` (figure-caption), an explicit caption= or none.
+        result['caption'] = caption_projection(block)
     elif context == 'paragraph':
         result['inlines'] = canonical(inline_projection(block['inlines']))
     elif block.get('simple', False):
@@ -530,6 +556,8 @@ def reference_projection(result, names):
             if node.get(key) is not None:
                 node[key] = inlines(node[key])
         if node['context'] == 'image':
+            if node['caption'] is not None:
+                node['caption'] = inlines(node['caption'], False)
             for key in ['target', 'src']:
                 node[key] = lexical(node[key])
             node['alt'] = inlines(node['alt'], False)
@@ -888,8 +916,10 @@ def validate_block(node):
         keys.update({'columns', 'head', 'body', 'foot'} | TABLE_FIELDS)
         validate_table(node)
     elif context == 'image':
-        keys.update({'target', 'src', 'alt', 'attributes', 'svg'})
+        keys.update({'target', 'src', 'alt', 'attributes', 'svg', 'caption'})
         validate_image(node)
+        if node.get('caption') is not None:
+            validate_inlines(node['caption'])
     elif context == 'stem':
         keys.update({'style', 'inlines'})
         require(node.get('style') in {'asciimath', 'latexmath'})

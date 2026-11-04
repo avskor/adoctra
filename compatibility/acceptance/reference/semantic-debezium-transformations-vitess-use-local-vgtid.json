@@ -1,0 +1,286 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "example-vitess-use-local-vgtid.adoc",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Example: Configuring the "
+                    },
+                    {
+                      "id": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "UseLocalVgtid"
+                        }
+                      ],
+                      "kind": "monospace",
+                      "roles": []
+                    },
+                    {
+                      "kind": "text",
+                      "value": " SMT"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "UseLocalVgtid"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SMT converts the value of the VGTID in the event record from a list of VGTIDs for several shards to the VGTID for the single shard that received the change for this event. This transformation is designed for use only with the Debezium connector for Vitess."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The SMT extracts the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "shard"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " field in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "source"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " block of the transaction boundary event record to determine the shard that received the change. The SMT then sets that value of the VGTID in the event record to the value of the VGTID for the specified shard. Other VGTID values are removed from the event record. The following example shows how to add the SMT to the connector configuration so that it converts lists of the VGTIDs for multiple shards to the value of a single local VGTID."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "\"connector.class\": \"io.debezium.connector.vitess.VitessConnector\",\n...\n\"transforms\": \"useLocalVgtid\",\n\"transforms.useLocalVgtid.type\": \"io.debezium.connector.vitess.transforms.UseLocalVgtid\",\n..."
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows the value of a record before and after the transformation is applied."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "{\n    \"source\": {\n        \"version\": \"2.6.2.Final\",\n        \"connector\": \"vitess\",\n        \"name\": \"my_sharded_connector\",\n        \"ts_ms\": 1559033904000,\n        \"ts_us\": 1559033904000000,\n        \"ts_ns\": 1559033904000000000,\n        \"snapshot\": \"false\",\n        \"db\": \"\",\n        \"sequence\": null,\n        \"keyspace\": \"commerce\",\n        \"table\": \"customers\",\n        \"shard\": \"-80\",\n        \"vgtid\": \"[{\\\"keyspace\\\":\\\"commerce\\\",\\\"shard\\\":\\\"80-\\\",\\\"gtid\\\":\\\"MariaDB/0-54610504-47\\\"},{\\\"keyspace\\\":\\\"commerce\\\",\\\"shard\\\":\\\"-80\\\",\\\"gtid\\\":\\\"MariaDB/0-1592148-45\\\"}]\"\n    },\n}"
+                            }
+                          ],
+                          "language": "json",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Value before the SMT processes the record"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "listing",
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "{\n    \"source\": {\n        \"version\": \"2.6.2.Final\",\n        \"connector\": \"vitess\",\n        \"name\": \"my_sharded_connector\",\n        \"ts_ms\": 1559033904000,\n        \"ts_us\": 1559033904000000,\n        \"ts_ns\": 1559033904000000000,\n        \"snapshot\": \"false\",\n        \"db\": \"\",\n        \"sequence\": null,\n        \"keyspace\": \"commerce\",\n        \"table\": \"customers\",\n        \"shard\": \"-80\",\n        \"vgtid\": \"[{\\\"keyspace\\\":\\\"commerce\\\",\\\"shard\\\":\\\"-80\\\",\\\"gtid\\\":\\\"MariaDB/0-1592148-45\\\"}]\"\n    },\n}"
+                            }
+                          ],
+                          "language": "json",
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Value after the SMT processes the record"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Effect of applying the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "UseLocalVgtid"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SMT"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "example-vitess-use-local-vgtid.adoc",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Example: Configuring the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "UseLocalVgtid"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " SMT"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Vitess Use Local VGTID"
+      }
+    ]
+  }
+}

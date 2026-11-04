@@ -1,0 +1,546 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " tests give the test writer more capabilities to express the relationship among several groups of tests. Such nested tests make use of Java’s nested classes and facilitate hierarchical thinking about the test structure. Here’s an elaborate example, both as source code and as a screenshot of the execution within an IDE."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import static org.junit.jupiter.api.Assertions.assertEquals;\nimport static org.junit.jupiter.api.Assertions.assertFalse;\nimport static org.junit.jupiter.api.Assertions.assertThrows;\nimport static org.junit.jupiter.api.Assertions.assertTrue;\n\nimport java.util.EmptyStackException;\nimport java.util.Stack;\n\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.DisplayName;\nimport org.junit.jupiter.api.Nested;\nimport org.junit.jupiter.api.Test;\n\n@DisplayName(\"A stack\")\nclass TestingAStackDemo {\n\n\t@Test\n\t@DisplayName(\"is instantiated with new Stack()\")\n\tvoid isInstantiatedWithNew() {\n\t\tnew Stack<>();\n\t}\n\n\t@Nested\n\t@DisplayName(\"when new\")\n\tclass WhenNew {\n\n\t\tStack<Object> stack;\n\n\t\t@BeforeEach\n\t\tvoid createNewStack() {\n\t\t\tstack = new Stack<>();\n\t\t}\n\n\t\t@Test\n\t\t@DisplayName(\"is empty\")\n\t\tvoid isEmpty() {\n\t\t\tassertTrue(stack.isEmpty());\n\t\t}\n\n\t\t@Test\n\t\t@DisplayName(\"throws EmptyStackException when popped\")\n\t\tvoid throwsExceptionWhenPopped() {\n\t\t\tassertThrows(EmptyStackException.class, stack::pop);\n\t\t}\n\n\t\t@Test\n\t\t@DisplayName(\"throws EmptyStackException when peeked\")\n\t\tvoid throwsExceptionWhenPeeked() {\n\t\t\tassertThrows(EmptyStackException.class, stack::peek);\n\t\t}\n\n\t\t@Nested\n\t\t@DisplayName(\"after pushing an element\")\n\t\tclass AfterPushing {\n\n\t\t\tString anElement = \"an element\";\n\n\t\t\t@BeforeEach\n\t\t\tvoid pushAnElement() {\n\t\t\t\tstack.push(anElement);\n\t\t\t}\n\n\t\t\t@Test\n\t\t\t@DisplayName(\"it is no longer empty\")\n\t\t\tvoid isNotEmpty() {\n\t\t\t\tassertFalse(stack.isEmpty());\n\t\t\t}\n\n\t\t\t@Test\n\t\t\t@DisplayName(\"returns the element when popped and is empty\")\n\t\t\tvoid returnElementWhenPopped() {\n\t\t\t\tassertEquals(anElement, stack.pop());\n\t\t\t\tassertTrue(stack.isEmpty());\n\t\t\t}\n\n\t\t\t@Test\n\t\t\t@DisplayName(\"returns the element when peeked but remains not empty\")\n\t\t\tvoid returnElementWhenPeeked() {\n\t\t\t\tassertEquals(anElement, stack.peek());\n\t\t\t\tassertFalse(stack.isEmpty());\n\t\t\t}\n\t\t}\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import org.junit.jupiter.api.Assertions.assertEquals\nimport org.junit.jupiter.api.Assertions.assertFalse\nimport org.junit.jupiter.api.Assertions.assertTrue\nimport org.junit.jupiter.api.BeforeEach\nimport org.junit.jupiter.api.DisplayName\nimport org.junit.jupiter.api.Nested\nimport org.junit.jupiter.api.Test\nimport org.junit.jupiter.api.assertThrows\nimport java.util.EmptyStackException\nimport java.util.Stack\n\n@DisplayName(\"A stack\")\nclass TestingAStackDemo {\n    @Test\n    @DisplayName(\"is instantiated with new Stack()\")\n    fun isInstantiatedWithNew() {\n        Stack<Any>()\n    }\n\n    @Nested\n    @DisplayName(\"when new\")\n    inner class WhenNew {\n        lateinit var stack: Stack<Any>\n\n        @BeforeEach\n        fun createNewStack() {\n            stack = Stack()\n        }\n\n        @Test\n        @DisplayName(\"is empty\")\n        fun isEmpty() {\n            assertTrue(stack.isEmpty())\n        }\n\n        @Test\n        @DisplayName(\"throws EmptyStackException when popped\")\n        fun throwsExceptionWhenPopped() {\n            assertThrows<EmptyStackException> { stack.pop() }\n        }\n\n        @Test\n        @DisplayName(\"throws EmptyStackException when peeked\")\n        fun throwsExceptionWhenPeeked() {\n            assertThrows<EmptyStackException> { stack.peek() }\n        }\n\n        @Nested\n        @DisplayName(\"after pushing an element\")\n        inner class AfterPushing {\n            val anElement = \"an element\"\n\n            @BeforeEach\n            fun pushAnElement() {\n                stack.push(anElement)\n            }\n\n            @Test\n            @DisplayName(\"it is no longer empty\")\n            fun isNotEmpty() {\n                assertFalse(stack.isEmpty())\n            }\n\n            @Test\n            @DisplayName(\"returns the element when popped and is empty\")\n            fun returnElementWhenPopped() {\n                assertEquals(anElement, stack.pop())\n                assertTrue(stack.isEmpty())\n            }\n\n            @Test\n            @DisplayName(\"returns the element when peeked but remains not empty\")\n            fun returnElementWhenPeeked() {\n                assertEquals(anElement, stack.peek())\n                assertFalse(stack.isEmpty())\n            }\n        }\n    }\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Nested test suite for testing a stack"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When executing this example in an IDE, the test execution tree in the GUI will look similar to the following image."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "writing tests nested test ide"
+              }
+            ],
+            "attributes": {},
+            "caption": [],
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "writing-tests_nested_test_ide.png",
+            "svg": null,
+            "target": "writing-tests_nested_test_ide.png",
+            "title": [
+              {
+                "kind": "text",
+                "value": "Executing a nested test in an IDE"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In this example, preconditions from outer tests are used in inner tests by defining hierarchical lifecycle methods for the setup code. For example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "createNewStack()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " is a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BeforeEach"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " lifecycle method that is used in the test class in which it is defined and in all levels in the nesting tree below the class in which it is defined."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The fact that setup code from outer tests is run before inner tests are executed gives you the ability to run all tests independently. You can even run inner tests alone without running the outer tests, because the setup code from the outer tests is always executed."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Only non-static nested classes"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " (i.e. "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inner classes"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") can serve as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " test classes. Nesting can be arbitrarily deep, and those inner classes are subject to full lifecycle support, including "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BeforeAll"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@AfterAll"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods on each level."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " may be combined with "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@ParameterizedClass"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/parameterized-classes-and-tests.html"
+              },
+              {
+                "kind": "text",
+                "value": " in which case the nested test class is parameterized."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example illustrates how to combine "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Nested"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " with "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ParameterizedClass"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ParameterizedTest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Execution(SAME_THREAD)\n@ParameterizedClass\n@ValueSource(strings = { \"apple\", \"banana\" })\nclass FruitTests {\n\n\t@Parameter\n\tString fruit;\n\n\t@Nested\n\t@ParameterizedClass\n\t@ValueSource(ints = { 23, 42 })\n\tclass QuantityTests {\n\n\t\t@Parameter\n\t\tint quantity;\n\n\t\t@ParameterizedTest\n\t\t@ValueSource(strings = { \"PT1H\", \"PT2H\" })\n\t\tvoid test(Duration duration) {\n\t\t\tassertFruit(fruit);\n\t\t\tassertQuantity(quantity);\n\t\t\tassertFalse(duration.isNegative());\n\t\t}\n\t}\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Execution(SAME_THREAD)\n@ParameterizedClass\n@ValueSource(strings = [\"apple\", \"banana\"])\nclass FruitTests {\n    @Parameter\n    lateinit var fruit: String\n\n    @Nested\n    @ParameterizedClass\n    @ValueSource(ints = [23, 42])\n    inner class QuantityTests {\n        @Parameter\n        var quantity: Int = 0\n\n        @ParameterizedTest\n        @ValueSource(strings = [\"PT1H\", \"PT2H\"])\n        fun test(duration: Duration) {\n            assertFruit(fruit)\n            assertQuantity(quantity)\n            assertFalse(duration.isNegative)\n        }\n    }\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Executing the above test class yields the following output:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "literal",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "FruitTests ✔\n├─ [1] fruit = \"apple\" ✔\n│  └─ QuantityTests ✔\n│     ├─ [1] quantity = 23 ✔\n│     │  └─ test(Duration) ✔\n│     │     ├─ [1] duration = \"PT1H\" ✔\n│     │     └─ [2] duration = \"PT2H\" ✔\n│     └─ [2] quantity = 42 ✔\n│        └─ test(Duration) ✔\n│           ├─ [1] duration = \"PT1H\" ✔\n│           └─ [2] duration = \"PT2H\" ✔\n└─ [2] fruit = \"banana\" ✔\n   └─ QuantityTests ✔\n      ├─ [1] quantity = 23 ✔\n      │  └─ test(Duration) ✔\n      │     ├─ [1] duration = \"PT1H\" ✔\n      │     └─ [2] duration = \"PT2H\" ✔\n      └─ [2] quantity = 42 ✔\n         └─ test(Duration) ✔\n            ├─ [1] duration = \"PT1H\" ✔\n            └─ [2] duration = \"PT2H\" ✔"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "interoperability",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Interoperability"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Nested Tests"
+      }
+    ]
+  }
+}

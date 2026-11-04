@@ -1,0 +1,3354 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "debezium-notification-format",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Debezium notification format"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "debezium-available-notifications",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Available notifications"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "debezium-notifications-about-the-status-of-an-initial-snapshot",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Debezium notifications about the status of an initial snapshot"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "debezium-notifications-about-the-progress-of-incremental-snapshots",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Debezium notifications about the progress of incremental snapshots"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "enabling-debezium-notifications",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Enabling Debezium notifications"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "access-debezium-jmx-notifications",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Access to Debezium JMX notifications"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "debezium-notification-custom-channel",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Custom notification channels"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "debezium-configuring-custom-notification-channels",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuring custom notification channels"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "debezium-core-module-dependency",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Debezium core module dependencies"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "deploying-a-debezium-custom-notification-channel",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Deploying a custom notification channel"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "configuring-connectors-to-use-a-custom-notification-channel",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuring connectors to use a custom notification channel"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium notifications provide a mechanism to obtain status information about the connector. Notifications can be sent to the following channels:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Sends notifications through the Connect API to a configured topic."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "SinkNotificationChannel"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Notifications are appended to the log."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "LogNotificationChannel"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Notifications are exposed as an attribute in a JMX bean."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "JmxNotificationChannel"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Notifications are sent to a "
+                    },
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "custom channel"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "#debezium-notification-custom-channel"
+                    },
+                    {
+                      "kind": "text",
+                      "value": " that you implement."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "kind": "text",
+                      "value": "Custom"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Notification messages contain the following information:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "autowidth": false,
+            "body": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "id"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "document": {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "A unique identifier that is assigned to the notification. For incremental snapshot notifications, the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "id"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is the same sent with the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "execute-snapshot"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " signal."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Due to code limitations, the "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "id"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " does not map 1:1 with the original signal when multiple incremental snapshots are in progress. In such cases, the "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "id"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " of the last sent signal will be used for all notifications."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "context": "admonition",
+                        "id": null,
+                        "roles": [],
+                        "title": null,
+                        "type": "note"
+                      }
+                    ],
+                    "title": null
+                  },
+                  "halign": "left",
+                  "rowspan": 1,
+                  "style": "asciidoc",
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "aggregate_type"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The data type of the aggregate root to which a notification is related. In domain-driven design, exported events should always refer to an aggregate."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "type"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "Provides status information about the event specified in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "aggregate_type"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " field."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "additional_data"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "A Map<String,String> with detailed information about the notification. For an example, see "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Debezium notifications about the progress of incremental snapshots"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "#debezium-notifications-about-the-progress-of-incremental-snapshots"
+                      },
+                      {
+                        "kind": "text",
+                        "value": "."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ],
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "timestamp"
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "paragraphs": [
+                    [
+                      {
+                        "kind": "text",
+                        "value": "The time when the notification was created. The value represents the number of milliseconds since the UNIX epoch."
+                      }
+                    ]
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "caption": null,
+            "columns": [
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              },
+              {
+                "autowidth": false,
+                "halign": "left",
+                "style": null,
+                "valign": "top",
+                "width": "50"
+              }
+            ],
+            "context": "table",
+            "explicit_width": false,
+            "float": null,
+            "foot": [],
+            "frame": "all",
+            "grid": "all",
+            "head": [
+              [
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Property"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                },
+                {
+                  "background": null,
+                  "colspan": 1,
+                  "halign": "left",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Description"
+                    }
+                  ],
+                  "rowspan": 1,
+                  "style": null,
+                  "valign": "top"
+                }
+              ]
+            ],
+            "id": null,
+            "options": [],
+            "roles": [],
+            "stripes": null,
+            "title": null,
+            "width": 100
+          }
+        ],
+        "context": "section",
+        "id": "debezium-notification-format",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Debezium notification format"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium notifications deliver information about the progress of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "initial snapshots"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#debezium-notifications-about-the-status-of-an-initial-snapshot"
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "incremental snapshots"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#debezium-notifications-about-the-progress-of-incremental-snapshots"
+              },
+              {
+                "kind": "text",
+                "value": ". For information about the use of notifications for a specific connector, see the documentation for that connector."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows a typical notification that provides the status of an initial snapshot:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{\n    \"id\": \"5563ae14-49f8-4579-9641-c1bbc2d76f99\",\n    \"aggregate_type\": \"Initial Snapshot\",\n    \"type\": \"COMPLETED\",\n    \"additional_data\" : {\n        \"connector_name\": \"myConnector\"\n    },\n    \"timestamp\": \"1695817046353\"\n}"
+                  }
+                ],
+                "language": "json",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following list describes select fields in the preceding initial snapshot notification example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "context": "ulist",
+                          "id": null,
+                          "items": [
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "COMPLETED"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "ABORTED"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            },
+                            {
+                              "blocks": [],
+                              "checkbox": null,
+                              "inlines": [
+                                {
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "SKIPPED"
+                                    }
+                                  ],
+                                  "kind": "monospace",
+                                  "roles": []
+                                }
+                              ]
+                            }
+                          ],
+                          "roles": [],
+                          "style": null,
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "type"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " field can contain one of the following values:"
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "type"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following table shows examples of the different payloads that might be present in notifications that report the status of initial snapshots:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "STARTED"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "  {\n      \"id\":\"ff81ba59-15ea-42ae-b5d0-4d74f1f4038f\",\n      \"aggregate_type\":\"Initial Snapshot\",\n      \"type\":\"STARTED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "IN_PROGRESS"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"6d82a3ec-ba86-4b36-9168-7423b0dd5c1d\",\n   \"aggregate_type\":\"Initial Snapshot\",\n   \"type\":\"IN_PROGRESS\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\",\n      \"data_collections\":\"table1, table2\",\n      \"current_collection_in_progress\":\"table1\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The field "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "data_collection"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " is not supported for the MongoDB connector."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "TABLE_SCAN_COMPLETED"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"6d82a3ec-ba86-4b36-9168-7423b0dd5c1d\",\n   \"aggregate_type\":\"Initial Snapshot\",\n   \"type\":\"TABLE_SCAN_COMPLETED\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\",\n      \"data_collection\":\"table1, table2\",\n      \"scanned_collection\":\"table1\",\n      \"total_rows_scanned\":\"100\",\n      \"status\":\"SUCCEEDED\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "In the preceding example, the "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "additional_data.status"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " field can contain one of the following values:"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "A SQL exception occurred while performing the snapshot."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "SQL_EXCEPTION"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The snapshot completed successfully."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "SUCCEEDED"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Fields "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "total_rows_scanned"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " and "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "data_collection"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " are currently not supported for MongoDB connector"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "COMPLETED"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "  {\n      \"id\":\"ff81ba59-15ea-42ae-b5d0-4d74f1f4038f\",\n      \"aggregate_type\":\"Initial Snapshot\",\n      \"type\":\"COMPLETED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "ABORTED"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "  {\n      \"id\":\"ff81ba59-15ea-42ae-b5d0-4d74f1f4038f\",\n      \"aggregate_type\":\"Initial Snapshot\",\n      \"type\":\"ABORTED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "SKIPPED"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "  {\n      \"id\":\"ff81ba59-15ea-42ae-b5d0-4d74f1f4038f\",\n      \"aggregate_type\":\"Initial Snapshot\",\n      \"type\":\"SKIPPED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Status"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Payload"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "debezium-notifications-about-the-status-of-an-initial-snapshot",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Debezium notifications about the status of an initial snapshot"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following table shows examples of the different payloads that might be present in notifications that report the status of incremental snapshots:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Start"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "  {\n      \"id\":\"ff81ba59-15ea-42ae-b5d0-4d74f1f4038f\",\n      \"aggregate_type\":\"Incremental Snapshot\",\n      \"type\":\"STARTED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\",\n         \"data_collections\":\"table1, table2\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Paused"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n      \"id\":\"068d07a5-d16b-4c4a-b95f-8ad061a69d51\",\n      \"aggregate_type\":\"Incremental Snapshot\",\n      \"type\":\"PAUSED\",\n      \"additional_data\":{\n         \"connector_name\":\"my-connector\",\n         \"data_collections\":\"table1, table2\"\n      },\n      \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Resumed"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": " {\n   \"id\":\"a9468204-769d-430f-96d2-b0933d4839f3\",\n   \"aggregate_type\":\"Incremental Snapshot\",\n   \"type\":\"RESUMED\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\",\n      \"data_collections\":\"table1, table2\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Stopped"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"83fb3d6c-190b-4e40-96eb-f8f427bf482c\",\n   \"aggregate_type\":\"Incremental Snapshot\",\n   \"type\":\"ABORTED\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Processing chunk"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"d02047d6-377f-4a21-a4e9-cb6e817cf744\",\n   \"aggregate_type\":\"Incremental Snapshot\",\n   \"type\":\"IN_PROGRESS\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\",\n      \"data_collections\":\"table1, table2\",\n      \"current_collection_in_progress\":\"table1\",\n      \"maximum_key\":\"100\",\n      \"last_processed_key\":\"50\",\n      \"total_rows\":\"100\",\n      \"total_chunks\":\"10\",\n      \"chunk_index\":\"5\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "total_rows"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ", "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "total_chunks"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ", and "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "chunk_index"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " fields let you report the progress of the scan for the current data collection:"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "A best-effort estimate of the total number of rows in the data collection that is currently being snapshotted. Debezium uses the database’s own metadata statistics when they are available, and otherwise falls back to a bounded count. Because the value is an estimate, it might not exactly match the number of rows that are ultimately scanned."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "total_rows"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The number of chunks that are required to complete the scan, derived from "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "total_rows"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " and the configured "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "incremental.snapshot.chunk.size"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": "."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "total_chunks"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The number of chunks that have been completed so far for the current data collection, from "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "1"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " up to "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "total_chunks"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": ". The reported progress never exceeds 100 percent."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "chunk_index"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "These fields are present only when Debezium can establish an estimate for the data collection; if it cannot, the fields are omitted."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Snapshot completed for a table"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"6d82a3ec-ba86-4b36-9168-7423b0dd5c1d\",\n   \"aggregate_type\":\"Incremental Snapshot\",\n   \"type\":\"TABLE_SCAN_COMPLETED\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\",\n      \"data_collection\":\"table1, table2\",\n      \"scanned_collection\":\"table1\",\n      \"total_rows_scanned\":\"100\",\n      \"total_rows\":\"100\",\n      \"status\":\"SUCCEEDED\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "The "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "total_rows"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " field reports the best-effort estimate of the total number of rows in the data collection. It is present only on a successful scan completion ("
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "status"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " is "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "SUCCEEDED"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ") and only when Debezium can establish an estimate for the data collection. Because the value is an estimate, it might differ slightly from "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "total_rows_scanned"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ", which reports the exact number of rows that were scanned."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "In the preceding example, the "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "additional_data.status"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " field can contain one of the following values:"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          },
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The table contains no values."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "EMPTY"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Cannot complete snapshot; table has no primary key."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "NO_PRIMARY_KEY"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Cannot complete a snapshots for this type of table. Refer to the logs for details."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "SKIPPED"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "A SQL exception occurred while performing the snapshot."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "SQL_EXCEPTION"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The snapshot completed successfully."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "SUCCEEDED"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              },
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Could not find a schema for the table. Check the logs for the list of known tables."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "UNKNOWN_SCHEMA"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Completed"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "listing",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "{\n   \"id\":\"6d82a3ec-ba86-4b36-9168-7423b0dd5c1d\",\n   \"aggregate_type\":\"Incremental Snapshot\",\n   \"type\":\"COMPLETED\",\n   \"additional_data\":{\n      \"connector_name\":\"my-connector\"\n   },\n   \"timestamp\": \"1695817046353\"\n}"
+                              }
+                            ],
+                            "language": "json",
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": null,
+                    "valign": "top",
+                    "width": "50"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Status"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "left",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Payload"
+                        }
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "debezium-notifications-about-the-progress-of-incremental-snapshots",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Debezium notifications about the progress of incremental snapshots"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "debezium-available-notifications",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Available notifications"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To enable Debezium to emit notifications, specify a list of notification channels by setting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "notification.enabled.channels"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration property. By default, the following notification channels are available:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sink"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "log"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "jmx"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "sink"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " notification channel, you must also set the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "notification.sink.topic.name"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " configuration property to the name of the topic where you want Debezium to send notifications."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "important"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To enable Debezium to report events that are exposed through JMX beans, complete the following configuration steps:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "olist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Enable the JMX MBean Server"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "operations/monitoring.html#monitoring-debezium"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to expose the notification bean."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Add "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "jmx"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "notification.enabled.channels"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property in the connector configuration."
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Connect your preferred JMX client to the MBean Server."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Notifications are exposed through the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Notifications"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " attribute of a bean with the name "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "debezium."
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<connector-type>"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": ".management.notifications."
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "<server>"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following image shows a notification that reports the start of an incremental snapshot:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "alt": [
+                  {
+                    "kind": "text",
+                    "value": "Fields in the JMX `Notifications` attribute"
+                  }
+                ],
+                "attributes": {},
+                "caption": null,
+                "context": "image",
+                "id": null,
+                "roles": [],
+                "src": "jmx-notification-attribute.png",
+                "svg": null,
+                "target": "jmx-notification-attribute.png",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To discard a notification, call the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "reset"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " operation on the bean."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The notifications are also exposed as a JMX notification with type "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "debezium.notification"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". To enable an application to listen for the JMX notifications that an MBean emits, "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "subscribe the application to the notifications"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://docs.oracle.com/javase/tutorial/jmx/notifs/index.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "access-debezium-jmx-notifications",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Access to Debezium JMX notifications"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "enabling-debezium-notifications",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Enabling Debezium notifications"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The notification mechanism is designed to be extensible. You can implement channels as needed to deliver notifications in a manner that works best in your environment. Adding a notification channel involves several steps:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "olist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Create a Java project for the channel"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#debezium-configuring-custom-notification-channels"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to implement the channel, and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "add "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Debezium Connector Core"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " as a dependency"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#debezium-connector-common-module-dependency"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Deploy the notification channel"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#deploying-a-debezium-custom-notification-channel"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Enable connectors to use the custom notification channel by modifying the connector configuration"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#configuring-connectors-to-use-a-custom-notification-channel"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Custom notification channels are Java classes that implement the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "io.debezium.pipeline.notification.channels.NotificationChannel"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " service provider interface (SPI). For example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "public interface NotificationChannel {\n\n    String name();\n\n    void init(CommonConnectorConfig config);\n\n    void send(Notification notification);\n\n    void close();\n}"
+                  }
+                ],
+                "language": "java",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following list describes the purpose of select lines in the preceding "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "NotificationChannel"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "The name of the channel. To enable Debezium to use the channel, specify this name in the connector’s "
+                        },
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "notification.enabled.channels"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        },
+                        {
+                          "kind": "text",
+                          "value": " property."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "String name()"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Initializes specific configuration, variables, or connections that the channel requires."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "void init(CommonConnectorConfig config)"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "ends the notification on the channel. Debezium calls this method to report its status."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "void send(Notification notification)"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Closes all allocated resources. Debezium calls this method when the connector is stopped."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "void close()"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "debezium-configuring-custom-notification-channels",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring custom notification channels"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A custom notification channel Java project has compile dependencies on the Debezium core module. You must include these compile dependencies in your project’s "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pom.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file, as shown in the following example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "<dependency>\n    <groupId>io.debezium</groupId>\n    <artifactId>debezium-connector-common</artifactId>\n    <version>${version.debezium}</version>\n</dependency>"
+                  }
+                ],
+                "language": "xml",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following list describes select fields in the preceding "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pom.xml"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " dependency example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [],
+                      "checkbox": null,
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Represents the version of the Debezium connector."
+                        }
+                      ]
+                    },
+                    "terms": [
+                      [
+                        {
+                          "id": null,
+                          "inlines": [
+                            {
+                              "kind": "text",
+                              "value": "${version.debezium}"
+                            }
+                          ],
+                          "kind": "monospace",
+                          "roles": []
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Declare your implementation in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "META-INF/services/io.debezium.pipeline.notification.channels.NotificationChannel"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "debezium-core-module-dependency",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Debezium core module dependencies"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You have a custom notification channel Java program."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Prerequisites"
+                  }
+                ]
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "For example, in a typical deployment, the Debezium connector files are stored in subdirectories of a Kafka Connect directory ("
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "/kafka/connect"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "), with each connector JAR in its own subdirectory ("
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "/kafka/connect/debezium-connector-db2"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "/kafka/connect/debezium-connector-mysql"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ", and so forth). To use a signaling channel with a connector, add the converter JAR file to the connector’s subdirectory."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To use a notification channel with a Debezium connector, export the Java project to a JAR file, and copy the file to the directory that contains the JAR file for each Debezium connector that you want to use it with."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Procedure"
+                  }
+                ]
+              },
+              {
+                "context": "admonition",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To use a custom notification channel with multiple connectors, you must place a copy of the notification channel JAR file in each connector subdirectory."
+                  }
+                ],
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "deploying-a-debezium-custom-notification-channel",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Deploying a custom notification channel"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the connector configuration, add the name of the custom notification channel to the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "notification.enabled.channels"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "configuring-connectors-to-use-a-custom-notification-channel",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring connectors to use a custom notification channel"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "debezium-notification-custom-channel",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom notification channels"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Debezium notifications"
+      }
+    ]
+  }
+}

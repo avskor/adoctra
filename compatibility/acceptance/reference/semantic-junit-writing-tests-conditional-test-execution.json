@@ -1,0 +1,2810 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExecutionCondition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/conditional-test-execution.html"
+              },
+              {
+                "kind": "text",
+                "value": " extension API in JUnit Jupiter allows developers to either "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "enable"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " or "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "disable"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " a test class or test method based on certain conditions "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "programmatically"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". The simplest example of such a condition is the built-in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "DisabledCondition"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/junit-team/junit-framework/tree/{release-branch}/junit-jupiter-engine/src/main/java/org/junit/jupiter/engine/extension/DisabledCondition.java"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " which supports the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Disabled"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/Disabled.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotation (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "writing-tests/disabling-tests.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/disabling-tests.html"
+              },
+              {
+                "kind": "text",
+                "value": ")."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In addition to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Disabled"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", JUnit Jupiter also supports several other annotation-based conditions in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "org.junit.jupiter.api.condition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " package that allow developers to enable or disable test classes and test methods "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "declaratively"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". If you wish to provide details about why they might be disabled, every annotation associated with these built-in conditions has a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "disabledReason"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute available for that purpose."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When multiple "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExecutionCondition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extensions are registered, a test class or test method is disabled as soon as one of the conditions returns "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "disabled"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". If a test class is disabled, all test methods within that class are automatically disabled as well. If a test method is disabled, that prevents execution of the test method and method-level lifecycle callbacks such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BeforeEach"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@AfterEach"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods, and corresponding extension APIs. However, that does not prevent the test class from being instantiated, and it does not prevent the execution of class-level lifecycle callbacks such as "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@BeforeAll"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@AfterAll"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods, and corresponding extension APIs."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "See "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExecutionCondition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/conditional-test-execution.html"
+              },
+              {
+                "kind": "text",
+                "value": " and the following sections for details."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that any of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "conditional"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations listed in the following sections may also be used as a meta-annotation in order to create a custom "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "composed annotation"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". For example, the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@TestOnMac"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotation in the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledOnOs demo"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "#os-demo"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " shows how you can combine "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledOnOs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in a single, reusable annotation."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Composed Annotations"
+              }
+            ],
+            "type": "tip"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Conditional"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations in JUnit Jupiter are not "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Inherited"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Consequently, if you wish to apply the same semantics to subclasses, each conditional annotation must be redeclared on each subclass."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Unless otherwise stated, each of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "conditional"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " annotations listed in the following sections can only be declared once on a given test interface, test class, or test method. If a conditional annotation is directly present, indirectly present, or meta-present multiple times on a given element, only the first such annotation discovered by JUnit will be used; any additional declarations will be silently ignored. Note, however, that each conditional annotation may be used in conjunction with other conditional annotations in the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "org.junit.jupiter.api.condition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " package."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A container or test may be enabled or disabled on a particular operating system, architecture, or combination of both via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledOnOs"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledOnOs.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledOnOs"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledOnOs.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnOs(MAC)\nvoid onlyOnMacOs() {\n\t// ...\n}\n\n@TestOnMac\nvoid testOnMac() {\n\t// ...\n}\n\n@Test\n@EnabledOnOs({ LINUX, MAC })\nvoid onLinuxOrMac() {\n\t// ...\n}\n\n@Test\n@DisabledOnOs(WINDOWS)\nvoid notOnWindows() {\n\t// ...\n}\n\n@Target(ElementType.METHOD)\n@Retention(RetentionPolicy.RUNTIME)\n@Test\n@EnabledOnOs(MAC)\n@interface TestOnMac {\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnOs(MAC)\nfun onlyOnMacOs() {\n    // ...\n}\n\n@TestOnMac\nfun testOnMac() {\n    // ...\n}\n\n@Test\n@EnabledOnOs(LINUX, MAC)\nfun onLinuxOrMac() {\n    // ...\n}\n\n@Test\n@DisabledOnOs(WINDOWS)\nfun notOnWindows() {\n    // ...\n}\n\n@Target(AnnotationTarget.FUNCTION)\n@Retention(AnnotationRetention.RUNTIME)\n@Test\n@EnabledOnOs(MAC)\nannotation class TestOnMac"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": "os-demo",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Conditional execution based on operating system"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnOs(architectures = \"aarch64\")\nvoid onAarch64() {\n\t// ...\n}\n\n@Test\n@DisabledOnOs(architectures = \"x86_64\")\nvoid notOnX86_64() {\n\t// ...\n}\n\n@Test\n@EnabledOnOs(value = MAC, architectures = \"aarch64\")\nvoid onNewMacs() {\n\t// ...\n}\n\n@Test\n@DisabledOnOs(value = MAC, architectures = \"aarch64\")\nvoid notOnNewMacs() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnOs(architectures = [\"aarch64\"])\nfun onAarch64() {\n    // ...\n}\n\n@Test\n@DisabledOnOs(architectures = [\"x86_64\"])\nfun notOnX86_64() {\n    // ...\n}\n\n@Test\n@EnabledOnOs(value = [MAC], architectures = [\"aarch64\"])\nfun onNewMacs() {\n    // ...\n}\n\n@Test\n@DisabledOnOs(value = [MAC], architectures = [\"aarch64\"])\nfun notOnNewMacs() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": "architectures-demo",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Conditional execution based on architecture"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "os",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Operating System and Architecture Conditions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A container or test may be enabled or disabled on particular versions of the Java Runtime Environment (JRE) via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledOnJre"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledOnJre.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledOnJre"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledOnJre.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations or on a particular range of versions of the JRE via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledForJreRange"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledForJreRange.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledForJreRange"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledForJreRange.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations. The range effectively defaults to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE.JAVA_8"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the lower bound and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE.OTHER"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the upper bound, which allows usage of half open ranges."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following listing demonstrates the use of these annotations with predefined "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/JRE.html"
+              },
+              {
+                "kind": "text",
+                "value": " enum constants."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnJre(JAVA_17)\nvoid onlyOnJava17() {\n\t// ...\n}\n\n@Test\n@EnabledOnJre({ JAVA_17, JAVA_21 })\nvoid onJava17And21() {\n\t// ...\n}\n\n@Test\n@EnabledForJreRange(min = JAVA_21, max = JAVA_25)\nvoid fromJava21To25() {\n\t// ...\n}\n\n@Test\n@EnabledForJreRange(min = JAVA_21)\nvoid onJava21ndHigher() {\n\t// ...\n}\n\n@Test\n@EnabledForJreRange(max = JAVA_18)\nvoid fromJava17To18() {\n\t// ...\n}\n\n@Test\n@DisabledOnJre(JAVA_19)\nvoid notOnJava19() {\n\t// ...\n}\n\n@Test\n@DisabledForJreRange(min = JAVA_17, max = JAVA_17)\nvoid notFromJava17To19() {\n\t// ...\n}\n\n@Test\n@DisabledForJreRange(min = JAVA_19)\nvoid notOnJava19AndHigher() {\n\t// ...\n}\n\n@Test\n@DisabledForJreRange(max = JAVA_18)\nvoid notFromJava17To18() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnJre(JAVA_17)\nfun onlyOnJava17() {\n    // ...\n}\n\n@Test\n@EnabledOnJre(JAVA_17, JAVA_21)\nfun onJava17And21() {\n    // ...\n}\n\n@Test\n@EnabledForJreRange(min = JAVA_21, max = JAVA_25)\nfun fromJava21To25() {\n    // ...\n}\n\n@Test\n@EnabledForJreRange(min = JAVA_21)\nfun onJava21ndHigher() {\n    // ...\n}\n\n@Test\n@EnabledForJreRange(max = JAVA_18)\nfun fromJava17To18() {\n    // ...\n}\n\n@Test\n@DisabledOnJre(JAVA_19)\nfun notOnJava19() {\n    // ...\n}\n\n@Test\n@DisabledForJreRange(min = JAVA_17, max = JAVA_17)\nfun notFromJava17To19() {\n    // ...\n}\n\n@Test\n@DisabledForJreRange(min = JAVA_19)\nfun notOnJava19AndHigher() {\n    // ...\n}\n\n@Test\n@DisabledForJreRange(max = JAVA_18)\nfun notFromJava17To18() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Since the enum constants defined in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/JRE.html"
+              },
+              {
+                "kind": "text",
+                "value": " are static for any given JUnit release, you might find that you need to configure a Java version that is not supported by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " enum. For example, when JUnit Jupiter 5.12 was released the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JRE"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " enum defined "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "JAVA_25"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as the highest supported Java version. However, you may wish to run your tests against later versions of Java. To support such use cases, you can specify arbitrary Java versions via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "versions"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attributes in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@EnabledOnJre"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DisabledOnJre"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "minVersion"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "maxVersion"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attributes in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@EnabledForJreRange"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DisabledForJreRange"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following listing demonstrates the use of these annotations with arbitrary Java versions."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnJre(versions = 26)\nvoid onlyOnJava26() {\n\t// ...\n}\n\n@Test\n@EnabledOnJre(versions = { 25, 26 })\n// Can also be expressed as follows.\n// @EnabledOnJre(value = JAVA_25, versions = 26)\nvoid onJava25And26() {\n\t// ...\n}\n\n@Test\n@EnabledForJreRange(minVersion = 26)\nvoid onJava26AndHigher() {\n\t// ...\n}\n\n@Test\n@EnabledForJreRange(minVersion = 25, maxVersion = 27)\n// Can also be expressed as follows.\n// @EnabledForJreRange(min = JAVA_25, maxVersion = 27)\nvoid fromJava25To27() {\n\t// ...\n}\n\n@Test\n@DisabledOnJre(versions = 26)\nvoid notOnJava26() {\n\t// ...\n}\n\n@Test\n@DisabledOnJre(versions = { 25, 26 })\n// Can also be expressed as follows.\n// @DisabledOnJre(value = JAVA_25, versions = 26)\nvoid notOnJava25And26() {\n\t// ...\n}\n\n@Test\n@DisabledForJreRange(minVersion = 26)\nvoid notOnJava26AndHigher() {\n\t// ...\n}\n\n@Test\n@DisabledForJreRange(minVersion = 25, maxVersion = 27)\n// Can also be expressed as follows.\n// @DisabledForJreRange(min = JAVA_25, maxVersion = 27)\nvoid notFromJava25To27() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledOnJre(versions = [26])\nfun onlyOnJava26() {\n    // ...\n}\n\n// Can also be expressed as follows.\n// @EnabledOnJre(value = [JAVA_25], versions = [26])\n@Test\n@EnabledOnJre(versions = [25, 26])\nfun onJava25And26() {\n    // ...\n}\n\n@Test\n@EnabledForJreRange(minVersion = 26)\nfun onJava26AndHigher() {\n    // ...\n}\n\n// Can also be expressed as follows.\n// @EnabledForJreRange(min = JAVA_25, maxVersion = 27)\n@Test\n@EnabledForJreRange(minVersion = 25, maxVersion = 27)\nfun fromJava25To27() {\n    // ...\n}\n\n@Test\n@DisabledOnJre(versions = [26])\nfun notOnJava26() {\n    // ...\n}\n\n// Can also be expressed as follows.\n// @DisabledOnJre(value = [JAVA_25], versions = [26])\n@Test\n@DisabledOnJre(versions = [25, 26])\nfun notOnJava25And26() {\n    // ...\n}\n\n@Test\n@DisabledForJreRange(minVersion = 26)\nfun notOnJava26AndHigher() {\n    // ...\n}\n\n// Can also be expressed as follows.\n// @DisabledForJreRange(min = JAVA_25, maxVersion = 27)\n@Test\n@DisabledForJreRange(minVersion = 25, maxVersion = 27)\nfun notFromJava25To27() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "jre",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Java Runtime Environment Conditions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A container or test may be enabled or disabled within a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "GraalVM native image"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.graalvm.org/reference-manual/native-image/"
+              },
+              {
+                "kind": "text",
+                "value": " via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledInNativeImage"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledInNativeImage.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledInNativeImage"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledInNativeImage.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations. These annotations are typically used when running tests within a native image using the Gradle and Maven plug-ins from the GraalVM "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Native Build Tools"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://graalvm.github.io/native-build-tools/latest/"
+              },
+              {
+                "kind": "text",
+                "value": " project."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledInNativeImage\nvoid onlyWithinNativeImage() {\n\t// ...\n}\n\n@Test\n@DisabledInNativeImage\nvoid neverWithinNativeImage() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledInNativeImage\nfun onlyWithinNativeImage() {\n    // ...\n}\n\n@Test\n@DisabledInNativeImage\nfun neverWithinNativeImage() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "native",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Native Image Conditions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A container or test may be enabled or disabled based on the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "named"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " JVM system property via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledIfSystemProperty"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledIfSystemProperty.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledIfSystemProperty"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledIfSystemProperty.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations. The value supplied via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "matches"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute will be interpreted as a regular expression."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIfSystemProperty(named = \"os.arch\", matches = \".*64.*\")\nvoid onlyOn64BitArchitectures() {\n\t// ...\n}\n\n@Test\n@DisabledIfSystemProperty(named = \"ci-server\", matches = \"true\")\nvoid notOnCiServer() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIfSystemProperty(named = \"os.arch\", matches = \".*64.*\")\nfun onlyOn64BitArchitectures() {\n    // ...\n}\n\n@Test\n@DisabledIfSystemProperty(named = \"ci-server\", matches = \"true\")\nfun notOnCiServer() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@EnabledIfSystemProperty"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledIfSystemProperty.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DisabledIfSystemProperty"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledIfSystemProperty.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " are "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "repeatable annotations"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Consequently, these annotations may be declared multiple times on a test interface, test class, or test method. Specifically, these annotations will be found if they are directly present, indirectly present, or meta-present on a given element."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "system-properties",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "System Property Conditions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "A container or test may be enabled or disabled based on the value of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "named"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " environment variable from the underlying operating system via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledIfEnvironmentVariable"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledIfEnvironmentVariable.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledIfEnvironmentVariable"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledIfEnvironmentVariable.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations. The value supplied via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "matches"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " attribute will be interpreted as a regular expression."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIfEnvironmentVariable(named = \"ENV\", matches = \"staging-server\")\nvoid onlyOnStagingServer() {\n\t// ...\n}\n\n@Test\n@DisabledIfEnvironmentVariable(named = \"ENV\", matches = \".*development.*\")\nvoid notOnDeveloperWorkstation() {\n\t// ...\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIfEnvironmentVariable(named = \"ENV\", matches = \"staging-server\")\nfun onlyOnStagingServer() {\n    // ...\n}\n\n@Test\n@DisabledIfEnvironmentVariable(named = \"ENV\", matches = \".*development.*\")\nfun notOnDeveloperWorkstation() {\n    // ...\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@EnabledIfEnvironmentVariable"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledIfEnvironmentVariable.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DisabledIfEnvironmentVariable"
+                          }
+                        ],
+                        "kind": "xref",
+                        "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledIfEnvironmentVariable.html"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " are "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "repeatable annotations"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Consequently, these annotations may be declared multiple times on a test interface, test class, or test method. Specifically, these annotations will be found if they are directly present, indirectly present, or meta-present on a given element."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "environment-variables",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Environment Variable Conditions"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As an alternative to implementing an "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExecutionCondition"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/conditional-test-execution.html"
+              },
+              {
+                "kind": "text",
+                "value": ", a container or test may be enabled or disabled based on a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "condition method"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configured via the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@EnabledIf"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/EnabledIf.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@DisabledIf"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/condition/DisabledIf.html"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " annotations. A condition method must have a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "boolean"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " return type and may accept either no arguments or a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExtensionContext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " argument."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following test class demonstrates how to configure a local method named "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "customCondition"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " via "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@EnabledIf"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@DisabledIf"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIf(\"customCondition\")\nvoid enabled() {\n\t// ...\n}\n\n@Test\n@DisabledIf(\"customCondition\")\nvoid disabled() {\n\t// ...\n}\n\nboolean customCondition() {\n\treturn true;\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "@Test\n@EnabledIf(\"customCondition\")\nfun enabled() {\n    // ...\n}\n\n@Test\n@DisabledIf(\"customCondition\")\nfun disabled() {\n    // ...\n}\n\nfun customCondition(): Boolean = true"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Alternatively, the condition method can be located outside the test class. In this case, it must be referenced by its "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "fully qualified name"
+                  }
+                ],
+                "kind": "emphasis",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as demonstrated in the following example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example;\n\nimport org.junit.jupiter.api.Test;\nimport org.junit.jupiter.api.condition.EnabledIf;\n\nclass ExternalCustomConditionDemo {\n\n\t@Test\n\t@EnabledIf(\"example.ExternalCondition#customCondition\")\n\tvoid enabled() {\n\t\t// ...\n\t}\n\n}\n\nclass ExternalCondition {\n\n\tstatic boolean customCondition() {\n\t\treturn true;\n\t}\n\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "package example.kotlin\n\nimport org.junit.jupiter.api.Test\nimport org.junit.jupiter.api.condition.EnabledIf\n\nclass ExternalCustomConditionDemo {\n    @Test\n    @EnabledIf(\"example.kotlin.ExternalCondition#customCondition\")\n    fun enabled() {\n        // ...\n    }\n}\n\nclass ExternalCondition {\n    companion object {\n        @JvmStatic\n        fun customCondition(): Boolean = true\n    }\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "There are several cases where a condition method would need to be "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "static"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ":"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "when "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@EnabledIf"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DisabledIf"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used at class level"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "when "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@EnabledIf"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@DisabledIf"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " is used on a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@ParameterizedTest"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " or a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "@TestTemplate"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " method"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "when the condition method is located in an external class"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In any other case, you can use either static methods or instance methods as condition methods."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is often the case that you can use an existing static method in a utility class as a custom condition."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For example, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.awt.GraphicsEnvironment"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " provides a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public static boolean isHeadless()"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method that can be used to determine if the current environment does not support a graphical display. Thus, if you have a test that depends on graphical support you can disable it when such support is unavailable as follows."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "dlist",
+                    "id": null,
+                    "items": [
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@DisabledIf(value = \"java.awt.GraphicsEnvironment#isHeadless\",\n\tdisabledReason = \"headless environment\")"
+                                    }
+                                  ],
+                                  "language": "java",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Java"
+                            }
+                          ]
+                        ]
+                      },
+                      {
+                        "description": {
+                          "blocks": [
+                            {
+                              "blocks": [
+                                {
+                                  "context": "listing",
+                                  "id": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "@DisabledIf(value = \"java.awt.GraphicsEnvironment#isHeadless\",\n    disabledReason = \"headless environment\")"
+                                    }
+                                  ],
+                                  "language": "kotlin",
+                                  "roles": [],
+                                  "title": null
+                                }
+                              ],
+                              "context": "open",
+                              "id": null,
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "checkbox": null,
+                          "inlines": []
+                        },
+                        "terms": [
+                          [
+                            {
+                              "kind": "text",
+                              "value": "Kotlin"
+                            }
+                          ]
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "example",
+                "id": null,
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          }
+        ],
+        "context": "section",
+        "id": "custom",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Custom Conditions"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Conditional Test Execution"
+      }
+    ]
+  }
+}

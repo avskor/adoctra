@@ -1,0 +1,708 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_kafka_connect_exactly_once_support_for_source_connector",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Kafka Connect exactly-once support for source connector"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_known_issues_and_considerations",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Known issues and considerations"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "_debezium_connectors_supporting_exactly_once_delivery",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Debezium Connectors supporting exactly-once delivery"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Configuration"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_prerequisites",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Prerequisites"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_configuration_of_the_kafka_workers",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuration of the Kafka workers"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_source_connector_configuration",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Source connector configuration"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium provides at-least-once delivery guarantees. This means that no changes are missed; however, in some cases, a record may be delivered more than once. In certain scenarios, these duplicate records might be problematic, and exactly-once semantics may be required."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Exactly-once delivery ensures that every change is delivered and appears in the change stream no more than once. This is a significantly stricter requirement than at-least-once delivery."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Currently, Debezium does not implement an internal deduplication layer to enforce exactly-once semantics. However, when Debezium is deployed as a source connector in the Kafka Connect framework, it can take advantage of Kafka Connect’s support for exactly-once delivery."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Kafka Connect introduced support for exactly-once delivery for source connectors in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "KIP-618"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-618%3A+Exactly-Once+Support+for+Source+Connectors"
+              },
+              {
+                "kind": "text",
+                "value": ". This functionality builds upon Kafka’s transaction support and the exactly-once delivery mechanism introduced in "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "KIP-98"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-98+-+Exactly+Once+Delivery+and+Transactional+Messaging"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Although exactly-once delivery has been available in Kafka and Kafka Connect for some time, it remains unclear whether the implementation is fully correct or if there are edge cases where exactly-once semantics might be violated."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To date, no comprehensive study has analyzed the correctness of transaction and exactly-once implementations in recent Kafka releases. However, two "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Jepsen"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://jepsen.io"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " reports, one for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Redpanda"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://jepsen.io/analyses/redpanda-21.10.1"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and another for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Bufstream"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://jepsen.io/analyses/bufstream-0.1.0"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", highlight potential issues with the Kafka protocol and its implementations. These reports raise concerns about correctness, particularly in the Bufstream case."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As a result, several related issues in Apache Kafka remain open:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "KAFKA-17734"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://issues.apache.org/jira/browse/KAFKA-17734"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "KAFKA-17754"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://issues.apache.org/jira/browse/KAFKA-17754"
+                      }
+                    ]
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "KAFKA-17582"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://issues.apache.org/jira/browse/KAFKA-17582"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Because Kafka Connect exactly-once delivery relies on Kafka transactions, it’s reasonable to assume that these issues might also affect Kafka Connect’s exactly-once guarantees."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "While there is no in-depth study which would analyse correctness of Kafka Connect exactly-once delivery, there are known issues in Kafka transaction protocol which may have impact also on the correctness of Kafka Connect exactly-once delivery."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "warning"
+              }
+            ],
+            "context": "section",
+            "id": "_known_issues_and_considerations",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Known issues and considerations"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_kafka_connect_exactly_once_support_for_source_connector",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Kafka Connect exactly-once support for source connector"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following Debezium source connectors support participation in Kafka Connect’s exactly-once delivery:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MariaDB"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MongoDB"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MySQL"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Oracle"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PostgreSQL"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SQL Server"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_debezium_connectors_supporting_exactly_once_delivery",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Debezium Connectors supporting exactly-once delivery"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka must be running in distributed mode, and the Kafka Connect version must support exactly-once delivery (version 3.3.0 or higher)."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_prerequisites",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Prerequisites"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "All Kafka Connect workers must have exactly-once delivery enabled by setting the following property in the worker configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exactly.once.source.support=enabled"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For more details (e.g., ACL configuration), refer to the official "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Kafka documentation"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation.html#connect_exactlyoncesource"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_configuration_of_the_kafka_workers",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration of the Kafka workers"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "To enable exactly-once delivery for a specific source connector, add the following setting to the connector configuration:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "exactly.once.support=required"
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "An additional setting, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "transaction.boundary"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", must be set to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "poll"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for all Debezium source connectors. However, since "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "poll"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is the default value, this setting does not need to be explicitly included in the configuration unless being overridden."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_source_connector_configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Source connector configuration"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Exactly once delivery"
+      }
+    ]
+  }
+}

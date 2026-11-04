@@ -1,0 +1,332 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "A "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ClassTemplate"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/ClassTemplate.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " class can only be executed when at least one "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ClassTemplateInvocationContextProvider"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ClassTemplateInvocationContextProvider.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is registered. Each such provider is responsible for providing a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Stream"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ClassTemplateInvocationContext"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ClassTemplateInvocationContext.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " instances. Each context may specify a custom display name and a list of additional extensions that will only be used for the next invocation of the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@ClassTemplate"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/ClassTemplate.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The following example shows how to write a class template as well as how to register and implement a "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ClassTemplateInvocationContextProvider"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ClassTemplateInvocationContextProvider.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": "."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "listing",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "@ClassTemplate\n@ExtendWith(ClassTemplateDemo.MyClassTemplateInvocationContextProvider.class)\nclass ClassTemplateDemo {\n\n\tstatic final List<String> WELL_KNOWN_FRUITS\n\t\t= List.of(\"apple\", \"banana\", \"lemon\");\n\n\tprivate String fruit;\n\n\t@Test\n\tvoid notNull() {\n\t\tassertNotNull(fruit);\n\t}\n\n\t@Test\n\tvoid wellKnown() {\n\t\tassertTrue(WELL_KNOWN_FRUITS.contains(fruit));\n\t}\n\n\tpublic class MyClassTemplateInvocationContextProvider\n\t\t\timplements ClassTemplateInvocationContextProvider {\n\n\t\t@Override\n\t\tpublic boolean supportsClassTemplate(ExtensionContext context) {\n\t\t\treturn true;\n\t\t}\n\n\t\t@Override\n\t\tpublic Stream<ClassTemplateInvocationContext>\n\t\t\t\tprovideClassTemplateInvocationContexts(ExtensionContext context) {\n\n\t\t\treturn Stream.of(invocationContext(\"apple\"), invocationContext(\"banana\"));\n\t\t}\n\n\t\tprivate ClassTemplateInvocationContext invocationContext(String parameter) {\n\t\t\treturn new ClassTemplateInvocationContext() {\n\t\t\t\t@Override\n\t\t\t\tpublic String getDisplayName(int invocationIndex) {\n\t\t\t\t\treturn parameter;\n\t\t\t\t}\n\n\t\t\t\t@Override\n\t\t\t\tpublic List<Extension> getAdditionalExtensions() {\n\t\t\t\t\treturn List.of(new TestInstancePostProcessor() {\n\t\t\t\t\t\t@Override\n\t\t\t\t\t\tpublic void postProcessTestInstance(\n\t\t\t\t\t\t\t\tObject testInstance, ExtensionContext context) {\n\t\t\t\t\t\t\t((ClassTemplateDemo) testInstance).fruit = parameter;\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t\t\t};\n\t\t}\n\t}\n}"
+          }
+        ],
+        "language": "java",
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "A class template with accompanying extension"
+          }
+        ]
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "In this example, the class template will be invoked twice, meaning all test methods in the class template will be executed twice. The display names of the invocations will be "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "apple"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " and "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "banana"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " as specified by the invocation context. Each invocation registers a custom "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "TestInstancePostProcessor"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/TestInstancePostProcessor.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " which is used to inject a value into a field. The output when using the "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "ConsoleLauncher"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " is as follows."
+          }
+        ],
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "literal",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "└─ ClassTemplateDemo ✔\n   ├─ apple ✔\n   │  ├─ notNull() ✔\n   │  └─ wellKnown() ✔\n   └─ banana ✔\n      ├─ notNull() ✔\n      └─ wellKnown() ✔"
+          }
+        ],
+        "language": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "context": "paragraph",
+        "id": null,
+        "inlines": [
+          {
+            "kind": "text",
+            "value": "The "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ClassTemplateInvocationContextProvider"
+                  }
+                ],
+                "kind": "xref",
+                "target": "attachment$api/org.junit.jupiter.api/org/junit/jupiter/api/extension/ClassTemplateInvocationContextProvider.html"
+              }
+            ],
+            "kind": "monospace",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " extension API is primarily intended for implementing different kinds of tests that rely on repetitive invocation of "
+          },
+          {
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "all"
+              }
+            ],
+            "kind": "emphasis",
+            "roles": []
+          },
+          {
+            "kind": "text",
+            "value": " test methods in a test class albeit in different contexts — for example, with different parameters, by preparing the test class instance differently, or multiple times without modifying the context. Please refer to the implementations of "
+          },
+          {
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Parameterized Classes"
+              }
+            ],
+            "kind": "xref",
+            "target": "writing-tests/parameterized-classes-and-tests.html"
+          },
+          {
+            "kind": "text",
+            "value": " which uses this extension point to provide its functionality."
+          }
+        ],
+        "roles": [],
+        "title": null
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Providing Invocation Contexts for Class Templates"
+      }
+    ]
+  }
+}

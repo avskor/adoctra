@@ -1,0 +1,4246 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_getting_started",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Getting Started"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_example",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Example"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "reactive-outbox",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Reactive Variant"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "additional-field-mappings",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Additional Field mappings"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Configuration"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_build_time_configuration_options",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Build time configuration options"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_runtime_configuration_options",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Runtime configuration options"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_distributed_tracing",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Distributed tracing"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This extension is inspired by the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Outbox Event Router"
+                  }
+                ],
+                "kind": "xref",
+                "target": "transformations/outbox-event-router.html"
+              },
+              {
+                "kind": "text",
+                "value": " single message transformation (SMT). As discussed in the blog post "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Reliable Microservices Data Exchange with the Outbox Pattern"
+                  }
+                ],
+                "kind": "link",
+                "target": "/blog/2019/02/19/reliable-microservices-data-exchange-with-the-outbox-pattern/"
+              },
+              {
+                "kind": "text",
+                "value": ", microservices often need to exchange information with one another and an excellent way to deal with that is using the Outbox pattern combined with Debezium’s Outbox Event Router SMT."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following image shows the overall architecture of this pattern:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "alt": [
+                  {
+                    "kind": "text",
+                    "value": "Outbox Pattern"
+                  }
+                ],
+                "attributes": {},
+                "id": null,
+                "kind": "image",
+                "roles": [],
+                "src": "outbox_pattern.png",
+                "svg": null,
+                "target": "outbox_pattern.png"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Outbox extension’s goal is to provide a "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Quarkus"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://quarkus.io/"
+              },
+              {
+                "kind": "text",
+                "value": " application with a reusable, highly configurable component that facilitates the use of the Outbox pattern paired with Debezium’s CDC connector pipeline to reliably and asynchronously share data with any consumer of said data."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to start using the Debezium Outbox Quarkus extension, the extension needs to be added as a part of the Quarkus application as follows:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<dependency>\n  <groupId>io.debezium</groupId>\n  <artifactId>debezium-quarkus-outbox</artifactId>\n  <version>3.7.0.Final</version>\n</dependency>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The extension provides the application with the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "io.debezium.outbox.quarkus.ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface. It’s expected that an application class will implement this interface and that the event will be emitted using the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "javax.enterprise.event.Event"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExportedEvent"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface is parameterized to allow the application to designate the Java types used by several attributes emitted by the event. It’s important that for a given Quarkus application, "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "all"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " implementations of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ExportedEvent"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " interface must use the same parameter types or a build failure will be thrown since all events will use the same underlying database table."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "_getting_started",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Getting Started"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example illustrates an implementation of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface representing an order that has been created:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public class OrderCreatedEvent implements ExportedEvent<String, JsonNode> {\n\n    private static final String TYPE = \"Order\";\n    private static final String EVENT_TYPE = \"OrderCreated\";\n\n    private final long orderId;\n    private final JsonNode jsonNode;\n    private final Instant timestamp;\n\n    public OrderCreatedEvent(Instant createdAt, Order order) {\n        this.orderId = order.getId();\n        this.timestamp = createdAt;\n        this.jsonNode = convertToJson(order);\n    }\n\n    @Override\n    public String getAggregateId() {\n        return String.valueOf(orderId);\n    }\n\n    @Override\n    public String getAggregateType() {\n        return TYPE;\n    }\n\n    @Override\n    public JsonNode getPayload() {\n        return jsonNode;\n    }\n\n    @Override\n    public String getType() {\n        return EVENT_TYPE;\n    }\n\n    @Override\n    public Instant getTimestamp() {\n        return timestamp;\n    }\n\n    @Override\n    public Map<String, Object> getAdditionalFieldValues() {\n        // no additional fields\n        return Collections.emptyMap();\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "OrderCreatedEvent.java"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example illustrates an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OrderService"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that emits the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OrderCreatedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ":"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ApplicationScoped\npublic class OrderService {\n\n    @Inject\n    OrderRepository orderRepository;\n\n    @Inject\n    Event<ExportedEvent<?, ?>> event;\n\n    @Transactional\n    public Order addOrder(Order order) {\n        order = orderRepository.save(order);\n        event.fire(new OrderCreatedEvent(Instant.now(), order));\n        return order;\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "OrderService.java"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the application code fires the event by calling "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Event#fire()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", the Outbox extension will be notified that the event occurred and persists the contents of the event into an outbox event table within the scope of the current transaction. The Debezium CDC connector in conjunction with the Outbox Event Router will be monitoring this table and will be responsible for relaying that data using CDC events."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To see a full end-to-end demo, the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Outbox"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/debezium-examples/tree/main/outbox"
+              },
+              {
+                "kind": "text",
+                "value": " example illustrates two Quarkus microservice applications using the outbox pattern to share data between them when orders are placed or cancelled."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_example",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Example"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If your application uses reactive datasources, or Hibernate Reactive, you must use a slightly different configuration to add the extension to your application."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For example, use the following configuration to import the reactive variant of the extension:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<dependency>\n  <groupId>io.debezium</groupId>\n  <artifactId>debezium-quarkus-outbox-reactive</artifactId>\n  <version>3.7.0.Final</version>\n</dependency>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The reactive extension provides the application with the same "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "io.debezium.outbox.quarkus.ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface as the non-reactive variant, but it also provides the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DebeziumOutboxHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class. Injecting the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DebeziumOutboxHandler"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " bean into an application provides a method for quickly persisting an "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to the outbox table. The following example shows an invocation that uses the same "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " as in the earlier example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@ApplicationScoped\npublic class OrderService {\n\n    @Inject\n    DebeziumOutboxHandler debeziumOutboxHandler;\n\n    @Inject\n    OrderRepository orderRepository;\n\n    @Inject\n    Event<ExportedEvent<?, ?>> event;\n\n    @ReactiveTransactional\n    public Uni<Order> addOrder(Order order) {\n        return orderRepository.persistAndFlush(order)\n        .call(debeziumOutboxHandler.persistToOutbox(new OrderCreatedEvent(Instant.now(), order)));\n\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "OrderService.java"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "persistToOutbox"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method returns a Uni; therefore, it must be observed by a subscriber ito receive the result. For more information about using the Mutiny library to build reactive applications, see the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Quarkus Mutiny primer"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://quarkus.io/guides/mutiny-primer"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "reactive-outbox",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Reactive Variant"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium Outbox SMT can be configured to read additional fields and emit those field values either as event headers, or as part of the event value."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to pass additional field mappings to be saved by the Quarkus Outbox extension, the configuration property "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quarkus.debezium-outbox.additional-fields"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " must be specified in the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". This configuration property is a comma-separated list of additional field definitions that will be added to the Outbox entity mapping and passed by the application’s implementation of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " interface."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Each entry in this comma-separated list must follow this format:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<field-name>:<field-java-type>[:<field-column-definition>[:<field-jpa-attribute-converter>]]"
+              }
+            ],
+            "language": null,
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The pattern indicates that the field’s name and java-type are required while the column definition and JPA attribute converter are optional. However, please note that if you wish to specify a JPA attribute converter then the column definition must be specified."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following example shows how to define an additional field called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "customer_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " that is represented in Java as a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "String"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and which should be stored in the outbox table as a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "VARCHAR(100)"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " column. This example also shows a JPA Attribute converter defined that forces the storage of the string to upper-case."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "quarkus.debezium-outbox.additional-fields=customer_name:string:varchar(100):example.UpperCase"
+              }
+            ],
+            "language": "properties",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "application.properties"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Once the field(s) are configured in the application’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file, the application’s code needs to provide the corresponding values through its exported events. In order to do this, the application class that extends the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ExportedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " needs to override the method called "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "getAdditionalFieldValues()"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and return a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Map"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " of the additional field names and values."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In the following example, we show how to specify the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "customer_name"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " field with a value of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Acme Goods"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ". Using our "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OrderCreatedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " from the example section above, we’ve extended the event:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public class OrderCreatedEvent implements ExportedEvent<String, JsonNode> {\n    ...\n    @Override\n    public Map<String, Object> getAdditionalFieldValues() {\n        return Collections.singletonMap(\"customer_name\", \"Acme Goods\");\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "OrderCreatedEvent.java"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Additional field mappings do allow specifying a JPA attribute converter per field."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In this example, we defined "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "example.UpperCase"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " that will convert any supplied string-value to upper-case prior to insertion. A JPA attribute converter allows decoupling this type of behavior from the call site, allowing reuse of a common behavior."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "With the configuration in the application’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": ".properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file and updating of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OrderCreateedEvent"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to provide these additional fields and values, the Debezium Outbox SMT now can access these additional field values and place them in the emitted event."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "additional-field-mappings",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional Field mappings"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Outbox extension can be configured by setting options in the Quarkus "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file. The extension works out-of-the-box with a default configuration, but this configuration may not be ideal for every situation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Configuration property"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Type"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Default"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The table name to be used when creating the outbox table."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-table-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.table-name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-table-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "OutboxEvent"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event id column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "uuid"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-id-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.id.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-id-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "id"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the event id column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "uuid not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-id-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.id.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-id-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "UUID NOT NULL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event key column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-id-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-id.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-id-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "aggregateid"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the aggregate id."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "varchar(50) not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-id-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-id.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-id-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VARCHAR(255) NOT NULL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The JPA AttributeConverter for the event key column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "com.company.TheAttributeConverter"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-id-converter",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-id.converter"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-id-converter"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event aggregate type column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-type-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-type.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-type-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "aggregatetype"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the aggregate type."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "varchar(15) not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-type-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-type.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-type-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VARCHAR(255) NOT NULL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The JPA AttributeConverter for the event aggregate type column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "com.company.TheAttributeConverter"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-aggregate-type-converter",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.aggregate-type.converter"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-aggregate-type-converter"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event type column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-type-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.type.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-type-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "type"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the event type."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "varchar(50) not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-type-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.type.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-type-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VARCHAR(255) NOT NULL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The JPA AttributeConverter for the event type column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "com.company.TheAttributeConverter"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-type-converter",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.type.converter"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-type-converter"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event timestamp column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-timestamp-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.timestamp.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-timestamp-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "timestamp"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the event timestamp."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "timestamp not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-timestamp-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.timestamp.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-timestamp-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "TIMESTAMP NOT NULL"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The JPA AttributeConverter for the event timestamp column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "com.company.TheAttributeConverter"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-timestamp-converter",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.timestamp.converter"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-timestamp-converter"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the event payload column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-payload-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.payload.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-payload-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "payload"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the event payload."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "text not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-payload-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.payload.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-payload-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VARCHAR(8000)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The JPA AttributeConverter for the event payload column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "com.company.TheAttributeConverter"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-payload-converter",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.payload.converter"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-payload-converter"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "A fully-qualified class name of a Hibernate "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "user type"
+                                        }
+                                      ],
+                                      "kind": "link",
+                                      "target": "https://docs.jboss.org/hibernate/orm/current/userguide/html_single/Hibernate_User_Guide.html#basic-custom-type"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " implementation."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "io.company.types.JsonNodeBinaryType"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-payload-type",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.payload.type"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-payload-type"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The column name for the tracing span context column."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-tracing-span-name",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.tracing-span.name"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-tracing-span-name"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "tracingspancontext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The database-specific column definition for the tracing span context column."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for example, "
+                                    },
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "text not null"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-tracing-span-column-definition",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.tracingspancontext.column-definition"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-tracing-span-column-definition"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "VARCHAR(256)"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "A comma-separated list of additional field mappings that will be persisted in the outbox table."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " "
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " See "
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "additional field mappings"
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#additional-field-mappings"
+                                    },
+                                    {
+                                      "kind": "text",
+                                      "value": " for details on format and usage."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-additional-fields",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.additional-fields"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-additional-fields"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "65"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "12"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": null,
+                    "valign": "top",
+                    "width": "23"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "The build time configuration defaults will work with the Outbox Event Router SMT out of the box. When not using the default values, be sure that the SMT configuration matches."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "_build_time_configuration_options",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Build time configuration options"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Configuration property"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Type"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Default"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [
+                                    {
+                                      "context": "paragraph",
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "The removal of the entry does not impact the Debezium connector from being able to emit CDC events. This is used as a way to keep the table’s underlying storage from growing over time."
+                                            }
+                                          ],
+                                          "kind": "emphasis",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "roles": [],
+                                      "title": null
+                                    }
+                                  ],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Whether the outbox entry is removed after having been inserted."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": "quarkus-debezium-outbox-remove-after-insert",
+                                      "kind": "anchor"
+                                    },
+                                    {
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "quarkus.debezium-outbox.remove-after-insert"
+                                            }
+                                          ],
+                                          "kind": "monospace",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "kind": "xref",
+                                      "target": "#quarkus-debezium-outbox-remove-after-insert"
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "boolean"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "true"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "65"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "15"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": null,
+                    "valign": "top",
+                    "width": "20"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_runtime_configuration_options",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Runtime configuration options"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The extension has support for the distributed tracing. See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tracing documentation"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "/documentation/reference/integrations/tracing"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for more details."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "_distributed_tracing",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Distributed tracing"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Outbox Quarkus Extension"
+      }
+    ]
+  }
+}

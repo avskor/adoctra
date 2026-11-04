@@ -1,0 +1,2095 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_installation",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Installation"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "open-telemetry-manual-installation",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Manual installation of OpenTelemetry"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "open-telemetry-docker-installation",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Using Docker to install OpenTelemetry"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "open-telemetry-strimzi-installation",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Using Strimzi to install Open Telemetry"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_configuring_opentelemetry",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuring OpenTelemetry"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "_activatetracingspan_smt",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "ActivateTracingSpan SMT"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "_kafka_producer_tracing",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Kafka Producer tracing"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "_configuration_options",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuration options"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "_outbox_extension",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Outbox Extension"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_event_router_smt",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Event Router SMT"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Observability is an important aspect of microservice-oriented applications. One of the key ingredients for observability is "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "distributed tracing"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://microservices.io/patterns/observability/distributed-tracing.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It is necessary to provide additional precautions when an application writes a record to a database that is later processed by Debezium. The active trace is effectively demarcated by the write to the database. If you want to include Debezium data in your application tracer, you must pass the trace metadata to Debezium."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can add tracing support to Debezium through the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "OpenTelemetry specification"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://opentelemetry.io/docs/specs/otel/"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "To enable traceability in Debezium, you must install the required OpenTelemetry API packages on your Kafka Connect cluster, together with the OpenTelemetry SDK."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "There are three main methods for installing OpenTelemetry on Kafka Connect, each having its advantages:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "dlist",
+            "id": null,
+            "items": [
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Offers more control and customization."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Manual installation"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "#open-telemetry-manual-installation"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Provides easier integration."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Docker installation"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "#open-telemetry-docker-installation"
+                    }
+                  ]
+                ]
+              },
+              {
+                "description": {
+                  "blocks": [],
+                  "checkbox": null,
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Presents a ready-to-use solution on Kubernetes that includes all of the necessary OpenTelemetry components."
+                    }
+                  ]
+                },
+                "terms": [
+                  [
+                    {
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Strimzi installation"
+                        }
+                      ],
+                      "kind": "xref",
+                      "target": "#open-telemetry-strimzi-installation"
+                    }
+                  ]
+                ]
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A manual installation provides greater control and customization."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Install the following packages to the Kafka Connect classpath:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-api"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry/opentelemetry-api/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-context"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry/opentelemetry-context/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-semconv"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry/opentelemetry-semconv/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-instrumentation-api"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry.instrumentation/opentelemetry-instrumentation-api/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-instrumentation-api-semconv"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry.instrumentation/opentelemetry-instrumentation-api-semconv/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-kafka-clients-2.6"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry.instrumentation/opentelemetry-kafka-clients-2.6/"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "opentelemetry-kafka-clients-common"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.opentelemetry.instrumentation/opentelemetry-kafka-clients-common/"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  },
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "You can download the OpenTelemetry packages directly from the Maven repository, or retrieve the packages by using the Maven dependency plugin to ensure version compatibility."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "blocks": [
+                      {
+                        "context": "olist",
+                        "id": null,
+                        "items": [
+                          {
+                            "blocks": [
+                              {
+                                "context": "listing",
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "<?xml version=\"1.0\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd\">\n <modelVersion>4.0.0</modelVersion>\n <groupId>group.id</groupId>\n <artifactId>artifact-id</artifactId>\n <version>0.0.1</version>\n <properties>\n  <version.opentelemetry.api>1.23.1</version.opentelemetry.api>\n  <version.opentelemetry.kafka.clients.2.6>1.23.0-alpha</version.opentelemetry.kafka.clients.2.6>\n </properties>\n <dependencies>\n  <dependency>\n   <groupId>io.opentelemetry</groupId>\n   <artifactId>opentelemetry-api</artifactId>\n   <version>${version.opentelemetry.api}</version>\n  </dependency>\n  <dependency>\n   <groupId>io.opentelemetry.instrumentation</groupId>\n   <artifactId>opentelemetry-kafka-clients-2.6</artifactId>\n   <version>${version.opentelemetry.kafka.clients.2.6}</version>\n  </dependency>\n </dependencies>\n</project>"
+                                  }
+                                ],
+                                "language": "xml",
+                                "roles": [],
+                                "title": null
+                              }
+                            ],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Create a POM file similar to the one in the following example. In your version of the file, specify the version of the OpenTelemetry package that you want to use."
+                              }
+                            ]
+                          },
+                          {
+                            "blocks": [
+                              {
+                                "context": "listing",
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "mvn dependency:copy-dependencies -DoutputDirectory=./lib"
+                                  }
+                                ],
+                                "language": "bash",
+                                "roles": [],
+                                "title": null
+                              }
+                            ],
+                            "checkbox": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "In the directory that contains the "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "pom.xml"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " file, run the following command to download all dependencies (including transitives) to a specified directory (for example, "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "./lib"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": ")"
+                              }
+                            ]
+                          }
+                        ],
+                        "roles": [],
+                        "style": "arabic",
+                        "title": null
+                      }
+                    ],
+                    "context": "section",
+                    "id": "_using_the_maven_dependency_plugin",
+                    "level": 4,
+                    "roles": [],
+                    "title": [
+                      {
+                        "kind": "text",
+                        "value": "Using the Maven Dependency Plugin"
+                      }
+                    ]
+                  }
+                ],
+                "context": "section",
+                "id": "_installing_the_opentelemetry_api",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Installing the OpenTelemetry API"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "After you install the API, install the OpenTelemetry SDK. Install the OpenTelemetry SDK on your Kafka connect cluster by using the "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Java agent"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://opentelemetry.io/docs/instrumentation/java/automatic/"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for automatic instrumentation."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_installing_the_opentelemetry_sdk",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Installing the OpenTelemetry SDK"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "open-telemetry-manual-installation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Manual installation of OpenTelemetry"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Prefer this installation method if you want to use Docker for local development or testing."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The OpenTelemetry API dependencies are installed in the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debezium Kafka Connect"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://quay.io/repository/debezium/connect"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " container image. The JAR files are downloaded to a separate directory. By default, the JAR files are not added to the class path. To add the JAR files to the class path, set the environment variable "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "ENABLE_OTEL"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "true"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You must also install the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OpenTelemetry Java agent"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://opentelemetry.io/docs/instrumentation/java/automatic/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "open-telemetry-docker-installation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using Docker to install OpenTelemetry"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Strimzi"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://strimzi.io/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " provides a way to deploy an Apache Kafka cluster on Kubernetes."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Strimzi Kafka image includes all of the necessary OpenTelemetry components."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you want to view the OpenTelemetry components that are available in the Strimzi image, examine the compose file that is provided in the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debezium Outbox example"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/debezium-examples/tree/main/outbox"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "open-telemetry-strimzi-installation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Using Strimzi to install Open Telemetry"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For information about how to configure OpenTelemetry, see the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "OpenTelemetry documentation"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://opentelemetry.io/docs/instrumentation/java/automatic/agent-config/"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debezium was tested with a Debezium Kafka Connect image, and a Strimzi distribution that included the following configuration settings:"
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  },
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "otel.traces.exporter=otlp"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "otel.propagators=tracecontext"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "_configuring_opentelemetry",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuring OpenTelemetry"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_installation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Installation"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The main implementation point of tracing in Debezium is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "io.debezium.transforms.tracing.ActivateTracingSpan"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SMT. In this case, the application writing to a database is responsible for providing the tracing span context. The writer must inject the span context into a "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "java.util.Properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " instance that is serialized and written to the database as a distinct field of the table."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If the span context is not provided then the SMT will create a new span. In this case, Debezium operations together with metadata will be traced but will not be connected to business transaction traces to enable end-to-end tracing."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When this SMT is invoked with a message then it will:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "extract the parent span context if present in the message"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create the event "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "db-log-write"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " span context with the start timestamp set to the database log write timestamp"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "insert fields from "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "source"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " block into the span as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tags"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create the processing "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "debezium-read"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " span as a child of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "db-log-write"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " span with the start timestamp set to the processing time of the event"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "insert fields from envelope such as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "op"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " into the processing span as "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tags"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "injects the processing span context into message headers"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Optionally it is possible to enable tracing at the Kafka producer level. If you enable tracing in the Kafka producer, when messages are written to the Kafka broker, the producer extracts the Debezium processing span context from the Kafka message headers, creates a new child span, and then records information about the write operation to the broker. Then it injects the new span into the message headers so a consumer of the message can restore the trace and resume end-to-end tracing."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The interceptor cannot propagate the traceability context if the Kafka instrumentation is enabled. The interceptor simply propagates the traceability context before delegating the instrumentation to the OpenTelemetry SDK."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "olist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Download and install the "
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "debezium-interceptor"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://mvnrepository.com/artifact/io.debezium/debezium-interceptor/"
+                          },
+                          {
+                            "kind": "text",
+                            "value": " to the Kafka Connect classpath."
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "Disable the automatic OpenTelemetry instrumentation at the Kafka producer and consumer by setting the value of "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "otel.instrumentation.common.default-enabled"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " to "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "false"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": "."
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": "arabic",
+                    "title": null
+                  }
+                ],
+                "context": "section",
+                "id": "_enabling_end_to_end_traceability",
+                "level": 3,
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Enabling end-to-end traceability"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "_kafka_producer_tracing",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Kafka Producer tracing"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Configuration property"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Type"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "Default"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [
+                                    {
+                                      "context": "paragraph",
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "The sender must write the span context into the database column as a serialized instance of "
+                                            },
+                                            {
+                                              "id": null,
+                                              "inlines": [
+                                                {
+                                                  "kind": "text",
+                                                  "value": "java.util.Properties"
+                                                }
+                                              ],
+                                              "kind": "monospace",
+                                              "roles": []
+                                            },
+                                            {
+                                              "kind": "text",
+                                              "value": " with injected span context."
+                                            }
+                                          ],
+                                          "kind": "emphasis",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "roles": [],
+                                      "title": null
+                                    }
+                                  ],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The name of the field containing span context."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "tracing.span.context.field"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "tracingspancontext"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "The operation name representing the Debezium processing span."
+                                    },
+                                    {
+                                      "kind": "line-break"
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "tracing.operation.name"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "string"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "debezium-read"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "dlist",
+                            "id": null,
+                            "items": [
+                              {
+                                "description": {
+                                  "blocks": [
+                                    {
+                                      "context": "paragraph",
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "id": null,
+                                          "inlines": [
+                                            {
+                                              "kind": "text",
+                                              "value": "If set to "
+                                            },
+                                            {
+                                              "id": null,
+                                              "inlines": [
+                                                {
+                                                  "kind": "text",
+                                                  "value": "true"
+                                                }
+                                              ],
+                                              "kind": "monospace",
+                                              "roles": []
+                                            },
+                                            {
+                                              "kind": "text",
+                                              "value": " then tracing span will be created only for events with associated tracing span context field. If set to "
+                                            },
+                                            {
+                                              "id": null,
+                                              "inlines": [
+                                                {
+                                                  "kind": "text",
+                                                  "value": "false"
+                                                }
+                                              ],
+                                              "kind": "monospace",
+                                              "roles": []
+                                            },
+                                            {
+                                              "kind": "text",
+                                              "value": " then the tracing span is created for all incoming events regardless of having associated span context."
+                                            }
+                                          ],
+                                          "kind": "emphasis",
+                                          "roles": []
+                                        }
+                                      ],
+                                      "roles": [],
+                                      "title": null
+                                    }
+                                  ],
+                                  "checkbox": null,
+                                  "inlines": [
+                                    {
+                                      "kind": "text",
+                                      "value": "Only events that have serialized context field should be traced."
+                                    }
+                                  ]
+                                },
+                                "terms": [
+                                  [
+                                    {
+                                      "id": null,
+                                      "inlines": [
+                                        {
+                                          "kind": "text",
+                                          "value": "tracing.with.context.field.only"
+                                        }
+                                      ],
+                                      "kind": "monospace",
+                                      "roles": []
+                                    }
+                                  ]
+                                ]
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "boolean"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "right",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "halign": "right",
+                      "paragraphs": [
+                        [
+                          {
+                            "kind": "text",
+                            "value": "false"
+                          }
+                        ]
+                      ],
+                      "rowspan": 1,
+                      "style": null,
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "65"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "15"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "right",
+                    "style": null,
+                    "valign": "top",
+                    "width": "20"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "_configuration_options",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration options"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_activatetracingspan_smt",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "ActivateTracingSpan SMT"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Quarkus extension"
+                  }
+                ],
+                "kind": "link",
+                "target": "/documentation/reference/integrations/outbox"
+              },
+              {
+                "kind": "text",
+                "value": " for implementing the outbox pattern provides the additional functionality necessary for tracing context propagation out-of-the-box. Specifically, it provides the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "tracingspancontext"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " field in the outbox table, which is used for passing the tracing span context from a service using the outbox extension to the Debezium connector."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When an outbox event is emitted, the extension will:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "create a new "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "outbox-write"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " span as a child of current active span"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "inject the span context into that "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "java.util.Properties"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " instance that is serialized into the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tracingspancontext"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " column"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "write the record into the database"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The tracing integration in the outbox extension is automatically enabled if the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quarkus-opentelemetry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extension is present. If you want to disable tracing support for the outbox extension despite the presence of the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quarkus-opentelemetry"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " extension, set the option "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "quarkus.debezium-outbox.tracing.enabled=false"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " in the Quarkus "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "application.properties"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " file."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_outbox_extension",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Outbox Extension"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Event Router SMT"
+                  }
+                ],
+                "kind": "link",
+                "target": "/documentation/reference/configuration/outbox-event-router"
+              },
+              {
+                "kind": "text",
+                "value": " acts as an Outbox extension counterpart, it executes the same steps as the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "ActivateTracingSpan"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " SMT, and is used instead of it."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_event_router_smt",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Event Router SMT"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Distributed Tracing"
+      }
+    ]
+  }
+}

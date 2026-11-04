@@ -377,8 +377,12 @@ def main():
         with ThreadPoolExecutor(args.jobs) as pool:
             pairs = list(pool.map(lambda case: render(case, args.binary, work), cases))
         job = work / "job.json"
+        # Without --screenshots each pair's images are removed once compared:
+        # the scratch directory may be a tmpfs, and a whole run's full-page
+        # screenshots take gigabytes there.
         job.write_text(json.dumps({"pairs": pairs, "viewports": manifest["viewports"], "out": str(shots),
-                                   "threshold": PIXEL_THRESHOLD, "jobs": args.jobs}))
+                                   "threshold": PIXEL_THRESHOLD, "jobs": args.jobs,
+                                   "keep": args.screenshots is not None}))
         run = subprocess.run(["node", str(DRIVER / "measure.mjs"), str(job)], capture_output=True, text=True)
         if run.returncode != 0:
             sys.exit(f"browser driver failed: {run.stderr.strip()}")

@@ -1,0 +1,316 @@
+// Category: debezium-using
+// Type: assembly
+// ModuleID: using-the-reselect-columns-post-processor-to-add-source-fields-to-change-event-records
+// Title: Using the reselect columns post processor to add source fields to change event records
+[id="reselect-columns-post-processor"]
+= Reselect columns
+
+ifdef::community[]
+:toc:
+:toc-placement: macro
+:linkattrs:
+:icons: font
+:source-highlighter: highlight.js
+
+toc::[]
+
+== Overview
+endif::community[]
+
+To improve performance and reduce storage overhead, databases can use external storage for certain columns.
+This type of storage is used for columns that store large amounts of data, such as the PostgreSQL TOAST (The Oversized-Attribute Storage Technique), Oracle Large Object (LOB), or the Oracle Exadata Extended String data types.
+To reduce I/O overhead and increase query speed, when data changes in a table row, the database retrieves only the columns that contain new values, ignoring data in externally stored columns that remain unchanged.
+As a result, the value of the externally stored column is not recorded in the database log, and {prodname} subsequently omits the column when it emits the event record.
+Downstream consumers that receive event records that omit required values can experience processing errors.
+
+If a value for an externally stored column is not present in the database log entry for an event, when {prodname} emits a record for the event, it replaces the missing value with an `unavailable.value.placeholder` sentinel value.
+These sentinel values are inserted into appropriately typed fields, for example, a byte array for bytes, a string for strings, or a key-value map for maps.
+
+To retrieve data for columns that were not available in the initial query, you can apply the {prodname} reselect columns post processor (`ReselectColumnsPostProcessor`).
+You can configure the post processor to reselect one or more columns from a table.
+After you configure the post processor, it monitors events that the connector emits for the column names that you designate for reselection.
+When it detects an event with the specified columns, the post processor re-queries the source tables to retrieve data for the specified columns, and fetches their current state.
+
+You can configure the post processor to reselect the following column types:
+
+ * `null` columns.
+ * Columns that contain the `unavailable.value.placeholder` sentinel value.
+
+
+NOTE: You can use the `ReselectColumnsPostProcessor` post processor only with {prodname} source connectors.
+The post processor is not designed to work with the {prodname} JDBC sink connector.
+
+ifdef::product[]
+For details about using the `ReselectColumnsPostProcessor` post processor, see the following topics:
+
+* xref:use-of-the-debezium-reselect-columns-post-processor-with-keyless-tables[]
+* xref:use-of-value-caching-with-the-debezium-reselect-columns-post-processor[]
+* xref:example-debezium-reselect-columns-post-processor-configuration[]
+* xref:descriptions-of-debezium-reselect-columns-post-processor-configuration-properties[]
+
+endif::product[]
+
+// Type: concept
+// ModuleID: use-of-the-debezium-reselect-columns-post-processor-with-keyless-tables
+// Title: Use of the {prodname} `ReselectColumnsPostProcessor` with keyless tables
+[id="keyless-tables"]
+== Keyless tables
+
+The reselect columns post processor generates a reselect query that returns the row to be modified.
+To construct the `WHERE` clause for the query, by default, the post processor uses a relational table model that is based on the table's primary key columns or on the unique index that is defined for the table.
+
+For keyless tables, the `SELECT` query that `ReselectColumnsPostProcessor` submits might return multiple rows, in which case {prodname} always uses only the first row.
+You cannot prioritize the order of the returned rows.
+To enable the post processor to return a consistently usable result for a keyless table, it's best to designate a custom key that can identify a unique row.
+The custom key must be capable of uniquely identify records in the source table based on a combination of columns.
+
+To define such a custom message key, use the `message.key.columns` property in the connector configuration.
+After you define a custom key, set the xref:reselect-columns-post-processor-property-reselect-use-event-key[`reselect.use.event.key`] configuration property to `true`.
+Setting this option enables the post processor to use the specified event key fields as selection criteria in lieu of a primary key column.
+Be sure to test the configuration to ensure that the reselection query provides the expected results.
+
+// Type: concept
+// ModuleID: use-of-value-caching-with-the-debezium-reselect-columns-post-processor
+// Title: Use of value caching with the {prodname} `ReselectColumnsPostProcessor`
+[id="value-caching"]
+== Value caching
+
+By default, the post processor queries the database for every event that requires reselection.
+For workloads in which the same rows are reselected repeatedly (for example, TOAST or LOB columns that {prodname} emits as placeholders on every unrelated row update), you can enable an optional cache of reselected values to reduce the number of database queries.
+
+Enable caching by setting `reselect.cache.enabled` to `true`.
+Reselected values are cached per row and per column, using the event's message key as the cache key.
+Before querying the database, the post processor checks the cache for each column that requires reselection, and only queries columns that are not already cached.
+Eligible columns whose values are present in the event record are also written to the cache, even if no reselection is needed, so a later event that omits the same column can be served from the cache without querying the database again.
+
+The cache is refreshed on modification: any event that carries a real (non-placeholder) value for an eligible column updates that column's cache entry with the current value.
+As a result, a later event that does not modify the column can be served from the cache, and a cached value is never served after the column has changed.
+
+Because the row identity is the message key, including its schema, a change to the key's schema (for example, a DDL change or a primary-key reordering) yields a different cache key, so the post processor queries the database for the new key rather than returning a stale cached value.
+
+The cache storage is pluggable through the `reselect.cache.type` property, which names an implementation of the `io.debezium.processors.reselect.cache.ReselectColumnCache` contract.
+{prodname} provides the implementations described in the following sections; you can also supply a custom implementation to integrate an alternative backend.
+Custom implementations that store values outside the JVM heap can extend `io.debezium.processors.reselect.cache.AbstractSerializingReselectColumnCache`, which handles the conversion of row keys and column values to and from bytes and requires only simple byte-level get, put, and remove storage operations.
+
+// Type: concept
+// ModuleID: debezium-reselect-columns-post-processor-in-memory-cache
+// Title: {prodname} `ReselectColumnsPostProcessor` in-memory cache
+[id="value-caching-in-memory"]
+=== In-memory cache
+
+The default cache implementation, `io.debezium.processors.reselect.cache.MemoryReselectColumnCache`, stores values on the JVM heap.
+The cache is bounded in both dimensions, the number of rows and the number of columns cached per row, and evicts the least-recently-used entries when a bound is exceeded.
+Cached values also expire after a time-to-live, which bounds how long entries for rows that are no longer being updated are retained in memory.
+The cache is lost when the connector stops, so reselections begin repopulating it after a restart.
+
+The in-memory cache supports the following properties, in addition to the common `reselect.cache.*` properties:
+
+.In-memory cache configuration options
+[cols="30%a,25%a,45%a"]
+|===
+|Property
+|Default
+|Description
+
+|[[reselect-columns-post-processor-property-reselect-cache-max-size]]<<reselect-columns-post-processor-property-reselect-cache-max-size, `+post.processors.reselect.cache.max.size+`>>
+|`10000`
+|The maximum number of cached rows retained in the reselection cache.
+
+When the limit is reached, the least-recently-used entries are evicted.
+
+|[[reselect-columns-post-processor-property-reselect-cache-ttl-ms]]<<reselect-columns-post-processor-property-reselect-cache-ttl-ms, `+post.processors.reselect.cache.ttl.ms+`>>
+|`600000`
+|The time-to-live, in milliseconds, of a cached reselection value.
+
+Because the cache is refreshed on modification, this value only bounds how long entries for rows that are no longer being updated are retained in memory; it is not the mechanism that guarantees freshness.
+
+|[[reselect-columns-post-processor-property-reselect-cache-max-columns-per-row]]<<reselect-columns-post-processor-property-reselect-cache-max-columns-per-row, `+post.processors.reselect.cache.max.columns.per.row+`>>
+|`200`
+|The maximum number of columns cached per row in the reselection cache.
+
+When the limit is reached, the least-recently-used column entries for that row are evicted.
+This bound guards against wide tables (for example, tables with 500-1000 columns) growing the per-row inner map without limit.
+
+|===
+
+ifdef::community[]
+[id="value-caching-rocksdb"]
+=== RocksDB cache
+
+The `io.debezium.storage.rocksdb.reselect.RocksDbReselectColumnCache` implementation persists cached values to disk in an embedded RocksDB database.
+Cached values persist after you a connector restarts, so columns that would otherwise need to be reselected continue to be served from the cache after a restart.
+Entries remain correct across restarts because the post processor refreshes the cache whenever a column arrives with a real value.
+
+To use the RocksDB cache, the `debezium-storage-rocksdb` artifact must be on the connector plugin path, and `reselect.cache.type` must be set to the implementation's fully-qualified class name.
+
+Storage is permanent by default: no time-to-live is applied, and the database directory is retained when the connector stops.
+If you specify a positive `reselect.cache.ttl.ms` value, expired entries are treated as cache misses and removed when they are read.
+RocksDB reclaims expired entries from disk during compaction.
+A time-to-live is recommended for schemas that change frequently, because entries written under a previous key schema are never overwritten and would otherwise remain on disk indefinitely.
+
+[NOTE]
+====
+The time-to-live setting determines how the RocksDB database is opened, and the two modes store entries on disk in different formats.
+If you change `reselect.cache.ttl.ms` between `0` and a positive value across a connector restart, entries that were written before the change can become unreadable in the new mode.
+Unreadable entries are discarded and treated as cache misses, so the affected columns are transparently reselected from the database and re-cached; no manual cleanup of the storage directory is required.
+====
+
+[IMPORTANT]
+====
+RocksDB takes an exclusive lock on its storage directory.
+Configure a distinct `reselect.cache.rocksdb.path` for each connector, and for each task of a multi-task connector.
+====
+
+The following example shows a post-processor configuration that uses the RocksDB cache:
+
+[source,json,subs="+attributes,+quotes"]
+----
+  "post.processors.reselector.reselect.cache.enabled" : "true",
+  "post.processors.reselector.reselect.cache.type" : "io.debezium.storage.rocksdb.reselect.RocksDbReselectColumnCache",
+  "post.processors.reselector.reselect.cache.rocksdb.path" : "/var/lib/debezium/reselect-cache"
+----
+
+The RocksDB cache supports the following properties, in addition to the common `reselect.cache.*` properties:
+
+.RocksDB cache configuration options
+[cols="30%a,25%a,45%a"]
+|===
+|Property
+|Default
+|Description
+
+|[[reselect-columns-post-processor-property-reselect-cache-rocksdb-path]]<<reselect-columns-post-processor-property-reselect-cache-rocksdb-path, `+post.processors.reselect.cache.rocksdb.path+`>>
+|No default
+|The directory path in which the RocksDB database is stored.
+The directory is created if it does not exist.
+This property is required.
+
+|[[reselect-columns-post-processor-property-reselect-cache-rocksdb-cleanup]]<<reselect-columns-post-processor-property-reselect-cache-rocksdb-cleanup, `+post.processors.reselect.cache.rocksdb.cleanup+`>>
+|`false`
+|Specifies whether the RocksDB database directory is deleted when the connector stops.
+
+By default the directory is retained, so cached values persist across connector restarts.
+
+|[[reselect-columns-post-processor-property-reselect-cache-rocksdb-ttl-ms]]<<reselect-columns-post-processor-property-reselect-cache-rocksdb-ttl-ms, `+post.processors.reselect.cache.ttl.ms+`>>
+|`0`
+|The time-to-live, in milliseconds, of a cached reselection value; `0` disables expiration so entries persist until overwritten or invalidated.
+
+Note that this is the same property that the in-memory cache uses, but with a different default: persistent storage is permanent unless a time-to-live is explicitly configured.
+
+|===
+endif::community[]
+
+// Type: concept
+// ModuleID: example-debezium-reselect-columns-post-processor-configuration
+// Title: Example: {prodname} `ReselectColumnsPostProcessor` configuration
+[id="configuration-example"]
+== Configuration example
+
+Configuring a post processor is similar to configuring a {link-prefix}:{link-custom-converters}#developing-debezium-custom-data-type-converters[custom converter] or {link-prefix}:{link-transformations}#applying-transformations-to-modify-messages-exchanged-with-kafka[single message transformation (SMT)].
+To enable the connector to use the `ReselectColumnsPostProcessor`, add the following entries to the connector configuration:
+
+[source,json,subs="+attributes,+quotes"]
+----
+  "post.processors" : "reselector",
+  "post.processors.reselector.type" : "io.debezium.processors.reselect.ReselectColumnsPostProcessor",
+  "post.processors.reselector.reselect.columns.include.list" : "_<schema>_.__<table>__:__<column>__,__<schema>__.__<table>__:__<column>__",
+  "post.processors.reselector.reselect.unavailable.values" : "true",
+  "post.processors.reselector.reselect.null.values" : "true",
+  "post.processors.reselector.reselect.use.event.key" : "false",
+  "post.processors.reselector.reselect.error.handling.mode" : "WARN"
+----
+
+See the xref:post-processor-configuration-options[configuration options] for the full list of available configuration properties.
+
+
+// Type: reference
+// ModuleID: descriptions-of-debezium-reselect-columns-post-processor-configuration-properties
+// Title: Descriptions of {prodname} reselect columns post processor configuration properties
+[id="post-processor-configuration-options"]
+== Configuration options
+
+The following table lists the configuration options that you can set for the Reselect Columns post-processor.
+
+.Reselect columns post processor configuration options
+[cols="30%a,25%a,45%a"]
+|===
+|Property
+|Default
+|Description
+
+|[[reselect-columns-post-processor-property-post-processors]]<<reselect-columns-post-processor-property-post-processors, `+post.processors.reselect.columns.post.processors+`>>
+|No default
+|Comma-separated list of post processors to enable.
+Post processors run in the order that you list them.
+
+|[[reselect-columns-post-processor-property-post-processors-reselector-type]] <<reselect-columns-post-processor-property-post-processors-reselector-type, `+`post.processors.reselector.type+`>>
+|No default
+|The fully-qualified class type name for the specified post processor.
+
+|[[reselect-columns-post-processor-property-reselect-columns-include-list]]<<reselect-columns-post-processor-property-reselect-columns-include-list, `+post.processors.reselect.columns.include.list+`>>
+|No default
+|Comma-separated list of column names to reselect from the source database.
+If the values for the specified columns are not present in the change event, the post processor requeries the source table to retrieve the values. 
+Use the following format to specify column names:
+
+`__<schema>__.__<table>__:__<column>__`
+
+Do not set this property if you set the `post.processors.reselect.columns.exclude.list` property.
+
+|[[reselect-columns-post-processor-property-reselect-columns-exclude-list]]<<reselect-columns-post-processor-property-reselect-columns-exclude-list, `+post.processors.reselect.columns.exclude.list+`>>
+|No default
+|Comma-separated list of column names in the source database to exclude from reselection.
+Use the following format to specify column names:
+
+`__<schema>__.__<table>__:__<column>__`
+
+Do not set this property if you set the `post.processors.reselect.columns.include.list` property.
+
+|[[reselect-columns-post-processor-property-reselect-unavailable-values]]<<reselect-columns-post-processor-property-reselect-unavailable-values, `+post.processors.reselect.unavailable.values+`>>
+|`true`
+|Specifies whether the post processor reselects a column that matches the `post.processors.reselect.columns.include.list` filter if the column value is provided by the connector's `unavailable.value.placeholder` property.
+
+|[[reselect-columns-post-processor-property-reselect-null-values]]<<reselect-columns-post-processor-property-reselect-null-values, `+post.processors.reselect.null.values+`>>
+|`true`
+|Specifies whether the post processor reselects a column that matches the `post.processors.reselect.columns.include.list` filter if the column value is `null`.
+
+|[[reselect-columns-post-processor-property-reselect-use-event-key]]<<reselect-columns-post-processor-property-reselect-use-event-key, `+post.processors.reselect.use.event.key+`>>
+|`false`
+|Specifies whether the post processor reselects based on the event's key field names or uses the relational table's primary key column names.
+
+By default, the reselection query is based on the relational table's primary key columns or unique key index.
+For tables that do not have a primary key, set this property to `true`, and configure the `message.key.columns` property in the connector configuration to specify a custom key for the connector to use when it creates events.
+The post processor then uses the specified key field names as the primary key in the SQL reselection query.
+
+|[[reselect-columns-post-processor-property-reselect-error-handling-mode]]<<reselect-columns-post-processor-property-reselect-error-handling-mode, `+post.processors.reselect.error.handling.mode+`>>
+|`WARN`
+|Specifies how the reselect post processor reacts to certain conditions.
+
+By default, the post-processor logs a warning message when the row cannot be found or if there is a database selection error.
+
+When set to `FAIL`, the connector will stop processing changes if the row no longer exists at the time of reselection or if there is a database failure when reselecting the row.
+
+|[[reselect-columns-post-processor-property-reselect-cache-enabled]]<<reselect-columns-post-processor-property-reselect-cache-enabled, `+post.processors.reselect.cache.enabled+`>>
+|`false`
+|Enables an optional, per-column cache of reselected values.
+
+By default the post processor queries the database for every event that requires reselection.
+When set to `true`, reselected column values are cached per row and column, and subsequent events that require the same column are served from the cache instead of querying the database.
+This is most useful for large, rarely-changing columns (such as TOAST or LOB values) on frequently-updated rows.
+See xref:value-caching[Value caching] for a description of the caching mechanism.
+
+|[[reselect-columns-post-processor-property-reselect-cache-type]]<<reselect-columns-post-processor-property-reselect-cache-type, `+post.processors.reselect.cache.type+`>>
+|`io.debezium.processors.reselect.cache.MemoryReselectColumnCache`
+|The fully-qualified name of the `io.debezium.processors.reselect.cache.ReselectColumnCache` implementation used to store reselected values.
+Applies only when `reselect.cache.enabled` is `true`.
+
+ifdef::product[]
+{prodname} provides the xref:value-caching-in-memory[in-memory cache].
+You can set additional `reselect.cache.*` properties, as described in xref:value-caching-in-memory[In-memory cache].
+endif::product[]
+ifdef::community[]
+{prodname} provides the xref:value-caching-in-memory[in-memory cache] (the default) and the xref:value-caching-rocksdb[RocksDB cache] (`io.debezium.storage.rocksdb.reselect.RocksDbReselectColumnCache`); each caches supports additional `reselect.cache.*` properties, as described in xref:value-caching-rocksdb[RocksDB cache].
+endif::community[]
+
+|===
+

@@ -1,0 +1,818 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_json_serde",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "JSON SerDe"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "serdes-configuration_options",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Configuration options"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This feature is currently in incubating state, i.e. exact semantics, configuration options etc. may change in future revisions, based on the feedback we receive. Please let us know if you encounter any problems while using these SerDes."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium generates data change events in the form of a complex message structure. This message is later on serialized by the configured Kafka Connect converter and it is the responsibility of the consumer to deserialize it into a logical message. For this purpose, Kafka uses the so-called "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "SerDes"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://kafka.apache.org/documentation/streams/developer-guide/datatypes.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium provides SerDes ("
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "io.debezium.serde.DebeziumSerdes"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ") to simplify the deserialization for the consumer either being it Kafka Streams pipeline or plain Kafka consumer."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The JSON SerDe deserializes JSON encoded change events and transforms it into a Java class. Internally this is achieved using "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Jackson Databind"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/FasterXML/jackson-databind/wiki"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The consumer creates a serde instance using"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "final Serde<MyType> serde = DebeziumSerdes.payloadJson(MyType.class);"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The consumer will then receive the logical Java type "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "MyType"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " whose fields are initiated from the JSON message. This applies to both for keys and values. It is also possible to use plain Java types like "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Integer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", for example when the key consists of a single "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "INT"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " field."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When the JSON converter is used by Kafka Connect then it generally provides two modes of operations - with or without schema. If the schema is used then the message looks like so:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n    \"schema\": {...},\n    \"payload\": {\n    \t\"op\": \"u\",\n    \t\"source\": {\n    \t\t...\n    \t},\n    \t\"ts_ms\" : \"...\",\n    \t\"ts_us\" : \"...\",\n    \t\"ts_ns\" : \"...\",\n    \t\"before\" : {\n    \t\t\"field1\" : \"oldvalue1\",\n    \t\t\"field2\" : \"oldvalue2\"\n    \t},\n    \t\"after\" : {\n    \t\t\"field1\" : \"newvalue1\",\n    \t\t\"field2\" : \"newvalue2\"\n    \t}\n\t}\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Whereas without schema, the structure look more like this:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "{\n\t\"op\": \"u\",\n\t\"source\": {\n\t\t...\n\t},\n\t\"ts_ms\" : \"...\",\n\t\"ts_us\" : \"...\",\n\t\"ts_ns\" : \"...\",\n\t\"before\" : {\n\t\t\"field1\" : \"oldvalue1\",\n\t\t\"field2\" : \"oldvalue2\"\n\t},\n\t\"after\" : {\n\t\t\"field1\" : \"newvalue1\",\n\t\t\"field2\" : \"newvalue2\"\n\t}\n}"
+              }
+            ],
+            "language": "json",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The deserializer behaviour is driven by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "from.field"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " configuration option and follows these rules:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "if a message contains a schema, then use "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "payload"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " only"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "if the key is deserialized, then map key field(s) into the target class"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "ulist",
+                    "id": null,
+                    "items": [
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "if "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "from.field"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " is not set, then deserialize the complete envelope into the target type"
+                          }
+                        ]
+                      },
+                      {
+                        "blocks": [],
+                        "checkbox": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "otherwise deserialize and map only content of the field configured into the target type, thus effectively flatting the message"
+                          }
+                        ]
+                      }
+                    ],
+                    "roles": [],
+                    "style": null,
+                    "title": null
+                  }
+                ],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "if the value is deserialized and contains the Debezium event envelope then:"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "if the value is deserialized and contains already a flattened message (i.e. when using the SMT for "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Event Flattening"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "transformations/event-flattening.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ") then map the flattened record into the target logical type"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "autowidth": false,
+                "body": [
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Property"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Default"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Description"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "from.field"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "integrations/serdes.html#serdes-from-field"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "N/A"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Empty if a message with full envelope should be deserialized, "
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "before"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": "/"
+                              },
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "after"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              },
+                              {
+                                "kind": "text",
+                                "value": " if only data values before or after the change are required."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ],
+                  [
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "inlines": [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "unknown.properties.ignored"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  }
+                                ],
+                                "kind": "xref",
+                                "target": "integrations/serdes.html#serdes-unknown-properties-ignored"
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "id": null,
+                                "inlines": [
+                                  {
+                                    "kind": "text",
+                                    "value": "false"
+                                  }
+                                ],
+                                "kind": "monospace",
+                                "roles": []
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    },
+                    {
+                      "background": null,
+                      "colspan": 1,
+                      "document": {
+                        "blocks": [
+                          {
+                            "context": "paragraph",
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Determines when an unknown property is encountered whether it should be silently ignored or if a runtime exception should be thrown."
+                              }
+                            ],
+                            "roles": [],
+                            "title": null
+                          }
+                        ],
+                        "title": null
+                      },
+                      "halign": "left",
+                      "rowspan": 1,
+                      "style": "asciidoc",
+                      "valign": "top"
+                    }
+                  ]
+                ],
+                "caption": null,
+                "columns": [
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "30"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "25"
+                  },
+                  {
+                    "autowidth": false,
+                    "halign": "left",
+                    "style": "asciidoc",
+                    "valign": "top",
+                    "width": "45"
+                  }
+                ],
+                "context": "table",
+                "explicit_width": false,
+                "float": null,
+                "foot": [],
+                "frame": "all",
+                "grid": "all",
+                "head": [],
+                "id": null,
+                "options": [],
+                "roles": [],
+                "stripes": null,
+                "title": null,
+                "width": 100
+              }
+            ],
+            "context": "section",
+            "id": "serdes-configuration_options",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Configuration options"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "_json_serde",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "JSON SerDe"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Debezium Event Deserialization"
+      }
+    ]
+  }
+}

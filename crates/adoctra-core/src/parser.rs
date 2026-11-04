@@ -4158,7 +4158,9 @@ fn item_text(
     let mut content = match (text, folded) {
         (Some(text), Some(folded)) => lines.folded_content(text, folded),
         (Some(text), None) => lines.content(text.start, text.end),
-        (None, Some(folded)) => lines.content(folded.start, folded.end),
+        // The paragraph alone keeps its first line's indentation for
+        // `adjust_indentation!`, which removes only the common indent.
+        (None, Some(folded)) => lines.content(lines.line_start(folded.start), folded.end),
         (None, None) => return Vec::new(),
     };
     let attrs = context.render_attributes();
@@ -4188,6 +4190,10 @@ fn fold_indentation(
     let paragraph = lines.line_start(folded.start);
     let first = folded.start - paragraph;
     let text = content.text.as_str();
+    // Without item text on the marker line the content starts at the
+    // paragraph's first line, whose indentation is adjusted with the rest
+    // (mixed indents keep the remainder: `    a` / `\tb` keeps `   a`).
+    let includes_first = content.original_span(Span::new(0, 0)).start == paragraph;
     // Lines of the folded paragraph after the item text: (start, leading
     // blanks). Its first line keeps its indentation here when the content
     // starts at the item text; Ruby strips the common indentation from it too.
@@ -4196,7 +4202,10 @@ fn fold_indentation(
     for line in text.split_inclusive('\n') {
         let original = content.original_span(Span::new(at, at)).start;
         let body = line.trim_end_matches(['\n', '\r']);
-        if at > 0 && original >= paragraph && !body.trim_matches(blank).is_empty() {
+        if (at > 0 || includes_first)
+            && original >= paragraph
+            && !body.trim_matches(blank).is_empty()
+        {
             continued.push((at, body.len() - body.trim_start_matches(blank).len()));
         }
         at += line.len();
@@ -5876,6 +5885,36 @@ mod tests {
         );
         assert_eq!(block.attrs.style.as_deref(), Some("NOTE"));
         assert_eq!(block.span, Span::new("[NOTE]\n".len(), src.len()));
+    }
+
+    #[test]
+    fn a_description_on_its_own_lines_keeps_the_first_lines_extra_indent() {
+        // Ruby's `adjust_indentation!` removes only the common indent of the
+        // description lines, the first included: a tab counts as one blank,
+        // so `    First` keeps three spaces (golden dlists/mixed_indent).
+        let src = "term::\n    First line\n    second line\n\tthird line.\n";
+        let blocks = parse(src).document.into_flat_blocks();
+        let BlockKind::DescriptionList { items, .. } = &blocks[0].kind else {
+            panic!("expected DescriptionList, got {:?}", blocks[0].kind);
+        };
+        let description = items[0].description.as_ref().expect("a description");
+        let Inline::Text { value, span } = &description.inlines[0] else {
+            panic!("expected Text, got {:?}", description.inlines[0]);
+        };
+        assert!(value.starts_with("   First line"), "{value:?}");
+        // The kept blanks map to their source bytes (after the common one).
+        assert_eq!(span.start, src.find("    First").unwrap() + 1);
+        // A uniform indent is removed entirely, as before.
+        let blocks = parse("term::\n  First line\n  second.\n")
+            .document
+            .into_flat_blocks();
+        let BlockKind::DescriptionList { items, .. } = &blocks[0].kind else {
+            panic!("expected DescriptionList");
+        };
+        let Inline::Text { value, .. } = &items[0].description.as_ref().unwrap().inlines[0] else {
+            panic!("expected Text");
+        };
+        assert!(value.starts_with("First line"), "{value:?}");
     }
 
     #[test]

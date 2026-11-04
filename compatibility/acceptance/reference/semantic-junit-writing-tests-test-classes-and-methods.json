@@ -1,0 +1,805 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Test methods and lifecycle methods may be declared locally within the current test class, inherited from superclasses, or inherited from interfaces (see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "writing-tests/test-interfaces-and-default-methods.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/test-interfaces-and-default-methods.html"
+              },
+              {
+                "kind": "text",
+                "value": "). In addition, test methods and lifecycle methods must not be "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "abstract"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and must not return a value (except "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@TestFactory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods which are required to return a value)."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Test classes, test methods, and lifecycle methods are not required to be "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", but they must "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "not"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " be "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "private"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "It is generally recommended to omit the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " modifier for test classes, test methods, and lifecycle methods unless there is a technical reason for doing so – for example, when a test class is extended by a test class in another package. Another technical reason for making classes and methods "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "public"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is to simplify testing on the module path when using the Java Module System."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Class and method visibility"
+              }
+            ],
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Fields in test classes are inherited. For example, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@TempDir"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " field from a superclass will always be applied in a subclass."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Test methods and lifecycle methods are inherited unless they are overridden according to the visibility rules of the Java language. For example, a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method from a superclass will always be applied in a subclass unless the subclass explicitly overrides the method. Similarly, if a package-private "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method is declared in a superclass that resides in a different package than the subclass, that "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "@Test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " method will always be applied in the subclass since the subclass cannot override a package-private method from a superclass in a different package."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See also: "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Field and Method Search Semantics"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "extensions/supported-utilities-in-extensions.html#search-semantics"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Field and method inheritance"
+              }
+            ],
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following test class demonstrates the use of "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Test"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods and all supported lifecycle methods. For further information on runtime semantics, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "writing-tests/test-execution-order.html"
+                  }
+                ],
+                "kind": "xref",
+                "target": "writing-tests/test-execution-order.html"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Wrapping Behavior of Callbacks"
+                  }
+                ],
+                "kind": "xref",
+                "target": "extensions/relative-execution-order-of-user-code-and-extensions.html#wrapping-behavior"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "dlist",
+                "id": null,
+                "items": [
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import static org.junit.jupiter.api.Assertions.fail;\nimport static org.junit.jupiter.api.Assumptions.assumeTrue;\n\nimport org.junit.jupiter.api.AfterAll;\nimport org.junit.jupiter.api.AfterEach;\nimport org.junit.jupiter.api.BeforeAll;\nimport org.junit.jupiter.api.BeforeEach;\nimport org.junit.jupiter.api.Disabled;\nimport org.junit.jupiter.api.Test;\n\nclass StandardTests {\n\n\t@BeforeAll\n\tstatic void initAll() {\n\t}\n\n\t@BeforeEach\n\tvoid init() {\n\t}\n\n\t@Test\n\tvoid succeedingTest() {\n\t}\n\n\t@Test\n\tvoid failingTest() {\n\t\tfail(\"a failing test\");\n\t}\n\n\t@Test\n\t@Disabled(\"for demonstration purposes\")\n\tvoid skippedTest() {\n\t\t// not executed\n\t}\n\n\t@Test\n\tvoid abortedTest() {\n\t\tassumeTrue(\"abc\".contains(\"Z\"));\n\t\tfail(\"test should have been aborted\");\n\t}\n\n\t@AfterEach\n\tvoid tearDown() {\n\t}\n\n\t@AfterAll\n\tstatic void tearDownAll() {\n\t}\n\n}"
+                                }
+                              ],
+                              "language": "java",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Java"
+                        }
+                      ]
+                    ]
+                  },
+                  {
+                    "description": {
+                      "blocks": [
+                        {
+                          "blocks": [
+                            {
+                              "context": "listing",
+                              "id": null,
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "import org.junit.jupiter.api.AfterAll\nimport org.junit.jupiter.api.AfterEach\nimport org.junit.jupiter.api.Assumptions.assumeTrue\nimport org.junit.jupiter.api.BeforeAll\nimport org.junit.jupiter.api.BeforeEach\nimport org.junit.jupiter.api.Disabled\nimport org.junit.jupiter.api.Test\nimport org.junit.jupiter.api.fail\n\nclass StandardTests {\n    @BeforeEach\n    fun init() {\n    }\n\n    @Test\n    fun succeedingTest() {\n    }\n\n    @Test\n    fun failingTest() {\n        fail(\"a failing test\")\n    }\n\n    @Test\n    @Disabled(\"for demonstration purposes\")\n    fun skippedTest() {\n        // not executed\n    }\n\n    @Test\n    fun abortedTest() {\n        assumeTrue(\"abc\".contains(\"Z\"))\n        fail(\"test should have been aborted\")\n    }\n\n    @AfterEach\n    fun tearDown() {\n    }\n\n    companion object {\n        @JvmStatic\n        @BeforeAll\n        fun initAll() {\n        }\n\n        @JvmStatic\n        @AfterAll\n        fun tearDownAll() {\n        }\n    }\n}"
+                                }
+                              ],
+                              "language": "kotlin",
+                              "roles": [],
+                              "title": null
+                            }
+                          ],
+                          "context": "open",
+                          "id": null,
+                          "roles": [],
+                          "title": null
+                        }
+                      ],
+                      "checkbox": null,
+                      "inlines": []
+                    },
+                    "terms": [
+                      [
+                        {
+                          "kind": "text",
+                          "value": "Kotlin"
+                        }
+                      ]
+                    ]
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "example",
+            "id": null,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "A standard test class"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It is also possible to use Java "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "record"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " classes as test classes as illustrated by the following example."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import static org.junit.jupiter.api.Assertions.assertEquals;\n\nimport example.util.Calculator;\n\nimport org.junit.jupiter.api.Test;\n\nrecord MyFirstJUnitJupiterRecordTests() {\n\n\t@Test\n\tvoid addition() {\n\t\tassertEquals(2, new Calculator().add(1, 1));\n\t}\n\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "A test class written as a Java record"
+              }
+            ]
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Test methods and lifecycle methods may be written in Kotlin and may optionally use the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "suspend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " keyword for testing code using coroutines."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import org.junit.jupiter.api.BeforeEach\nimport org.junit.jupiter.api.Test\n\nclass KotlinCoroutinesDemo {\n    @BeforeEach\n    fun regularSetUp() {\n    }\n\n    @BeforeEach\n    suspend fun coroutineSetUp() {\n    }\n\n    @Test\n    fun regularTest() {\n    }\n\n    @Test\n    suspend fun coroutineTest() {\n    }\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "A test class written in Kotlin"
+              }
+            ]
+          },
+          {
+            "context": "admonition",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Using suspending functions as test or lifecycle methods requires "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "kotlin-stdlib"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://central.sonatype.com/artifact/org.jetbrains.kotlin/kotlin-stdlib"
+              },
+              {
+                "kind": "text",
+                "value": ", "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "kotlin-reflect"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://central.sonatype.com/artifact/org.jetbrains.kotlin/kotlin-reflect"
+              },
+              {
+                "kind": "text",
+                "value": ", and "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "kotlinx-coroutines-core"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://central.sonatype.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-core"
+              },
+              {
+                "kind": "text",
+                "value": " to be present on the classpath or module path."
+              }
+            ],
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When using "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "suspend"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " test or lifecycle methods, JUnit internally uses "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "runBlocking"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " to execute them. This is sufficient for simple coroutine-based tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "However, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "runBlocking"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " does not support skipping calls to "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "delay"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " and does not provide control over virtual time or dispatchers."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As an alternative, tests can be written as regular "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "@Test"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " methods and wrapped in "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "runTest"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " from "
+              },
+              {
+                "inlines": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "kotlinx-coroutines-test"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  }
+                ],
+                "kind": "link",
+                "target": "https://central.sonatype.com/artifact/org.jetbrains.kotlinx/kotlinx-coroutines-test"
+              },
+              {
+                "kind": "text",
+                "value": " to support skipping delays during tests and gain control over virtual time and dispatchers."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "import kotlinx.coroutines.test.runTest\nimport org.junit.jupiter.api.Test\n\nclass KotlinCoroutinesRunTestDemo {\n    @Test\n    fun coroutineTestUsingRunTest() = runTest {\n        // ...\n    }\n}"
+              }
+            ],
+            "language": "kotlin",
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "kotlin-coroutines",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Kotlin Coroutines"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Test Classes and Methods"
+      }
+    ]
+  }
+}

@@ -1,0 +1,397 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Most commonly, you deploy Debezium by means of Apache "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka Connect"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://kafka.apache.org/documentation/#connect"
+              },
+              {
+                "kind": "text",
+                "value": ". Kafka Connect is a framework and runtime for implementing and operating:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Source connectors such as Debezium that send records into Kafka"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Sink connectors that propagate records from Kafka topics to other systems"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The following image shows the architecture of a change data capture pipeline based on Debezium:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "Debezium Architecture"
+              }
+            ],
+            "attributes": {},
+            "caption": null,
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "debezium-architecture.png",
+            "svg": null,
+            "target": "debezium-architecture.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As shown in the image, the Debezium connectors for MySQL and PostgresSQL are deployed to capture changes to these two types of databases. Each Debezium connector establishes a connection to its source database:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The MySQL connector uses a client library for accessing the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "binlog"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The PostgreSQL connector reads from a logical replication stream."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Kafka Connect operates as a separate service besides the Kafka broker."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, changes from one database table are written to a Kafka topic whose name corresponds to the table name. If needed, you can adjust the destination topic name by configuring Debezium’s "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "topic routing transformation"
+                  }
+                ],
+                "kind": "xref",
+                "target": "transformations/topic-routing.html#topic-routing"
+              },
+              {
+                "kind": "text",
+                "value": ". For example, you can:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Route records to a topic whose name is different from the table’s name"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Stream change event records for multiple tables into a single topic"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "After change event records are in Apache Kafka, different connectors in the Kafka Connect ecosystem can stream the records to other systems and databases such as Elasticsearch, data warehouses and analytics systems, or caches such as Infinispan. Depending on the chosen sink connector, you might need to configure the Debezium "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "new record state extraction"
+                  }
+                ],
+                "kind": "xref",
+                "target": "transformations/event-flattening.html#new-record-state-extraction"
+              },
+              {
+                "kind": "text",
+                "value": " transformation. This Kafka Connect SMT propagates the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "after"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " structure from a Debezium change event to the sink connector. The modified change event record replaces the original, more verbose record that is propagated by default."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Another way to deploy Debezium is by using the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium server"
+                  }
+                ],
+                "kind": "xref",
+                "target": "operations/debezium-server.html"
+              },
+              {
+                "kind": "text",
+                "value": ". The Debezium server is a configurable, ready-to-use application that streams change events from a source database to a variety of messaging infrastructures. The following image shows the architecture of a change data capture pipeline that uses the Debezium Server:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "alt": [
+              {
+                "kind": "text",
+                "value": "Debezium Architecture"
+              }
+            ],
+            "attributes": {},
+            "caption": null,
+            "context": "image",
+            "id": null,
+            "roles": [],
+            "src": "debezium-server-architecture.png",
+            "svg": null,
+            "target": "debezium-server-architecture.png",
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "You can configure Debezium server to use one of the Debezium source connectors to capture changes from a source database. Change events can be serialized to different formats like JSON or Apache Avro and then will be sent to one of a variety of messaging infrastructures such as Amazon Kinesis, Google Cloud Pub/Sub, or Apache Pulsar."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_debezium_server",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Debezium Server"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Yet an alternative way for using the Debezium connectors is the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium engine"
+                  }
+                ],
+                "kind": "xref",
+                "target": "development/engine.html"
+              },
+              {
+                "kind": "text",
+                "value": ". In this case, Debezium will not be run via Kafka Connect, but as a library embedded into your custom Java applications. This can be useful for either consuming change events within your application itself, without the needed for deploying complete Kafka and Kafka Connect clusters, or for streaming changes to alternative messaging brokers such as Amazon Kinesis. You can find "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "an example"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/debezium-examples/tree/main/kinesis"
+              },
+              {
+                "kind": "text",
+                "value": " for the latter in the examples repository."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_debezium_engine",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Debezium Engine"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Debezium Architecture"
+      }
+    ]
+  }
+}

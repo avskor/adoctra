@@ -1,0 +1,3005 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "disabling-automatic-topic-creation-for-the-kafka-broker",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Disabling automatic topic creation for the Kafka broker"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "enabling-automatic-topic-creation",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Set up Kafka Connect"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "configuration",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Configuration"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "topic-creation-groups",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Topic creation groups"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "topic-creation-group-configuration-properties",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Topic creation group configuration properties"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "default-topic-creation-group-configuration",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Default group configuration"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "custom-topic-creation-group-configuration",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Custom group configuration"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "registering-custom-topic-creation-groups",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Registering custom groups"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                },
+                {
+                  "id": "_additional_resources",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Additional resources"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Kafka provides two mechanisms for creating topics automatically. You can enable automatic topic creation for the Kafka broker, and, beginning with Kafka 2.6.0, you can also enable Kafka Connect to create topics. The Kafka broker uses the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "auto.create.topics.enable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property to control automatic topic creation. In Kafka Connect, the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "topic.creation.enable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property specifies whether Kafka Connect is permitted to create topics. In both cases, the default settings for the properties enables automatic topic creation."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When automatic topic creation is enabled, if a Debezium source connector emits a change event record for a table for which no target topic already exists, the topic is created at runtime as the event record is ingested into Kafka."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Topics that the broker creates are limited to sharing a single default configuration. The broker cannot apply unique configurations to different topics or sets of topics. By contrast, Kafka Connect can apply any of several configurations when creating topics, setting the replication factor, number of partitions, and other topic-specific settings as specified in the Debezium connector configuration. The connector configuration defines a set of topic creation groups, and associates a set of topic configuration properties with each group."
+              }
+            ],
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Differences between automatic topic creation at the broker and in Kafka Connect"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The broker configuration and the Kafka Connect configuration are independent of each other. Kafka Connect can create topics regardless of whether you disable topic creation at the broker. If you enable automatic topic creation at both the broker and in Kafka Connect, the Connect configuration takes precedence, and the broker creates topics only if none of the settings in the Kafka Connect configuration apply."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, the Kafka broker configuration enables the broker to create topics at runtime if the topics do not already exist. However, the broker cannot create topics with unique settings for different connectors. All topics that a broker creates have the same retention period, compaction settings, partition count, replication factors and so forth. If you have multiple connectors and each requires its own topic configuration, use "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka Connect automatic topic creation"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#enabling-automatic-topic-creation"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "If Kafka Connect topic creation is unavailable, as in deployments that use Kafka 2.6 or earlier, the only way to guarantee custom topic properties is to pre-create the topics yourself, either manually, or through a custom deployment process."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As noted earlier, broker topic creation and Kafka Connect topic creation are independent, so to use the Kafka Connect mechanism, it’s not strictly necessary to disable topic creation at the broker. That said, preventing the broker from creating topics provides the following advantages:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Prevents accidental topic creation."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Ensures all connector topics are created through the Connect configuration."
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Makes topic configuration more predictable and auditable."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "In the broker configuration, set the value of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "auto.create.topics.enable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "false"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": [
+              {
+                "kind": "text",
+                "value": "Procedure"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "disabling-automatic-topic-creation-for-the-kafka-broker",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Disabling automatic topic creation for the Kafka broker"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Automatic topic creation in Kafka Connect is controlled by the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "topic.creation.enable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property. The default value for the property is "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "true"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", enabling automatic topic creation, as shown in the following example:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "topic.creation.enable = true"
+              }
+            ],
+            "language": "shell",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The setting for the "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "topic.creation.enable"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " property applies to all workers in the Connect cluster."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Kafka Connect automatic topic creation requires you to define the configuration properties that Kafka Connect applies when creating topics. You specify topic configuration properties in the Debezium connector configuration by defining topic groups, and then specifying the properties to apply to each group. The connector configuration defines a default topic creation group, and, optionally, one or more custom topic creation groups. Custom topic creation groups use lists of topic name patterns to specify the topics to which the group’s settings apply."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For details about how Kafka Connect matches topics to topic creation groups, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Topic creation groups"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#topic-creation-groups"
+              },
+              {
+                "kind": "text",
+                "value": ". For more information about how configuration properties are assigned to groups, see "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Topic creation group configuration properties"
+                  }
+                ],
+                "kind": "xref",
+                "target": "#topic-creation-group-configuration-properties"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "By default, topics that Kafka Connect creates are named based on the pattern "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "server.schema.table"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": ", for example, "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "dbserver.myschema.inventory"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If you don’t want to allow automatic topic creation by Kafka Connect, set the value of "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic.creation.enable"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "false"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the Kafka Connect configuration ("
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "connect-distributed.properties"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " file, or via the environment variable "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CONNECT_TOPIC_CREATION_ENABLE"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " when using the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debezium container image for Kafka Connect"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://quay.io/repository/debezium/connect"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ")."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka Connect automatic topic creation requires the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "replication.factor"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "partitions"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " properties to be set for at least the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " topic creation group. It is valid for groups to obtain the values for the required properties from the default values for the Kafka broker."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "section",
+        "id": "enabling-automatic-topic-creation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Set up Kafka Connect"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For Kafka Connect to create topics automatically, it requires information from the source connector about the configuration properties to apply when creating topics. You define the properties that control topic creation in the configuration for each Debezium connector. As Kafka Connect creates topics for event records that a connector emits, the resulting topics obtain their configuration from the applicable group. The configuration applies to event records emitted by that connector only."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "A set of topic properties is associated with a topic creation group. Minimally, you must define a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " topic creation group and specify its configuration properties. Beyond that you can optionally define one or more custom topic creation groups and specify unique properties for each."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "When you create custom topic creation groups, you define the member topics for each group based on topic name patterns. You can specify naming patterns that describe the topics to include or exclude from each group. The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "exclude"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " properties contain comma-separated lists of regular expressions that define topic name patterns. For example, if you want a group to include all topics that start with the string "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dbserver1.inventory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", set the value of its "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic.creation.inventory.include"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " property to "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "dbserver1\\\\.inventory\\\\.*"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "If you specify both "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "include"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "exclude"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " properties for a custom topic group, the exclusion rules take precedence, and override the inclusion rules."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "topic-creation-groups",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Topic creation groups"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " topic creation group and each custom group is associated with a unique set of configuration properties. You can configure a group to include any of the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Kafka topic-level configuration properties"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#topicconfigs"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". For example, you can specify the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "cleanup policy for old topic segments"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#topicconfigs_cleanup.policy"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "retention time"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#topicconfigs_retention.ms"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ", or the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "topic compression type"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://kafka.apache.org/documentation/#topicconfigs_compression.type"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for a topic group. You must define at least a minimum set of properties to describe the configuration of the topics to be created."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "If no custom groups are registered, or if the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " patterns for any registered groups don’t match the names of any topics to be created, then Kafka Connect uses the configuration of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " group to create topics."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "See "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Configuring Debezium topics"
+                      }
+                    ],
+                    "kind": "xref",
+                    "target": "install.html#configuring-debezium-topics"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " in the Debezium installation guide on generic topic configuration considerations."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "topic-creation-group-configuration-properties",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Topic creation group configuration properties"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Before you can use Kafka Connect automatic topic creation, you must create a default topic creation group and define a configuration for it. The configuration for the default topic creation group is applied to any topics with names that do not match the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "include"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " list pattern of a custom topic creation group."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "{\n    ...\n\n    \"topic.creation.default.replication.factor\": 3,  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-1",
+                            "kind": "callout",
+                            "number": "1",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.default.partitions\": 10,  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-2",
+                            "kind": "callout",
+                            "number": "2",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.default.cleanup.policy\": \"compact\",  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-3",
+                            "kind": "callout",
+                            "number": "3",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.default.compression.type\": \"lz4\"  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-4",
+                            "kind": "callout",
+                            "number": "4",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n\n     ...\n}"
+                          }
+                        ],
+                        "language": "json",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "You can include any "
+                          },
+                          {
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "Kafka topic-level configuration property"
+                              }
+                            ],
+                            "kind": "link",
+                            "target": "https://kafka.apache.org/documentation/#topicconfigs"
+                          },
+                          {
+                            "kind": "text",
+                            "value": " in the configuration for the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "default"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " group."
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "autowidth": false,
+                        "body": [
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "1"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.default.replication.factor"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " defines the replication factor for topics created by the default group. "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "replication.factor"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " is mandatory for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group but optional for custom groups. Custom groups will fall back to the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group’s value if not set. Use "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "-1"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " to use the Kafka broker’s default value."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "2"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.default.partitions"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " defines the number of partitions for topics created by the default group. "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "partitions"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " is mandatory for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group but optional for custom groups. Custom groups will fall back to the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group’s value if not set. Use "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "-1"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " to use the Kafka broker’s default value."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "3"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.default.cleanup.policy"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " is mapped to the "
+                                  },
+                                  {
+                                    "inlines": [
+                                      {
+                                        "id": null,
+                                        "inlines": [
+                                          {
+                                            "kind": "text",
+                                            "value": "cleanup.policy"
+                                          }
+                                        ],
+                                        "kind": "monospace",
+                                        "roles": []
+                                      }
+                                    ],
+                                    "kind": "link",
+                                    "target": "https://kafka.apache.org/documentation/#cleanup.policy"
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " property of the "
+                                  },
+                                  {
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic level configuration parameters"
+                                      }
+                                    ],
+                                    "kind": "link",
+                                    "target": "https://kafka.apache.org/documentation/#topicconfigs"
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " and defines the log retention policy."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "4"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.default.compression.type"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " is mapped to the "
+                                  },
+                                  {
+                                    "inlines": [
+                                      {
+                                        "id": null,
+                                        "inlines": [
+                                          {
+                                            "kind": "text",
+                                            "value": "compression.type"
+                                          }
+                                        ],
+                                        "kind": "monospace",
+                                        "roles": []
+                                      }
+                                    ],
+                                    "kind": "link",
+                                    "target": "https://kafka.apache.org/documentation/#compression.type"
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " property of the "
+                                  },
+                                  {
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic level configuration parameters"
+                                      }
+                                    ],
+                                    "kind": "link",
+                                    "target": "https://kafka.apache.org/documentation/#topicconfigs"
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " and defines how messages are compressed on hard disk."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ]
+                        ],
+                        "caption": [
+                          {
+                            "kind": "text",
+                            "value": "Table 1. "
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "autowidth": false,
+                            "halign": "left",
+                            "style": null,
+                            "valign": "top",
+                            "width": "10"
+                          },
+                          {
+                            "autowidth": false,
+                            "halign": "left",
+                            "style": null,
+                            "valign": "top",
+                            "width": "90"
+                          }
+                        ],
+                        "context": "table",
+                        "explicit_width": false,
+                        "float": null,
+                        "foot": [],
+                        "frame": "all",
+                        "grid": "all",
+                        "head": [
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Item"
+                                }
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Description"
+                                }
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ]
+                        ],
+                        "id": null,
+                        "options": [
+                          "header"
+                        ],
+                        "roles": [],
+                        "stripes": null,
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Connector configuration for the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "default"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " topic creation group"
+                          }
+                        ],
+                        "width": 100
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To define properties for the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "topic.creation.default"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " group, add them to the connector configuration JSON, as shown in the following example:"
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Procedure"
+                  }
+                ]
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Custom groups fall back to the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "default"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " group settings only for the required "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "replication.factor"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " and "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "partitions"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " properties. If the configuration for a custom topic group leaves other properties undefined, the values specified in the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "default"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " group are not applied."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "note"
+              }
+            ],
+            "context": "section",
+            "id": "default-topic-creation-group-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Default group configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "You can define multiple custom topic groups, each with its own configuration."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The following example shows sample configurations for the "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "inventory"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "applicationlogs"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " custom topic creation groups:"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "{\n    ...\n\n    "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-5",
+                            "kind": "callout",
+                            "number": "1",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.inventory.include\": \"dbserver1\\\\.inventory\\\\.*\",  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-6",
+                            "kind": "callout",
+                            "number": "2",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.inventory.partitions\": 20,\n    \"topic.creation.inventory.cleanup.policy\": \"compact\",\n    \"topic.creation.inventory.delete.retention.ms\": 7776000000,\n\n    "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-7",
+                            "kind": "callout",
+                            "number": "3",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.applicationlogs.include\": \"dbserver1\\\\.logs\\\\.applog-.*\",  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-8",
+                            "kind": "callout",
+                            "number": "4",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.applicationlogs.exclude\": \"dbserver1\\\\.logs\\\\.applog-old-.*\",  "
+                          },
+                          {
+                            "guard": "//",
+                            "icons": null,
+                            "id": "CO1-9",
+                            "kind": "callout",
+                            "number": "5",
+                            "src": "",
+                            "xml": false
+                          },
+                          {
+                            "kind": "text",
+                            "value": "\n    \"topic.creation.applicationlogs.replication.factor\": 1,\n    \"topic.creation.applicationlogs.partitions\": 20,\n    \"topic.creation.applicationlogs.cleanup.policy\": \"delete\",\n    \"topic.creation.applicationlogs.retention.ms\": 7776000000,\n    \"topic.creation.applicationlogs.compression.type\": \"lz4\",\n\n     ...\n}"
+                          }
+                        ],
+                        "language": "json",
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "autowidth": false,
+                        "body": [
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "1"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "Defines the configuration for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "inventory"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group. The "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "replication.factor"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " and "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "partitions"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " properties are optional for custom groups. If no value is set, custom groups fall back to the value set for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group. Set the value to "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "-1"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " to use the value that is set for the Kafka broker."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "2"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.inventory.include"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " defines a regular expression to match all topics that start with "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "dbserver1.inventory."
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": ". The configuration that is defined for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "inventory"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group is applied only to topics with names that match the specified regular expression."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "3"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "Defines the configuration for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "applicationlogs"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group. The "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "replication.factor"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " and "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "partitions"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " properties are optional for custom groups. If no value is set, custom groups fall back to the value set for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "default"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group. Set the value to "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "-1"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " to use the value that is set for the Kafka broker."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "4"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.applicationlogs.include"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " defines a regular expression to match all topics that start with "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "dbserver1.logs.applog-"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": ". The configuration that is defined for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "applicationlogs"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group is applied only to topics with names that match the specified regular expression. Because an "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "exclude"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " property is also defined for this group, the topics that match the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "include"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " regular expression might be further restricted by the that "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "exclude"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " property."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ],
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "kind": "text",
+                                    "value": "5"
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "paragraphs": [
+                                [
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "topic.creation.applicationlogs.exclude"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " defines a regular expression to match all topics that start with "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "dbserver1.logs.applog-old-"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": ". The configuration that is defined for the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "applicationlogs"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group is applied only to topics with name that do "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "not"
+                                      }
+                                    ],
+                                    "kind": "strong",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " match the given regular expression. Because an "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "include"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " property is also defined for this group, the configuration of the "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "applicationlogs"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " group is applied only to topics with names that match the specified "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "include"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " regular expressions "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "and"
+                                      }
+                                    ],
+                                    "kind": "strong",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " that do "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "not"
+                                      }
+                                    ],
+                                    "kind": "emphasis",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " match the specified "
+                                  },
+                                  {
+                                    "id": null,
+                                    "inlines": [
+                                      {
+                                        "kind": "text",
+                                        "value": "exclude"
+                                      }
+                                    ],
+                                    "kind": "monospace",
+                                    "roles": []
+                                  },
+                                  {
+                                    "kind": "text",
+                                    "value": " regular expressions."
+                                  }
+                                ]
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ]
+                        ],
+                        "caption": [
+                          {
+                            "kind": "text",
+                            "value": "Table 2. "
+                          }
+                        ],
+                        "columns": [
+                          {
+                            "autowidth": false,
+                            "halign": "left",
+                            "style": null,
+                            "valign": "top",
+                            "width": "10"
+                          },
+                          {
+                            "autowidth": false,
+                            "halign": "left",
+                            "style": null,
+                            "valign": "top",
+                            "width": "90"
+                          }
+                        ],
+                        "context": "table",
+                        "explicit_width": false,
+                        "float": null,
+                        "foot": [],
+                        "frame": "all",
+                        "grid": "all",
+                        "head": [
+                          [
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Item"
+                                }
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            },
+                            {
+                              "background": null,
+                              "colspan": 1,
+                              "halign": "left",
+                              "inlines": [
+                                {
+                                  "kind": "text",
+                                  "value": "Description"
+                                }
+                              ],
+                              "rowspan": 1,
+                              "style": null,
+                              "valign": "top"
+                            }
+                          ]
+                        ],
+                        "id": null,
+                        "options": [
+                          "header"
+                        ],
+                        "roles": [],
+                        "stripes": null,
+                        "title": [
+                          {
+                            "kind": "text",
+                            "value": "Connector configuration for custom "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "inventory"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "applicationlogs"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " topic creation groups"
+                          }
+                        ],
+                        "width": 100
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "To define a custom topic group, add a "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "topic.creation."
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "<group_name>"
+                              }
+                            ],
+                            "kind": "emphasis",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ".include"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property to the connector JSON, and list the properties for the custom group after the group name."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Procedure"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "custom-topic-creation-group-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Custom group configuration"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "After you specify the configuration for any custom topic creation groups, register the groups."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "ulist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [
+                      {
+                        "context": "paragraph",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "The following example registers the custom topic creation groups "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "inventory"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": " and "
+                          },
+                          {
+                            "id": null,
+                            "inlines": [
+                              {
+                                "kind": "text",
+                                "value": "applicationlogs"
+                              }
+                            ],
+                            "kind": "monospace",
+                            "roles": []
+                          },
+                          {
+                            "kind": "text",
+                            "value": ":"
+                          }
+                        ],
+                        "roles": [],
+                        "title": null
+                      },
+                      {
+                        "context": "listing",
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "{\n    ...\n\n    \"topic.creation.groups\": \"inventory,applicationlogs\",\n\n    ...\n}"
+                          }
+                        ],
+                        "language": "json",
+                        "roles": [],
+                        "title": null
+                      }
+                    ],
+                    "checkbox": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Register custom groups by adding the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "topic.creation.groups"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " property to the connector JSON, and specifying a comma-separated list of groups."
+                      }
+                    ]
+                  }
+                ],
+                "roles": [],
+                "style": null,
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Procedure"
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The following example shows a completed configuration that includes the configuration for a "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "default"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " topic group, along with the configurations for an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "inventory"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and an "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "applicationlogs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " custom topic creation group:"
+                  }
+                ],
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Completed configuration"
+                  }
+                ]
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "{\n    ...\n\n    \"topic.creation.default.replication.factor\": 3,\n    \"topic.creation.default.partitions\": 10,\n    \"topic.creation.default.cleanup.policy\": \"compact\",\n    \"topic.creation.default.compression.type\": \"lz4\",\n    \"topic.creation.groups\": \"inventory,applicationlogs\",\n    \"topic.creation.inventory.include\": \"dbserver1\\\\.inventory\\\\.*\",\n    \"topic.creation.inventory.partitions\": 20,\n    \"topic.creation.inventory.cleanup.policy\": \"compact\",\n    \"topic.creation.inventory.delete.retention.ms\": 7776000000,\n    \"topic.creation.applicationlogs.include\": \"dbserver1\\\\.logs\\\\.applog-.*\",\n    \"topic.creation.applicationlogs.exclude\": \"dbserver1\\\\.logs\\\\.applog-old-.*\",\n    \"topic.creation.applicationlogs.replication.factor\": 1,\n    \"topic.creation.applicationlogs.partitions\": 20,\n    \"topic.creation.applicationlogs.cleanup.policy\": \"delete\",\n    \"topic.creation.applicationlogs.retention.ms\": 7776000000,\n    \"topic.creation.applicationlogs.compression.type\": \"lz4\"\n}"
+                  }
+                ],
+                "language": "json",
+                "roles": [],
+                "title": [
+                  {
+                    "kind": "text",
+                    "value": "Example: Configuration for a default topic creation group and two custom groups"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "registering-custom-topic-creation-groups",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Registering custom groups"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "configuration",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Configuration"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "For more information on topic auto-creation you can have a look at these resources:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium Blog: "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Auto-creating Debezium Change Data Topics"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://debezium.io/blog/2020/09/15/debezium-auto-create-topics/"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Kafka Improvement Proposal about adding topic auto-creation to Kafka Connect: "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "KIP-158 Kafka Connect should allow source connectors to set topic-specific settings for new topics"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://cwiki.apache.org/confluence/display/KAFKA/KIP-158%3A+Kafka+Connect+should+allow+source+connectors+to+set+topic-specific+settings+for+new+topics"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_additional_resources",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Additional resources"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Customization of Kafka Connect automatic topic creation"
+      }
+    ]
+  }
+}

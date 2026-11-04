@@ -472,10 +472,7 @@ def validate_resources(case):
     for name, text in {**case["resources"], **binaries}.items():
         if (not isinstance(name, str) or not name or name == "main.adoc"
                 or name.startswith("/") or any(part in {"", ".", ".."} for part in name.split("/"))
-                or any(char in name for char in "\\\0") or not isinstance(text, str)
-                # An Antora resource id may name a module (`mod:example$x`),
-                # but never a Windows drive (`C:x`).
-                or re.match(r"[A-Za-z]:", name)):
+                or any(char in name for char in "\\:\0") or not isinstance(text, str)):
             raise ValueError(f"invalid fixture resource: {name!r}")
         if name in binaries and re.fullmatch(r"(?:[0-9a-fA-F]{2})*", text) is None:
             raise ValueError(f"invalid binary fixture hex: {name!r}")

@@ -1,0 +1,1749 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "logical-decoding-plugin-setup",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Logical Decoding Plug-ins"
+                    }
+                  ],
+                  "sections": [
+                    {
+                      "id": "logical-decoding-output-plugin-installation",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Installation"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "fedora-rpm",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "Installation on Fedora 30+"
+                        }
+                      ],
+                      "sections": []
+                    },
+                    {
+                      "id": "postgresql-server-configuration",
+                      "inlines": [
+                        {
+                          "kind": "text",
+                          "value": "PostgreSQL Server Configuration"
+                        }
+                      ],
+                      "sections": []
+                    }
+                  ]
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "This document describes the database setup required for streaming data changes out of "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PostgreSQL"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.postgresql.org/"
+              },
+              {
+                "kind": "text",
+                "value": ". This comprises configuration applying to the database itself as well as the installation of the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "decoderbufs"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/postgres-decoderbufs"
+              },
+              {
+                "kind": "text",
+                "value": " logical decoding output plug-in. The installation and the tests are performed at the following environment/configuration:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostgreSQL (v14.x)"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/index.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/postgres-decoderbufs"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "CentOS Stream 8"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.centos.org/"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "As of Debezium 0.10, the connector supports PostgreSQL 10+ logical replication streaming using "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pgoutput"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". This means that a logical decoding output plug-in is no longer necessary and changes can be emitted directly from the replication stream by the connector."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Logical decoding is the process of extracting all persistent changes to a database’s tables into a coherent, easy to understand format which can be interpreted without detailed knowledge of the database’s internal state."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "As of PostgreSQL 9.4, logical decoding is implemented by decoding the contents of the write-ahead log, which describe changes on a storage level, into an application-specific form such as a stream of tuples or SQL statements. In the context of logical replication, a slot represents a stream of changes that can be replayed to a client in the order they were made on the origin server. Each slot streams a sequence of changes from a single database. The output plug-ins transform the data from the write-ahead log’s internal representation into the format the consumer of a replication slot desires. Plug-ins are written in C, compiled, and installed on the machine which runs the PostgreSQL server, and they use a number of PostgreSQL specific APIs, as described by the "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "PostgreSQL documentation"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.postgresql.org/docs/14/logicaldecoding-output-plugin.html"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Debezium’s PostgreSQL connector works with one of Debezium’s supported logical decoding plug-ins,"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/postgres-decoderbufs/blob/main/README.md"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " or"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pgoutput"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/postgres/postgres/blob/master/src/backend/replication/pgoutput/pgoutput.c"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "to encode the changes in either "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Protobuf"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/google/protobuf"
+              },
+              {
+                "kind": "text",
+                "value": " format or "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Logical replication"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.postgresql.org/docs/current/protocol-logicalrep-message-formats.html"
+              },
+              {
+                "kind": "text",
+                "value": " format."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "For simplicity, Debezium also provides a container image based on a vanilla "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostgreSQL server image"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/container-images/tree/main/postgres/14"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " on top of which it compiles and installs the plug-ins."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "tip"
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The Debezium logical decoding plug-ins have only been installed and tested on "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Linux"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " machines. For Windows and other platforms it may require different installation steps"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "warning"
+          },
+          {
+            "context": "floating_title",
+            "id": "_differences_between_plug_ins",
+            "level": 3,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Differences between Plug-ins"
+              }
+            ]
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "All up-to-date differences are tracked in a test suite "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Java class"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://github.com/debezium/debezium/blob/main/debezium-connector-postgres/src/test/java/io/debezium/connector/postgresql/DecoderDifferences.java"
+              },
+              {
+                "kind": "text",
+                "value": "."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "More information about the logical decoding and output plug-ins can be found at:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostgreSQL logical decoding explanation"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/logicaldecoding-explanation.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostgreSQL logical decoding output plug-in"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/logicaldecoding-output-plugin.html"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PostgreSQL logical decoding plug-ins"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://wiki.postgresql.org/wiki/Logical_Decoding_Plugins"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "At the current installation example, the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/postgres-decoderbufs"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " output plug-in for logical decoding is used. The decoderbufs output plug-in produces a Protobuf message per database change. Each message contains new/old tuples for an updated table row.. The plug-in "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "compilation and installation"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " is performed by executing the related commands extracted from the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Debezium Dockerfile"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/container-images/blob/main/postgres/14/Dockerfile"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Before executing the commands, make sure that the user has the privileges to write the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " library at the PostgreSQL "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "lib"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " directory (at the test environment, the directory is: "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "/usr/lib64/pgsql/"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "). Also note that the installation process requires the PostgreSQL utility "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pg_config"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/11/app-pgconfig.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". Verify that the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PATH"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " environment variable is set so as the utility can be found. If not, update the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "PATH"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " environment variable appropriately. For example at the test environment:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ git clone https://github.com/debezium/postgres-decoderbufs -b v{debezium-version} --single-branch \\\n&& cd postgres-decoderbufs \\\n&& make && make install \\\n&& cd .. \\\n&& rm -rf postgres-decoderbufs"
+                  }
+                ],
+                "language": "bash",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " installation commands"
+                  }
+                ]
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Cloning into 'postgres-decoderbufs'...\nremote: Enumerating objects: 288, done.\nremote: Counting objects: 100% (4/4), done.\nremote: Compressing objects: 100% (4/4), done.\nremote: Total 288 (delta 0), reused 1 (delta 0), pack-reused 284\nReceiving objects: 100% (288/288), 91.62 KiB | 3.66 MiB/s, done.\nResolving deltas: 100% (131/131), done.\nNote: switching to 'c9b00aa8c093fa77e08b256bb09d33069a30db86'.\n\nYou are in 'detached HEAD' state. You can look around, make experimental\nchanges and commit them, and you can discard any commits you make in this\nstate without impacting any branches by switching back to a branch.\n\nIf you want to create a new branch to retain commits you create, you may\ndo so (now or later) by using -c with the switch command. Example:\n\n  git switch -c <new-branch-name>\n\nOr undo this operation with:\n\n  git switch -\n\nTurn off this advice by setting config variable advice.detachedHead to false\n\ngcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -fPIC -std=c11  -I/usr/local/include  -I. -I./ -I/usr/include/pgsql/server -I/usr/include/pgsql/internal  -D_GNU_SOURCE -I/usr/include/libxml2   -c -o src/decoderbufs.o src/decoderbufs.c\ngcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -fPIC -std=c11  -I/usr/local/include  -I. -I./ -I/usr/include/pgsql/server -I/usr/include/pgsql/internal  -D_GNU_SOURCE -I/usr/include/libxml2   -c -o src/proto/pg_logicaldec.pb-c.o src/proto/pg_logicaldec.pb-c.c\ngcc -Wall -Wmissing-prototypes -Wpointer-arith -Wdeclaration-after-statement -Wendif-labels -Wmissing-format-attribute -Wformat-security -fno-strict-aliasing -fwrapv -fexcess-precision=standard -Wno-format-truncation -Wno-stringop-truncation -O2 -g -pipe -Wall -Werror=format-security -Wp,-D_FORTIFY_SOURCE=2 -Wp,-D_GLIBCXX_ASSERTIONS -fexceptions -fstack-protector-strong -grecord-gcc-switches -specs=/usr/lib/rpm/redhat/redhat-hardened-cc1 -specs=/usr/lib/rpm/redhat/redhat-annobin-cc1 -m64 -mtune=generic -fasynchronous-unwind-tables -fstack-clash-protection -fcf-protection -fPIC -shared -o decoderbufs.so src/decoderbufs.o src/proto/pg_logicaldec.pb-c.o -L/usr/lib64  -Wl,-z,relro  -Wl,-z,now -specs=/usr/lib/rpm/redhat/redhat-hardened-ld  -Wl,--as-needed  -lprotobuf-c\n/usr/bin/mkdir -p '/usr/lib64/pgsql'\n/usr/bin/mkdir -p '/usr/share/pgsql/extension'\n/usr/bin/install -c -m 755  decoderbufs.so '/usr/lib64/pgsql/decoderbufs.so'\n/usr/bin/install -c -m 644 .//decoderbufs.control '/usr/share/pgsql/extension/'"
+                  }
+                ],
+                "language": "bash",
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " installation output"
+                  }
+                ]
+              }
+            ],
+            "context": "section",
+            "id": "logical-decoding-output-plugin-installation",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Installation"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium provides "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "RPM package"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://apps.fedoraproject.org/packages/postgres-decoderbufs"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for Fedora operating system too. The package is updated always after a final Debezium release is done. To use the RPM in question just issue the standard Fedora installation command:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "$ sudo dnf -y install postgres-decoderbufs"
+                  }
+                ],
+                "language": "bash",
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "The rest of the configuration is same as described below."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "section",
+            "id": "fedora-rpm",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "Installation on Fedora 30+"
+              }
+            ]
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Once the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "decoderbufs"
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " plug-in has been installed, the database server should be configured."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "floating_title",
+                "id": "_setting_up_libraries_wal_and_replication_parameters",
+                "level": 2,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Setting up libraries, WAL and replication parameters"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Add the following lines at the end of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "postgresql.conf"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " PostgreSQL configuration file in order to include the plug-in at the shared libraries and to adjust some "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "WAL"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/runtime-config-wal.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "streaming replication"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/runtime-config-replication.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " settings. The configuration is extracted from "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "postgresql.conf.sample"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://github.com/debezium/container-images/blob/main/postgres/14/postgresql.conf.sample"
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You may need to modify it, if for example you have additionally installed "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "shared_preload_libraries"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "############ REPLICATION ##############\n# MODULES\nshared_preload_libraries = 'decoderbufs'   "
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO1-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\n\n# REPLICATION\nwal_level = logical                     "
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO1-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\nmax_wal_senders = 4                     "
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO1-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\nmax_replication_slots = 4               "
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO1-4",
+                    "kind": "callout",
+                    "number": "4",
+                    "src": "",
+                    "xml": false
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "postgresql.conf"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ", configuration file parameters settings"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server that it should load at startup the "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "decoderbufs"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " (the name of the plug-in is set in "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "decoderbufs"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://github.com/debezium/postgres-decoderbufs/blob/main/Makefile"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " Makefile)"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server that it should use logical decoding with the write-ahead log"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server that it should use a maximum of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "4"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " separate processes for processing WAL changes"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO1-4"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server that it should allow a maximum of "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "4"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " replication slots to be created for streaming WAL changes"
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Debezium uses PostgreSQL’s logical decoding, which uses replication slots. Replication slots are guaranteed to retain all WAL required for Debezium even during Debezium outages. It is important for this reason to closely monitor replication slots to avoid too much disk consumption and other conditions that can happen such as catalog bloat if a Debezium slot stays unused for too long. For more information please see the official Postgres docs on "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "this subject"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/current/warm-standby.html#STREAMING-REPLICATION-SLOTS"
+                  },
+                  {
+                    "kind": "text",
+                    "value": "."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "We strongly recommend reading and understanding "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the official documentation"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.postgresql.org/docs/14/wal-configuration.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " regarding the mechanics and configuration of the PostgreSQL write-ahead log."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "floating_title",
+                "id": "setting_replication_permissions",
+                "level": 2,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Setting up replication permissions"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Replication can only be performed by a database user that has appropriate permissions and only for a configured number of hosts. In order to give a user replication permissions, define a PostgreSQL role that has "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "at least"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "REPLICATION"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LOGIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " permissions. For example:"
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "CREATE ROLE name REPLICATION LOGIN;"
+                  }
+                ],
+                "language": "sql",
+                "roles": [],
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "Superusers have by default both of the above roles."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Add the following lines at the end of the "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "pg_hba.conf"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " PostgreSQL configuration file, so as to configure the "
+                  },
+                  {
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "client authentication"
+                      }
+                    ],
+                    "kind": "link",
+                    "target": "https://www.postgresql.org/docs/14/auth-pg-hba-conf.html"
+                  },
+                  {
+                    "kind": "text",
+                    "value": " for the database replication. The PostgreSQL server should allow replication to take place between the server machine and the host on which the Debezium PostgreSQL connector is running."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Note that the authentication refers to the database superuser "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "postgres"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": ". You may change this accordingly, if some other user with "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "REPLICATION"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " and "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "LOGIN"
+                      }
+                    ],
+                    "kind": "monospace",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " permissions has been created."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              },
+              {
+                "context": "listing",
+                "id": "pg_hba_conf",
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "############ REPLICATION ##############\nlocal   replication     postgres                          trust\t\t"
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO2-1",
+                    "kind": "callout",
+                    "number": "1",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\nhost    replication     postgres  127.0.0.1/32            trust\t\t"
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO2-2",
+                    "kind": "callout",
+                    "number": "2",
+                    "src": "",
+                    "xml": false
+                  },
+                  {
+                    "kind": "text",
+                    "value": "\nhost    replication     postgres  ::1/128                 trust\t\t"
+                  },
+                  {
+                    "guard": "//",
+                    "icons": null,
+                    "id": "CO2-3",
+                    "kind": "callout",
+                    "number": "3",
+                    "src": "",
+                    "xml": false
+                  }
+                ],
+                "language": null,
+                "roles": [],
+                "title": [
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "pg_hba.conf"
+                          }
+                        ],
+                        "kind": "emphasis",
+                        "roles": []
+                      }
+                    ],
+                    "kind": "strong",
+                    "roles": []
+                  },
+                  {
+                    "kind": "text",
+                    "value": " "
+                  },
+                  {
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": ", configuration file parameters settings"
+                      }
+                    ],
+                    "kind": "emphasis",
+                    "roles": []
+                  }
+                ]
+              },
+              {
+                "context": "colist",
+                "id": null,
+                "items": [
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-1"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server to allow replication for "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "postgres"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " locally (i.e. on the server machine)"
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-2"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server to allow "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "postgres"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " on "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "localhost"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to receive replication changes using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "IPV4"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  },
+                  {
+                    "blocks": [],
+                    "checkbox": null,
+                    "coids": [
+                      "CO2-3"
+                    ],
+                    "icons": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "tells the server to allow "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "postgres"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " on "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "localhost"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      },
+                      {
+                        "kind": "text",
+                        "value": " to receive replication changes using "
+                      },
+                      {
+                        "id": null,
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "IPV6"
+                          }
+                        ],
+                        "kind": "monospace",
+                        "roles": []
+                      }
+                    ],
+                    "src": ""
+                  }
+                ],
+                "roles": [],
+                "style": "arabic",
+                "title": null
+              },
+              {
+                "blocks": [
+                  {
+                    "context": "paragraph",
+                    "id": null,
+                    "inlines": [
+                      {
+                        "kind": "text",
+                        "value": "See "
+                      },
+                      {
+                        "inlines": [
+                          {
+                            "kind": "text",
+                            "value": "the PostgreSQL documentation"
+                          }
+                        ],
+                        "kind": "link",
+                        "target": "https://www.postgresql.org/docs/14/datatype-net-types.html"
+                      },
+                      {
+                        "kind": "text",
+                        "value": " for more information on network masks."
+                      }
+                    ],
+                    "roles": [],
+                    "title": null
+                  }
+                ],
+                "context": "admonition",
+                "id": null,
+                "roles": [],
+                "title": null,
+                "type": "tip"
+              }
+            ],
+            "context": "section",
+            "id": "postgresql-server-configuration",
+            "level": 2,
+            "roles": [],
+            "title": [
+              {
+                "kind": "text",
+                "value": "PostgreSQL Server Configuration"
+              }
+            ]
+          }
+        ],
+        "context": "section",
+        "id": "logical-decoding-plugin-setup",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Logical Decoding Plug-ins"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Logical Decoding Output Plug-in Installation for PostgreSQL"
+      }
+    ]
+  }
+}

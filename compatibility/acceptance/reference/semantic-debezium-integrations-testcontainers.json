@@ -1,0 +1,624 @@
+{
+  "semantics": {
+    "attributes": {
+      "final": {},
+      "header": {}
+    },
+    "blocks": [
+      {
+        "blocks": [
+          {
+            "context": "toc",
+            "id": null,
+            "outline": {
+              "class": "toc",
+              "levels": 2,
+              "sections": [
+                {
+                  "id": "_overview",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Overview"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_getting_started",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Getting Started"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_test_set_up",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Test Set-Up"
+                    }
+                  ],
+                  "sections": []
+                },
+                {
+                  "id": "_test_implementation",
+                  "inlines": [
+                    {
+                      "kind": "text",
+                      "value": "Test Implementation"
+                    }
+                  ],
+                  "sections": []
+                }
+              ],
+              "title": [
+                {
+                  "kind": "text",
+                  "value": "Table of Contents"
+                }
+              ]
+            },
+            "roles": [],
+            "title": null
+          },
+          {
+            "blocks": [
+              {
+                "context": "paragraph",
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "This feature is currently in incubating state, i.e. exact semantics, configuration options, APIs etc. may change in future revisions, based on the feedback we receive. Please let us know if you encounter any problems will using this extension."
+                  }
+                ],
+                "roles": [],
+                "title": null
+              }
+            ],
+            "context": "admonition",
+            "id": null,
+            "roles": [],
+            "title": null,
+            "type": "note"
+          }
+        ],
+        "context": "preamble",
+        "id": null,
+        "outline": null,
+        "roles": [],
+        "title": null
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When setting up change data capture pipelines with Debezium, it’s a good idea to also have some automated testing in place, in order to make sure that"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "ulist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "the source database is set up so changes can be streamed off of it"
+                  }
+                ]
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "your connectors are configured correctly"
+                  }
+                ]
+              }
+            ],
+            "roles": [],
+            "style": null,
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "The Debezium extension for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Testcontainers"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.testcontainers.org/"
+              },
+              {
+                "kind": "text",
+                "value": " aims at simplying such tests, by running all the required infrastructure (Apache Kafka, Kafka Connect etc.) via Linux containers and making it easily accessible to Java-based tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "It applies sensible defaults as far as possible (e.g. database credentials for connectors can be obtained from the configured database container), allowing you to focus on the essential logic of your tests."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_overview",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Overview"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "In order to use Debezium’s Testcontainers integration, add the following dependency to your project:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "<dependency>\n  <groupId>io.debezium</groupId>\n  <artifactId>debezium-testing-testcontainers</artifactId>\n  <version>3.7.0.Final</version>\n  <scope>test</scope>\n</dependency>\n<dependency>\n  <groupId>org.testcontainers</groupId>\n  <artifactId>kafka</artifactId>\n  <scope>test</scope>\n</dependency>\n\n<!-- Add the TC dependency matching your database -->\n<dependency>\n  <groupId>org.testcontainers</groupId>\n  <artifactId>postgresql</artifactId>\n  <scope>test</scope>\n</dependency>"
+              }
+            ],
+            "language": "xml",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Depending on your testing strategy, you may also need the JDBC driver of your database and a client for Apache Kafka, so you can insert some test data and assert the corresponding change events in Kafka."
+              }
+            ],
+            "roles": [],
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_getting_started",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Getting Started"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "When writing an integration test for a Debezium connector configuration, you’ll also need to set up Apache Kafka and a database which should be the source of change events. The existing Testcontainers support for "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Apache Kafka"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.testcontainers.org/modules/kafka/"
+              },
+              {
+                "kind": "text",
+                "value": " and "
+              },
+              {
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "databases"
+                  }
+                ],
+                "kind": "link",
+                "target": "https://www.testcontainers.org/modules/databases/"
+              },
+              {
+                "kind": "text",
+                "value": " can be used for that."
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Together with Debezium’s "
+              },
+              {
+                "id": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "DebeziumContainer"
+                  }
+                ],
+                "kind": "monospace",
+                "roles": []
+              },
+              {
+                "kind": "text",
+                "value": " class, a typical set-up will look like this:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "public class DebeziumContainerTest {\n\n    private static Network network = Network.newNetwork(); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    private static KafkaContainer kafkaContainer = new KafkaContainer()\n            .withNetwork(network); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    public static PostgreSQLContainer<?> postgresContainer =\n            new PostgreSQLContainer<>(\n                    DockerImageName.parse(\"quay.io/debezium/postgres:15\")\n                        .asCompatibleSubstituteFor(\"postgres\"))\n                .withNetwork(network)\n                .withNetworkAliases(\"postgres\"); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    public static DebeziumContainer debeziumContainer =\n            new DebeziumContainer(\"quay.io/debezium/connect:3.7.0.Final\")\n                .withNetwork(network)\n                .withKafka(kafkaContainer)\n                .dependsOn(kafkaContainer); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-4",
+                "kind": "callout",
+                "number": "4",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n    @BeforeClass\n    public static void startContainers() { "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO1-5",
+                "kind": "callout",
+                "number": "5",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        Startables.deepStart(Stream.of(\n                kafkaContainer, postgresContainer, debeziumContainer))\n                .join();\n    }\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Define a Docker network to be used by all the services"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set up a container for Apache Kafka"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-3"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set up a container for Postgres 15 (using Debezium’s Postgres container image)"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-4"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Set up a container for Kafka Connect with Debezium 3.7.0.Final"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO1-5"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Start all three containers"
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_test_set_up",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Test Set-Up"
+          }
+        ]
+      },
+      {
+        "blocks": [
+          {
+            "context": "paragraph",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "Having declared all the required containers, you can now register an instance of the Debezium Postgres connector, insert some test data into Postgres and use the Apache Kafka client for reading the expected change event records from the corresponding Kafka topic:"
+              }
+            ],
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "listing",
+            "id": null,
+            "inlines": [
+              {
+                "kind": "text",
+                "value": "@Test\npublic void canRegisterPostgreSqlConnector() throws Exception {\n    try (Connection connection = getConnection(postgresContainer);\n            Statement statement = connection.createStatement();\n            KafkaConsumer<String, String> consumer = getConsumer(\n                    kafkaContainer)) {\n\n        statement.execute(\"create schema todo\"); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO2-1",
+                "kind": "callout",
+                "number": "1",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n        statement.execute(\"create table todo.Todo (id int8 not null, \" +\n                \"title varchar(255), primary key (id))\");\n        statement.execute(\"alter table todo.Todo replica identity full\");\n        statement.execute(\"insert into todo.Todo values (1, \" +\n                \"'Learn CDC')\");\n        statement.execute(\"insert into todo.Todo values (2, \" +\n                \"'Learn Debezium')\");\n\n        ConnectorConfiguration connector = ConnectorConfiguration\n                .forJdbcContainer(postgresContainer)\n                .with(\"topic.prefix\", \"dbserver1\");\n\n        debeziumContainer.registerConnector(\"my-connector\",\n                connector); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO2-2",
+                "kind": "callout",
+                "number": "2",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n        consumer.subscribe(Arrays.asList(\"dbserver1.todo.todo\"));\n\n        List<ConsumerRecord<String, String>> changeEvents =\n                drain(consumer, 2); "
+              },
+              {
+                "guard": "// ",
+                "icons": null,
+                "id": "CO2-3",
+                "kind": "callout",
+                "number": "3",
+                "src": "",
+                "xml": false
+              },
+              {
+                "kind": "text",
+                "value": "\n\n        assertThat(JsonPath.<Integer> read(changeEvents.get(0).key(),\n                \"$.id\")).isEqualTo(1);\n        assertThat(JsonPath.<String> read(changeEvents.get(0).value(),\n                \"$.op\")).isEqualTo(\"r\");\n        assertThat(JsonPath.<String> read(changeEvents.get(0).value(),\n                \"$.after.title\")).isEqualTo(\"Learn CDC\");\n\n        assertThat(JsonPath.<Integer> read(changeEvents.get(1).key(),\n                \"$.id\")).isEqualTo(2);\n        assertThat(JsonPath.<String> read(changeEvents.get(1).value(),\n                \"$.op\")).isEqualTo(\"r\");\n        assertThat(JsonPath.<String> read(changeEvents.get(1).value(),\n                \"$.after.title\")).isEqualTo(\"Learn Debezium\");\n\n        consumer.unsubscribe();\n    }\n}\n\n// Helper methods below\n\nprivate Connection getConnection(\n        PostgreSQLContainer<?> postgresContainer)\n                throws SQLException {\n\n    return DriverManager.getConnection(postgresContainer.getJdbcUrl(),\n            postgresContainer.getUsername(),\n            postgresContainer.getPassword());\n}\n\nprivate KafkaConsumer<String, String> getConsumer(\n            KafkaContainer kafkaContainer) {\n\n    return new KafkaConsumer<>(\n            Map.of(\n                    ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,\n                            kafkaContainer.getBootstrapServers(),\n                    ConsumerConfig.GROUP_ID_CONFIG,\n                            \"tc-\" + UUID.randomUUID(),\n                    ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,\n                            \"earliest\"),\n            new StringDeserializer(),\n            new StringDeserializer());\n}\n\nprivate List<ConsumerRecord<String, String>> drain(\n        KafkaConsumer<String, String> consumer,\n        int expectedRecordCount) {\n\n    List<ConsumerRecord<String, String>> allRecords = new ArrayList<>();\n\n    Unreliables.retryUntilTrue(10, TimeUnit.SECONDS, () -> {\n        consumer.poll(Duration.ofMillis(50))\n                .iterator()\n                .forEachRemaining(allRecords::add);\n\n        return allRecords.size() == expectedRecordCount;\n    });\n\n    return allRecords;\n}"
+              }
+            ],
+            "language": "java",
+            "roles": [],
+            "title": null
+          },
+          {
+            "context": "colist",
+            "id": null,
+            "items": [
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-1"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Create a table in the Postgres database and insert two records"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-2"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Register an instance of the Debezium Postgres connector; the connector type as well as properties such as database host, database name, user etc. are derived from the database container"
+                  }
+                ],
+                "src": ""
+              },
+              {
+                "blocks": [],
+                "checkbox": null,
+                "coids": [
+                  "CO2-3"
+                ],
+                "icons": null,
+                "inlines": [
+                  {
+                    "kind": "text",
+                    "value": "Read two records from the change event topic in Kafka and assert their attributes"
+                  }
+                ],
+                "src": ""
+              }
+            ],
+            "roles": [],
+            "style": "arabic",
+            "title": null
+          }
+        ],
+        "context": "section",
+        "id": "_test_implementation",
+        "level": 1,
+        "roles": [],
+        "title": [
+          {
+            "kind": "text",
+            "value": "Test Implementation"
+          }
+        ]
+      }
+    ],
+    "outline": null,
+    "title": [
+      {
+        "kind": "text",
+        "value": "Integration Testing with Testcontainers"
+      }
+    ]
+  }
+}
