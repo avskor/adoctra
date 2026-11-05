@@ -14,6 +14,13 @@ class UriCacheAuditTests(unittest.TestCase):
         self.report = {'html': '<p>one</p>', 'diagnostics': [],
                        'requests': [{'path': '/part.adoc', 'status': 200, 'sha256': 'abc'}]}
 
+    def test_generator_release_is_not_recorded(self):
+        # Regression: each version bump changed the recorded HTML.
+        html = '<meta name="generator" content="adoctra 0.0.3">\n<p>x</p>'
+        self.assertEqual(audit.unversioned(html),
+                         '<meta name="generator" content="adoctra {version}">\n<p>x</p>')
+        self.assertEqual(audit.unversioned('<p>adoctra 0.0.3</p>'), '<p>adoctra 0.0.3</p>')
+
     def test_extra_fetch_and_wrong_response_are_differences(self):
         changed = copy.deepcopy(self.report)
         changed['requests'] *= 2

@@ -361,6 +361,16 @@ def canonical(value, root, uri):
     return value
 
 
+GENERATOR_RX = re.compile(r'(<meta name="generator" content="adoctra) [^"]*"')
+
+
+def unversioned(html):
+    """The CLI's HTML without its release in the generator meta, so the
+    recorded observations do not change with each version bump; the rest of
+    the output is kept as is."""
+    return GENERATOR_RX.sub(r'\1 {version}"', html)
+
+
 def cli_diagnostics(stderr):
     diagnostics = []
     for line in stderr.splitlines():
@@ -423,7 +433,8 @@ def run_side(case, cli, reference):
                 raise RuntimeError(f'unexpected reference stderr: {completed.stderr}')
             output = json.loads(completed.stdout)
         else:
-            output = dict(html=completed.stdout, diagnostics=cli_diagnostics(completed.stderr))
+            output = dict(html=unversioned(completed.stdout),
+                          diagnostics=cli_diagnostics(completed.stderr))
         output['requests'] = list(trace)
         if standalone and 'html' in output:
             output['styles'] = re.findall(r'<style[^>]*>(.*?)</style>', output['html'], re.S)
