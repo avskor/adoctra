@@ -1151,6 +1151,16 @@ The CLI's file provider canonicalizes through `resources::canonicalize`,
 which strips Windows' verbatim prefix (`\\?\C:\` → `C:\`, `\\?\UNC\` →
 `\\`), and names files posixified (`C:/Work/a.adoc`), so diagnostics,
 `docfile` and `docdir` match Ruby's `File.expand_path` (before: `//?/C:/…`).
+**DOCX diagrams** (2026-11-05): a diagram's image goes to the output
+directory (`imagesoutdir`), but its relative target made DOCX read it next
+to the document ("image not found or unreadable" with `-o` elsewhere).
+asciidoctor-pdf forces `data-uri` so asciidoctor-diagram names images by
+absolute path; forcing `data-uri` here would make core embed every image
+as a data URI with Ruby's HTML messages, so instead `DiagramHost::
+embeds_images` (CLI: `-b docx`) gives the absolute target and DOCX's
+`media::system_source` reads an absolute system-path target as is (not
+joined to `imagesdir`, which breaks `C:/…` on Windows). Ruby 2.0.23's
+`image_uri` reads only the document's `imagesdir`, so core ignores a block's.
 Includes support lines/tag/tags selection before preprocessing, including ordered
 wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
 separate provenance fragments for disjoint retained lines, even within one source

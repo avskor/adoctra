@@ -657,7 +657,7 @@ fn image_block(
     };
     attributes.set("alt", alt);
 
-    let mut absolute = source.attr_document("data-uri").is_some();
+    let mut absolute = source.attr_document("data-uri").is_some() || host.embeds_images();
     if format == "svg" {
         let svg_type = if attributes.has_option("inline") {
             Some("inline".to_owned())

@@ -643,7 +643,7 @@ impl<'c, 't> Runs<'c, 't> {
         let src = if image.src.is_empty() {
             &image.target
         } else {
-            &image.src
+            crate::media::system_source(&image.target, &image.src)
         };
         let src = decode_references(src);
         let picture = self.cx.media.picture(&src, self.cx.rels, self.cx.allow_uri);

@@ -11,6 +11,9 @@ project uses [Semantic Versioning](https://semver.org/).
 - Windows: file names in messages and the `docfile`/`docdir` attributes
   no longer carry the `\\?\` prefix (`\\?\C:\Work\a.adoc`); they are
   written like Asciidoctor's, `C:/Work/a.adoc`.
+- DOCX: diagrams are embedded when the output goes to another directory
+  (`-o c:\tmp\out.docx`), where their images are written, instead of
+  warning "image not found or unreadable".
 
 ## [0.0.2] - 2026-11-05
 

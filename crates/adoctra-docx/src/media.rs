@@ -328,6 +328,19 @@ impl Media {
     }
 }
 
+/// Where an image is read: an absolute system path target (a diagram's
+/// image in the output directory) as it is, like asciidoctor-pdf's
+/// `normalize_system_path`, rather than the web path joined to `imagesdir`
+/// (on Windows `C:/x.png` is no web root); otherwise core's `src`, including
+/// a `data:` URI.
+pub(crate) fn system_source<'a>(target: &'a str, src: &'a str) -> &'a str {
+    if !src.starts_with("data:") && adoctra_core::is_root_path(target) {
+        target
+    } else {
+        src
+    }
+}
+
 fn is_uri(s: &str) -> bool {
     s.split_once("://").is_some_and(|(scheme, _)| {
         !scheme.is_empty()
@@ -508,6 +521,24 @@ mod tests {
         assert_eq!(base64_decode("aGVsbG8=").unwrap(), b"hello");
         assert_eq!(base64_decode("aGVs\nbG8").unwrap(), b"hello");
         assert!(base64_decode("a*b").is_none());
+    }
+
+    /// An absolute system path target (a diagram written to the output
+    /// directory) is read as it is, not joined to `imagesdir`; `data:` URIs
+    /// and relative targets use core's `src`.
+    #[test]
+    fn absolute_targets_are_read_as_system_paths() {
+        assert_eq!(system_source("/out/d.png", "imgs//out/d.png"), "/out/d.png");
+        assert_eq!(system_source("/out/d.png", "/out/d.png"), "/out/d.png");
+        assert_eq!(
+            system_source("/out/d.png", "data:image/png;base64,AA=="),
+            "data:image/png;base64,AA=="
+        );
+        assert_eq!(system_source("d.png", "imgs/d.png"), "imgs/d.png");
+        assert_eq!(
+            system_source("http://x/d.png", "http://x/d.png"),
+            "http://x/d.png"
+        );
     }
 
     #[test]

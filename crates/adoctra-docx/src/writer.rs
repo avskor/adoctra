@@ -520,7 +520,10 @@ impl<'c, 't> Writer<'c, 't> {
                 }
             }
             BlockKind::Table(table) => self.table(block, table, ctx),
-            BlockKind::Image { src, alt, .. } => {
+            BlockKind::Image {
+                target, src, alt, ..
+            } => {
+                let src = crate::media::system_source(target, src);
                 self.block_image(block, src, alt, ctx);
                 Vec::new()
             }

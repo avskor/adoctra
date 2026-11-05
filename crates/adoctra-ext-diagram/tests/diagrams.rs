@@ -36,6 +36,7 @@ struct Fake {
     executables: Vec<String>,
     env: BTreeMap<String, String>,
     http: bool,
+    embeds_images: bool,
 }
 
 impl Fake {
@@ -246,6 +247,9 @@ impl DiagramHost for Fake {
     }
     fn env(&self, name: &str) -> Option<String> {
         self.env.get(name).cloned()
+    }
+    fn embeds_images(&self) -> bool {
+        self.embeds_images
     }
     fn list_dir(&self, path: &str) -> Vec<String> {
         let prefix = format!("{path}/");
@@ -727,6 +731,36 @@ fn svg_types_data_uri_and_autoimagesdir_set_the_target() {
         errors(&result),
         ["error: Failed to generate image: Unsupported SVG type: bogus"]
     );
+}
+
+/// A host whose converter reads images itself (DOCX) gets absolute image
+/// targets, as asciidoctor-pdf gets with `data-uri`: the image is written to
+/// the output directory, not next to the document (regression: DOCX with
+/// `-o` elsewhere warned "image not found or unreadable").
+#[test]
+fn embedding_hosts_name_images_by_absolute_path() {
+    let host = Fake {
+        embeds_images: true,
+        ..Fake::with(&["/usr/bin/dot"])
+    };
+    let mut options = options(&host, SafeMode::Unsafe);
+    options.output = Some(OutputTarget::File("/out/d.docx".to_owned()));
+    let result = parse_with_options(
+        ":imagesdir: imgs\n\n[graphviz, e, png]\n----\na\n----\n",
+        &options,
+    );
+    match &result.document.blocks[0].kind {
+        BlockKind::Image { target, .. } => assert_eq!(target, "/out/imgs/e.png"),
+        other => panic!("expected an image, got {other:?}"),
+    }
+    assert!(host.exists("/out/imgs/e.png"));
+    // Other hosts keep Ruby's relative name.
+    let host = Fake::with(&["/usr/bin/dot"]);
+    let result = parse(&host, "[graphviz, f, png]\n----\na\n----\n");
+    match &result.document.blocks[0].kind {
+        BlockKind::Image { target, .. } => assert_eq!(target, "f.png"),
+        other => panic!("expected an image, got {other:?}"),
+    }
 }
 
 #[test]

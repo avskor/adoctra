@@ -283,7 +283,9 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
             Some(dir) => Some(posix(&expand_path(dir)?)),
             None => None,
         },
-        extensions: args.diagrams.then(diagram_extensions),
+        extensions: args
+            .diagrams
+            .then(|| diagram_extensions(args.format == "docx")),
         // Text extensions substitute while reading (a diagram's code with
         // `subs`) gets Ruby's html5 markup, Ruby's default converter (it
         // has none for DOCX or JSON).
@@ -1072,9 +1074,15 @@ fn print_usage(out: &mut dyn Write) {
 
 /// The diagram processors for `-r asciidoctor-diagram`: tools run and images
 /// are written on this system; diagram servers are reached over HTTP.
-fn diagram_extensions() -> std::sync::Arc<adoctra::Registry> {
+/// The diagram extension; DOCX embeds the images it reads, so diagrams
+/// name theirs by absolute path, as asciidoctor-pdf gets with `data-uri`.
+fn diagram_extensions(embeds_images: bool) -> std::sync::Arc<adoctra::Registry> {
     let mut registry = adoctra::Registry::new();
-    let host = adoctra_ext_diagram::SystemHost::new().with_http(std::sync::Arc::new(DiagramHttp));
+    let mut host =
+        adoctra_ext_diagram::SystemHost::new().with_http(std::sync::Arc::new(DiagramHttp));
+    if embeds_images {
+        host = host.with_embedded_images();
+    }
     adoctra_ext_diagram::register(&mut registry, std::sync::Arc::new(host));
     std::sync::Arc::new(registry)
 }

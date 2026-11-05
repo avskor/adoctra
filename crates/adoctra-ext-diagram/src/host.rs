@@ -73,6 +73,13 @@ pub trait DiagramHost: Send + Sync {
     }
     /// Remove an empty directory; nothing by default.
     fn remove_dir(&self, _path: &str) {}
+    /// The converter reads images itself (DOCX), so an image block names its
+    /// image by absolute path, as with `data-uri`: asciidoctor-pdf enables
+    /// `data-uri` for this, as the image is written to the output directory,
+    /// not next to the document. Off by default.
+    fn embeds_images(&self) -> bool {
+        false
+    }
 }
 
 /// The real system: processes, files and the process environment. HTTP
@@ -80,6 +87,7 @@ pub trait DiagramHost: Send + Sync {
 #[derive(Default, Clone)]
 pub struct SystemHost {
     http: Option<Arc<dyn HttpClient>>,
+    embeds_images: bool,
 }
 
 impl SystemHost {
@@ -90,6 +98,13 @@ impl SystemHost {
     /// Allow diagram servers through this client.
     pub fn with_http(mut self, client: Arc<dyn HttpClient>) -> Self {
         self.http = Some(client);
+        self
+    }
+
+    /// For a converter that reads images itself (see
+    /// [`DiagramHost::embeds_images`]).
+    pub fn with_embedded_images(mut self) -> Self {
+        self.embeds_images = true;
         self
     }
 }
@@ -197,6 +212,10 @@ impl DiagramHost for SystemHost {
 
     fn remove_dir(&self, path: &str) {
         let _ = std::fs::remove_dir(path);
+    }
+
+    fn embeds_images(&self) -> bool {
+        self.embeds_images
     }
 }
 

@@ -2044,3 +2044,51 @@ fn cli_absolute_output_paths_use_the_host_form() {
     assert_eq!(std::fs::read_to_string(&target).unwrap(), "<p>x</p>");
     std::fs::remove_dir_all(root).unwrap();
 }
+
+/// Regression: with `-o` in another directory, a diagram's image is written
+/// there (Ruby's `imagesoutdir`), and DOCX embeds it from there instead of
+/// warning "image not found or unreadable" (asciidoctor-pdf's `data-uri`).
+/// A QR code needs no tool or server.
+#[test]
+fn cli_docx_embeds_diagrams_written_to_another_output_directory() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-docx-diag-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("doc/part")).unwrap();
+    std::fs::write(
+        root.join("doc/main.adoc"),
+        "= T\n:imagesdir: img\n\ninclude::part/a.adoc[]\n",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("doc/part/a.adoc"),
+        "[qrcode, code, png]\n----\nhello\n----\n",
+    )
+    .unwrap();
+    let output = Command::new(env!("CARGO_BIN_EXE_adoctra"))
+        .current_dir(root.join("doc"))
+        .args([
+            "-r",
+            "asciidoctor-diagram",
+            "-S",
+            "unsafe",
+            "-b",
+            "docx",
+            "-o",
+        ])
+        .arg(root.join("out").join("a.docx"))
+        .arg("main.adoc")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    let png = std::fs::read(root.join("out/img/code.png")).unwrap();
+    let docx = std::fs::read(root.join("out/a.docx")).unwrap();
+    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(docx)).unwrap();
+    let mut media = archive.by_name("word/media/image1.png").unwrap();
+    let mut embedded = Vec::new();
+    std::io::Read::read_to_end(&mut media, &mut embedded).unwrap();
+    assert_eq!(embedded, png);
+    drop(media);
+    std::fs::remove_dir_all(root).unwrap();
+}
