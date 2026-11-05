@@ -32,31 +32,45 @@ struct Match<'a> {
 
 fn replace_stage(text: Text, stage: usize, left: bool, right: bool, decode: bool) -> Text {
     const TRIGGERS: &[u8; 13] = b"(((--.`'-=&&&";
-    if !text.text.as_bytes().contains(&TRIGGERS[stage]) {
+    let trigger = char::from(TRIGGERS[stage]);
+    let src = &text.text;
+    if !src.contains(trigger) {
         return text;
     }
     let mut output = Text::default();
     let mut copied = 0;
-    let mut offset = 0;
-    while offset < text.text.len() {
-        if let Some(m) = match_at(&text.text, offset, stage, left, right) {
-            text.copy(copied..offset, &mut output);
+    // A match at `at` always has the stage's trigger at `at` or `at + 1`
+    // (after an escaping backslash or the blank of a spaced dash, see
+    // `match_at`), so only the two offsets ending at each trigger are tried,
+    // in order. Every other offset of a left-to-right scan matches nothing.
+    let mut next = 0;
+    let mut search = 0;
+    while let Some(found) = src[search..].find(trigger) {
+        let t = search + found;
+        for at in [t.saturating_sub(1), t] {
+            if at < next || !src.is_char_boundary(at) {
+                continue;
+            }
+            let Some(m) = match_at(src, at, stage, left, right) else {
+                next = at + 1;
+                continue;
+            };
+            text.copy(copied..at, &mut output);
             if let Some(escape) = m.escape {
-                text.copy(offset..escape, &mut output);
+                text.copy(at..escape, &mut output);
                 text.copy(escape + 1..m.end, &mut output);
             } else {
                 text.replacement(
-                    offset..m.end,
+                    at..m.end,
                     &m.lexical,
                     if decode { m.decoded } else { None },
                     &mut output,
                 );
             }
             copied = m.end;
-            offset = m.end;
-        } else {
-            offset += text.text[offset..].chars().next().unwrap().len_utf8();
+            next = m.end;
         }
+        search = next.max(t + 1);
     }
     if copied == 0 {
         return text;
@@ -249,6 +263,84 @@ mod tests {
             r("(C) 2026 -- it's a test..."),
             "\u{a9} 2026\u{2009}\u{2014}\u{2009}it\u{2019}s a test\u{2026}\u{200b}"
         );
+    }
+
+    /// The scan before trigger jumps: every char boundary, left to right.
+    fn replace_stage_scan(text: Text, stage: usize, left: bool, right: bool) -> Text {
+        let mut output = Text::default();
+        let mut copied = 0;
+        let mut offset = 0;
+        while offset < text.text.len() {
+            if let Some(m) = match_at(&text.text, offset, stage, left, right) {
+                text.copy(copied..offset, &mut output);
+                if let Some(escape) = m.escape {
+                    text.copy(offset..escape, &mut output);
+                    text.copy(escape + 1..m.end, &mut output);
+                } else {
+                    text.replacement(offset..m.end, &m.lexical, m.decoded, &mut output);
+                }
+                copied = m.end;
+                offset = m.end;
+            } else {
+                offset += text.text[offset..].chars().next().unwrap().len_utf8();
+            }
+        }
+        if copied == 0 {
+            return text;
+        }
+        text.copy(copied..text.text.len(), &mut output);
+        output
+    }
+
+    type Snapshot = (
+        String,
+        Vec<(std::ops::Range<usize>, String, Option<String>, crate::Span)>,
+        Vec<AttributePart>,
+    );
+
+    fn snapshot(text: Text) -> Snapshot {
+        let fragments = text
+            .fragments
+            .iter()
+            .map(|(r, f)| (r.clone(), f.text.clone(), f.decoded.clone(), f.span))
+            .collect();
+        (text.text.clone(), fragments, text.into_parts())
+    }
+
+    #[test]
+    fn trigger_jumps_match_a_scan_of_every_offset() {
+        const TOKENS: &[&str] = &[
+            "a", "\u{416}", "\u{e9}", " ", "\n", "\\", "-", "--", "(C)", "(R)", "(TM)", ".", "...",
+            "'", "`", "=", "&lt;", "&gt;", "&amp;", "&#169;",
+        ];
+        let mut inputs = vec![String::new()];
+        for _ in 0..3 {
+            let longer: Vec<String> = inputs
+                .iter()
+                .flat_map(|s| TOKENS.iter().map(move |t| format!("{s}{t}")))
+                .collect();
+            inputs.extend(longer);
+        }
+        inputs.sort();
+        inputs.dedup();
+        for input in &inputs {
+            for stage in 0..13 {
+                for (left, right) in [(true, true), (false, false)] {
+                    let text = || {
+                        let mut text = Text::default();
+                        text.append_source(input, false, 0, crate::Span::new(5, 5 + input.len()));
+                        text
+                    };
+                    let actual = replace_stage(text(), stage, left, right, true);
+                    let expected = replace_stage_scan(text(), stage, left, right);
+                    assert_eq!(
+                        snapshot(actual),
+                        snapshot(expected),
+                        "{input:?} stage {stage}"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

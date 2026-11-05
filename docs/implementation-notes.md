@@ -296,6 +296,19 @@ fragments and private slot keys, before semantic parts/marks enter the stream;
 do not apply it to arbitrary substitution streams. Inputs containing special
 characters keep the previous rebuilding path. The paired measurements and
 allocation counters are in `performance/source-protection.json`.
+**Trigger jumps** (2026-11-05): `replacements::replace_stage` no longer tries
+every char boundary. Each of the 13 stages matches with its trigger byte at
+`at` or `at + 1` (escape backslash, spaced-dash blank), so it searches the
+trigger and tries only those two offsets, in order; the old scan stays as a
+test oracle compared on all three-token inputs. `inline_pass::Index::new`
+builds its ten marker vectors from byte `match_indices` (all markers are ASCII)
+instead of ten `char_indices` passes, and `Passes::stage` returns text without
+`+`, `$`, a backtick or `pass:` untouched, since `Index::find` cannot match
+then. Keep the `at`/`at + 1` invariant in `match_at` if a stage is added.
+Parse of `docs/implementation-plan.adoc` fell from ~92 to ~58 ms; see
+`docs/performance.adoc`. Under WSL, gprofng clock profiling loses ~99% of
+ticks (the "timer period was changed" warning); profile with `-p off -h
+cycles,on` instead.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

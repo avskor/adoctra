@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Inline substitutions are faster: replacements jump between their trigger
+  characters, and the passthrough pass indexes markers by byte search and
+  skips text without them. Parsing a 405 KiB document takes about 37% less
+  time; output is unchanged.
+
 ## [0.0.3] - 2026-11-05
 
 ### Fixed
@@ -52,6 +61,7 @@ documents, but the API and output may still change between releases.
   diagnostics and highlighting tokens, a virtual file system for includes,
   and diagrams through Kroki.
 
+[Unreleased]: https://github.com/avskor/adoctra/compare/v0.0.3...HEAD
 [0.0.3]: https://github.com/avskor/adoctra/releases/tag/v0.0.3
 [0.0.2]: https://github.com/avskor/adoctra/releases/tag/v0.0.2
 [0.0.1]: https://github.com/avskor/adoctra/releases/tag/v0.0.1

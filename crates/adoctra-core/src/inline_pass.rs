@@ -102,6 +102,12 @@ impl Passes {
         constrained: bool,
     ) -> Text {
         let src = &text.text;
+        // Every passthrough opens with `pass:`, `+`, `$$` or a backtick
+        // (`Index::find`); text without them is returned untouched, as the
+        // scan below would find nothing.
+        if !src.contains(['+', '$', '`']) && !src.contains("pass:") {
+            return text;
+        }
         let mut output = Text::default();
         let mut copied = 0;
         let mut at = 0;
@@ -788,38 +794,48 @@ struct Index {
 }
 impl Index {
     fn new(src: &str, compat: bool) -> Self {
-        let positions = |needle: &str| {
-            src.char_indices()
-                .filter_map(|(i, _)| src[i..].starts_with(needle).then_some(i))
+        // All markers are ASCII, so each byte match is a char boundary and
+        // longer (overlapping) markers are filtered from their first byte.
+        let positions =
+            |marker: char| -> Vec<usize> { src.match_indices(marker).map(|(i, _)| i).collect() };
+        let starting = |positions: &[usize], needle: &str| -> Vec<usize> {
+            positions
+                .iter()
+                .copied()
+                .filter(|&i| src[i..].starts_with(needle))
                 .collect()
         };
-        let closers = |marker: char| {
-            src.char_indices()
-                .filter_map(|(i, c)| {
-                    (c == marker
-                        && src[..i].chars().next_back().is_some_and(|c| !space(c))
+        let closers = |positions: &[usize]| -> Vec<usize> {
+            positions
+                .iter()
+                .copied()
+                .filter(|&i| {
+                    src[..i].chars().next_back().is_some_and(|c| !space(c))
                         && !src[i + 1..]
                             .chars()
                             .next()
-                            .is_some_and(|c| word(c) || compat && c == '`'))
-                    .then_some(i)
+                            .is_some_and(|c| word(c) || compat && c == '`')
                 })
                 .collect()
         };
+        let plus = positions('+');
+        let backtick = positions('`');
+        let brackets = positions(']');
         Self {
-            opens: positions("["),
-            plus_closes: closers('+'),
-            backtick_closes: closers('`'),
-            brackets: positions("]"),
-            macro_ends: src
-                .match_indices(']')
-                .filter_map(|(i, _)| (i == 0 || src.as_bytes()[i - 1] != b'\\').then_some(i))
+            opens: positions('['),
+            plus_closes: closers(&plus),
+            backtick_closes: closers(&backtick),
+            macro_ends: brackets
+                .iter()
+                .copied()
+                .filter(|&i| i == 0 || src.as_bytes()[i - 1] != b'\\')
                 .collect(),
-            plus: positions("+"),
-            double: positions("++"),
-            triple: positions("+++"),
-            dollar: positions("$$"),
-            backtick: positions("`"),
+            brackets,
+            double: starting(&plus, "++"),
+            triple: starting(&plus, "+++"),
+            dollar: starting(&positions('$'), "$$"),
+            plus,
+            backtick,
         }
     }
     fn next(v: &[usize], at: usize) -> Option<usize> {
@@ -976,6 +992,106 @@ impl Index {
 mod tests {
     use super::*;
     use crate::substitution_text::tests::{assert_reused, marked_text};
+
+    /// The index before byte search: every char boundary per marker.
+    fn index_scan(src: &str, compat: bool) -> Vec<Vec<usize>> {
+        let positions = |needle: &str| {
+            src.char_indices()
+                .filter_map(|(i, _)| src[i..].starts_with(needle).then_some(i))
+                .collect()
+        };
+        let closers = |marker: char| {
+            src.char_indices()
+                .filter_map(|(i, c)| {
+                    (c == marker
+                        && src[..i].chars().next_back().is_some_and(|c| !space(c))
+                        && !src[i + 1..]
+                            .chars()
+                            .next()
+                            .is_some_and(|c| word(c) || compat && c == '`'))
+                    .then_some(i)
+                })
+                .collect()
+        };
+        vec![
+            positions("]"),
+            positions("["),
+            closers('+'),
+            closers('`'),
+            src.match_indices(']')
+                .filter_map(|(i, _)| (i == 0 || src.as_bytes()[i - 1] != b'\\').then_some(i))
+                .collect(),
+            positions("+"),
+            positions("++"),
+            positions("+++"),
+            positions("$$"),
+            positions("`"),
+        ]
+    }
+
+    #[test]
+    fn byte_search_index_matches_a_scan_of_every_char() {
+        const TOKENS: &[&str] = &[
+            "+",
+            "`",
+            "$",
+            "[",
+            "]",
+            "\\",
+            "a",
+            " ",
+            "\u{416}",
+            "\u{1f642}",
+        ];
+        let mut inputs = vec![String::new()];
+        for _ in 0..4 {
+            let longer: Vec<String> = inputs
+                .iter()
+                .flat_map(|s| TOKENS.iter().map(move |t| format!("{s}{t}")))
+                .collect();
+            inputs.extend(longer);
+        }
+        inputs.sort();
+        inputs.dedup();
+        for input in &inputs {
+            for compat in [false, true] {
+                let index = Index::new(input, compat);
+                let actual = vec![
+                    index.brackets,
+                    index.opens,
+                    index.plus_closes,
+                    index.backtick_closes,
+                    index.macro_ends,
+                    index.plus,
+                    index.double,
+                    index.triple,
+                    index.dollar,
+                    index.backtick,
+                ];
+                assert_eq!(
+                    actual,
+                    index_scan(input, compat),
+                    "{input:?} compat {compat}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn stages_return_text_without_passthrough_markers_untouched() {
+        let attrs = crate::Attributes::new();
+        let mut evaluation = Evaluation::read_only(&attrs);
+        for compat in [false, true] {
+            let (_, mut passes) = Passes::extract("", 0, &mut evaluation, compat);
+            for constrained in [false, true] {
+                assert_reused(
+                    marked_text("Ж🙂 [.role]#x# *b* pass[] \\stem:[x] end"),
+                    |text| passes.stage(text, &mut evaluation, compat, constrained),
+                );
+            }
+            assert!(passes.slots.is_empty());
+        }
+    }
 
     #[test]
     fn extracted_source_protection_matches_rebuilt_stream_and_positions() {
