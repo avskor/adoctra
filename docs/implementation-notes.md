@@ -1863,6 +1863,48 @@ lenient=True)`: Ruby writes inline macro text unescaped, so an error with
 `crates/adoctra-ext-diagram/tests/diagrams.rs` (fake host), unit tests,
 `scripts/test_diagram.py`.
 
+**All CLI diagram types** (2026-11-05). `lib.rs` registers the 39 types of
+`DIAGRAM_TYPES` in Ruby's `require` order (block, block macro and inline
+macro each, so inline macros apply in that order) with Ruby's class
+prefixes (`AsciiToSvg`, `BlockDiag`…, `GoAT`, `GraphvizPy`, `SvgBob`,
+`TikZ`, `Vhs` for `tape`, `Vega` for both `vega` and `vegalite`).
+`converter/tools.rs` ports each `<type>/converter.rb` on the
+`CliGenerator` helpers of `converter/mod.rs`: `generate` (Ruby's: run,
+read stdout or the target, `Gen::out_file` read instead of the target for
+LilyPond's `.cropped.<fmt>` and pdflatex's `-output-directory` PDF, empty
+data is `"<tool path> failed: <stdout or stderr>"`), `generate_stdin`,
+`generate_stdin_stdout`, `generate_file`, `generate_file_stdout`,
+`generate_stdin_file` (diagrams' python). Temporary names follow
+`Dir::Tmpname` (`<prefix><YYYYMMDD>-<pid>-<base36><suffix>`, `civil_date`),
+so the harness normalizes both sides alike. `find_command` caches results
+(also `nil`) per processor instance under `cmd-<first attr name>` like
+Ruby's `config` (`Source::with_commands`; `DiagramBlock`/`…Macro`/
+`…InlineMacro` each own a `Commands` map; the CLI builds a registry per
+document, as Ruby instantiates processors per document); wavedrom's
+`wavedrom` fallback is therefore never found. `Source::resolve_path`
+(`normalize_system_path` from `base_dir`, warnings appended after the
+image path warnings) serves penrose. `image::post_process` rejects
+formats without `IMAGE_PARAMS` (bpmn `jpeg`, gnuplot `literal`) after the
+tool ran with Ruby's NoMethodError text. A server-generated image scales
+by `scale` even for native-scaling converters (Ruby's `converter` is then
+the `HttpConverter`). Ruby quirks kept: dpic's `start_with?("\n.PE")`,
+d2's `sketch=false` as a valued flag, gnuplot's truthy `transparent`/
+`crop` strings, oxdraw's greedy SVG `width`/`height` rewrite
+(`scale_svg_attribute`, `String#to_f`), pikchr's tag-stripped error,
+tikz's `~~~~` preamble split, umlet's `.jar` sibling, vega's
+`/schema/vega-lite/` test and truthy `vegalite`, vhs refusing safe modes
+(`SafeMode` integers). Not ported yet: ditaa, structurizr, meme, barcode,
+JSyntrax JARs. Harness: `fake_tools` cases run
+`scripts/diagram_fake_tool.py` through shell wrappers (absolute
+interpreter, `FAKE_TOOL_NAME`) first on `PATH` with per-side `TMPDIR` and
+`FAKE_DIAGRAM_LOG`; the log (tool, normalized args, stdin, input files,
+cwd) is compared. Ruby's checksum includes `:attribute_entries` object
+addresses for blocks right after attribute entries (non-deterministic);
+cases separate them with a paragraph. Tests: `tests/diagrams.rs`
+(`command_line_tools_run_like_rubys_converters`, `tool_paths_are_cached_…`,
+`ruby_failures_after_the_tool_ran_…`, `server_generated_images_scale_…`),
+unit tests in `converter/{mod,tools}.rs`, `scripts/test_diagram.py`.
+
 **DOCX backend** (user decision 2026-11-04; contract and status in
 `docs/docx.adoc`, stages in `docs/implementation-plan.adoc` «DOCX-бэкенд»).
 Template-based: the look comes from a Word template, every element gets a

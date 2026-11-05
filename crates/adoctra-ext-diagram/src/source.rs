@@ -14,6 +14,9 @@ pub(crate) enum Origin {
     File(Option<String>),
 }
 
+/// A processor's `config` cache of tool paths (`cmd-<attr>`).
+pub(crate) type Commands = std::sync::Mutex<std::collections::HashMap<String, Option<String>>>;
+
 pub(crate) struct Source<'c, 'a> {
     /// The processor name, downcased (`diagram_type`).
     pub diagram_type: String,
@@ -23,6 +26,9 @@ pub(crate) struct Source<'c, 'a> {
     pub context: &'c ProcessContext<'a>,
     code: Option<String>,
     checksum: Option<String>,
+    commands: Option<&'c Commands>,
+    /// Path resolution warnings (logged without a location).
+    pub warnings: std::cell::RefCell<Vec<String>>,
 }
 
 impl<'c, 'a> Source<'c, 'a> {
@@ -39,7 +45,38 @@ impl<'c, 'a> Source<'c, 'a> {
             context,
             code: None,
             checksum: None,
+            commands: None,
+            warnings: Default::default(),
         }
+    }
+
+    /// Cache tool paths in the processor's `config`.
+    pub fn with_commands(mut self, commands: &'c Commands) -> Self {
+        self.commands = Some(commands);
+        self
+    }
+
+    /// A tool path cached under `cmd_var` (`Some(None)`: cached `nil`).
+    pub fn cached_command(&self, cmd_var: &str) -> Option<Option<String>> {
+        let commands = self.commands?.lock().ok()?;
+        commands.get(cmd_var).cloned()
+    }
+
+    pub fn cache_command(&self, cmd_var: String, path: Option<String>) {
+        if let Some(Ok(mut commands)) = self.commands.map(|c| c.lock()) {
+            commands.insert(cmd_var, path);
+        }
+    }
+
+    /// `resolve_path(target, start = base_dir)`: `normalize_system_path`.
+    pub fn resolve_path(&self, target: &str, start: Option<&str>) -> String {
+        let base_dir = self.base_dir();
+        let start = start.unwrap_or(&base_dir);
+        crate::processor::Paths::new(self.context).normalize(
+            target,
+            Some(start),
+            &mut self.warnings.borrow_mut(),
+        )
     }
 
     /// `attr(name, default, inherit = diagram_type)`: the block attribute,

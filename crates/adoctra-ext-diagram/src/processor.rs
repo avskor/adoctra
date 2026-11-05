@@ -5,7 +5,7 @@
 use crate::cache::Metadata;
 use crate::converter::{http::Http, options_json, Converter};
 use crate::host::DiagramHost;
-use crate::source::{expand_path, parent_dir, Origin, Source};
+use crate::source::{expand_path, parent_dir, Commands, Origin, Source};
 use adoctra_core::{
     AttrKey, AttributeFormat, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor,
     BlockRequest, ExtensionAttributes, InlineMacroProcessor, InlineMacroRequest, NewBlock,
@@ -24,9 +24,10 @@ pub(crate) struct Diagram {
     pub host: Arc<dyn DiagramHost>,
 }
 
-pub(crate) struct DiagramBlock(pub Arc<Diagram>);
-pub(crate) struct DiagramBlockMacro(pub Arc<Diagram>);
-pub(crate) struct DiagramInlineMacro(pub Arc<Diagram>);
+/// Each processor instance has its own `config` cache of tool paths.
+pub(crate) struct DiagramBlock(pub Arc<Diagram>, pub Commands);
+pub(crate) struct DiagramBlockMacro(pub Arc<Diagram>, pub Commands);
+pub(crate) struct DiagramInlineMacro(pub Arc<Diagram>, pub Commands);
 
 /// Which processor runs `process`: blocks re-apply the listing's `subs` to an
 /// error, inline macros support no text formats.
@@ -54,6 +55,7 @@ impl BlockProcessor for DiagramBlock {
         let class = format!("Asciidoctor::Diagram::{}BlockProcessor", self.0.class);
         Some(process(
             &self.0,
+            &self.1,
             &class,
             2,
             request.attributes,
@@ -87,6 +89,7 @@ impl BlockMacroProcessor for DiagramBlockMacro {
         }
         Some(process(
             &self.0,
+            &self.1,
             &class,
             1,
             request.attributes,
@@ -128,6 +131,7 @@ impl InlineMacroProcessor for DiagramInlineMacro {
         }
         let block = process(
             &self.0,
+            &self.1,
             &class,
             1,
             request.attributes,
@@ -163,13 +167,13 @@ impl InlineMacroProcessor for DiagramInlineMacro {
 }
 
 /// The document's base directory and jail (`normalize_system_path`).
-struct Paths {
+pub(crate) struct Paths {
     base_dir: String,
     safe: SafeMode,
 }
 
 impl Paths {
-    fn new(context: &ProcessContext<'_>) -> Self {
+    pub(crate) fn new(context: &ProcessContext<'_>) -> Self {
         let cwd = crate::source::current_dir();
         let base_dir = context
             .base_dir()
@@ -186,7 +190,12 @@ impl Paths {
 
     /// `normalize_system_path(target, start)` with automatic recovery; the
     /// jail is the base directory from safe mode up.
-    fn normalize(&self, target: &str, start: Option<&str>, warnings: &mut Vec<String>) -> String {
+    pub(crate) fn normalize(
+        &self,
+        target: &str,
+        start: Option<&str>,
+        warnings: &mut Vec<String>,
+    ) -> String {
         let (start, jail) = if self.safe == SafeMode::Unsafe {
             let start = match start {
                 Some(start) if start.starts_with('/') => start.to_owned(),
@@ -237,8 +246,10 @@ fn output_dir(source: &Source<'_, '_>, context: &ProcessContext<'_>) -> String {
     resolve_path(outdir.as_deref(), None)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn process(
     diagram: &Diagram,
+    commands: &Commands,
     class: &str,
     positional: usize,
     attributes: ExtensionAttributes,
@@ -264,7 +275,8 @@ fn process(
     let host = Arc::clone(&diagram.host);
     let mut warnings = Vec::new();
     let (result, code) = {
-        let mut source = Source::new(diagram.name, normalised, origin, context);
+        let mut source =
+            Source::new(diagram.name, normalised, origin, context).with_commands(commands);
         let code = source.code(host.as_ref()).map(str::to_owned);
         let result = match &code {
             Ok(_) => generate(
@@ -277,6 +289,8 @@ fn process(
             ),
             Err(message) => Err(message.clone()),
         };
+        // Converters resolve their paths after the image paths.
+        warnings.append(&mut source.warnings.borrow_mut());
         (result, code)
     };
     for warning in warnings {
@@ -399,12 +413,14 @@ fn image_block(
         || source.should_process(host, &cached_image_file, metadata.checksum.as_deref())
         || metadata.options.as_deref() != Some(options_json(&options).as_str());
 
+    let mut server_used = false;
     if regenerate {
         let server = source.global_attr("server-url").map(|url| Http {
             base_uri: url,
             server_type: source.global_attr("server-type").unwrap_or_default(),
             converter,
         });
+        server_used = server.is_some();
         let (options, result) = match &server {
             Some(server) => {
                 let options = Http::collect_options(source);
@@ -440,8 +456,11 @@ fn image_block(
     }
 
     let mut attributes = source.attributes.clone();
+    // Ruby's `converter` is the `HttpConverter` (no native scaling) when it
+    // generated the image through a server.
+    let native_scaling = converter.native_scaling() && !(regenerate && server_used);
     let scale_factor = match attributes.get("scale") {
-        Some(scale) if !converter.native_scaling() => leading_number(scale).unwrap_or(1.0),
+        Some(scale) if !native_scaling => leading_number(scale).unwrap_or(1.0),
         _ => 1.0,
     };
     if html {

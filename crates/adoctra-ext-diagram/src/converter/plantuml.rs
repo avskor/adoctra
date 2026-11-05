@@ -65,12 +65,7 @@ fn tool(source: &Source<'_, '_>, host: &dyn DiagramHost) -> Result<Tool, String>
         return Ok(Tool::Native(native));
     }
     if let Some(classpath) = host.env("DIAGRAM_PLANTUML_CLASSPATH") {
-        let java = host
-            .env("JAVA_HOME")
-            .map(|home| format!("{}/bin/java", home.trim_end_matches('/')))
-            .filter(|java| host.is_executable(java))
-            .or_else(|| host.which("java"))
-            .ok_or_else(|| "Could not find Java executable".to_owned())?;
+        let java = super::java(host)?;
         return Ok(Tool::Java(
             java,
             vec![
@@ -152,7 +147,7 @@ impl PlantUml {
         if native {
             Self::theme_args(Self::theme(source), &mut args);
         }
-        let output = generate_stdin_stdout(host, code, tool.command(args))?;
+        let output = generate_stdin_stdout(host, code.as_bytes(), tool.command(args))?;
         // Ruby's default (its Java server) returns the preprocessed text
         // without the final line break the command line prints.
         let text = String::from_utf8_lossy(&output);
@@ -245,7 +240,7 @@ impl Converter for PlantUml {
                 .env
                 .insert("PLANTUML_LIMIT_SIZE".to_owned(), limit.clone());
         }
-        generate_stdin_stdout(host, &code, command)
+        generate_stdin_stdout(host, code.as_bytes(), command)
     }
 
     fn server_code(

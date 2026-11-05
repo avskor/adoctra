@@ -8,9 +8,17 @@
 
 Крейт `adoctra-ext-diagram` переносит asciidoctor-diagram 3.2.1 (версия
 закреплена в `compatibility/asciidoctor-diagram-version`): block, block
-macro и inline macro процессоры `plantuml`, `salt`, `graphviz` и `mermaid`. Kroki и
+macro и inline macro процессоры 39 типов (`DIAGRAM_TYPES`, порядок
+`require` Ruby): `a2s`, `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`,
+`rackdiag`, `packetdiag`, `bpmn`, `bytefield`, `d2`, `dbml`, `diagrams`,
+`dpic`, `erd`, `goat`, `gnuplot`, `graphviz`, `graphviz_py`, `lilypond`,
+`mermaid`, `msc`, `nomnoml`, `oxdraw`, `penrose`, `pikchr`, `pintora`,
+`plantuml`, `salt`, `shaape`, `smcat`, `svgbob`, `symbolator`, `syntrax`,
+`tikz`, `umlet`, `vega`, `vegalite`, `tape` (vhs), `wavedrom`. Ещё не
+перенесены ditaa, structurizr, meme и barcode (см. план). Kroki и
 PlantUML-сервер подключаются, как в Ruby, атрибутами
-`diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`).
+`diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`)
+для любого типа.
 
 == Подключение
 
@@ -39,7 +47,7 @@ Rust-процессоры. Блок диаграммы там остаётся �
 (с 2026-11-05). Core вызывает inline-процессоры первыми на этапе макросов,
 как `sub_macros` Ruby: каждый процессор по очереди заменяет совпадения
 `\?name:(\S+?)\[(|.*?[^\\])\]` (в одной строке) в тексте, оставленном
-предыдущим, в порядке регистрации Ruby (graphviz, mermaid, plantuml, salt).
+предыдущим, в порядке регистрации Ruby (порядок `DIAGRAM_TYPES`).
 Цель — текст этапа макросов (после спецсимволов, кавычек, атрибутов и
 замен); процессор ещё раз применяет к ней `sub_attributes` с
 `attribute-missing=warn` и разрешает путь от base directory. Позиционный
@@ -72,6 +80,27 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
 * Mermaid — mermaid-cli `mmdc` (атрибут `mmdc` или `PATH`). Устаревший
   `mermaid` + PhantomJS, к которому Ruby откатывается, не запускается:
   выводится ошибка `mmdc`.
+* Остальные типы — их программы с аргументами, stdin, временными файлами
+  и каталогом запуска Ruby (протоколы `CliGenerator`: `generate_stdin`,
+  `_stdout`, `_file`, `_file_stdout`, `_stdin_file`, `out_file` у
+  LilyPond и pdflatex), включая особенности Ruby: `.PE` у dpic
+  добавляется почти всегда, `sketch=false` у d2 — флаг со значением,
+  любое значение `transparent`/`crop` у gnuplot истинно, oxdraw
+  масштабирует SVG сам, erd — `erd` (или `erd-go`) и `dot`, vega —
+  `vl2vg` для Vega-Lite и `vg2<формат>`, wavedrom — `wavedrom-cli`,
+  WaveDromEditor или PhantomJS, umlet — `java -jar umlet.jar`, vhs
+  (`tape`) работает только в режиме unsafe. Форматы без `IMAGE_PARAMS`
+  Ruby (`jpeg` у bpmn, `literal` у gnuplot) после запуска инструмента
+  дают ошибку `undefined method `[]' for nil`, как в Ruby. syntrax
+  запускается командой `syntrax` (JSyntrax через JAR — этап Java-сервера).
+* Найденный путь инструмента кэшируется в процессоре, как `config` Ruby
+  (`cmd-<первый атрибут>`, и `nil` тоже): отдельно у блока, block macro и
+  inline-макроса каждого типа, на время одного документа (реестр CLI
+  создаётся на документ). Так у wavedrom программа `wavedrom` на `PATH`
+  не находится: первый поиск кэширует `nil` под тем же `cmd-wavedrom`.
+* При генерации через сервер (Kroki, PlantUML) Ruby заменяет конвертер
+  `HttpConverter`, у которого нет собственного масштабирования: `scale`
+  умножает размер и у svgbob, a2s, oxdraw и других.
 
 == Сравнение с Ruby
 
@@ -85,9 +114,17 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
 одинаково), диагностики (серьёзность, файл, строка, текст), все созданные файлы побайтно
 (изображения и метаданные кэша) и запросы к локальному фейковому серверу
 диаграмм (метод, путь, тип, раскодированный код). Случай без нужного
-инструмента — SKIP, а не PASS. Результат 2026-11-05: 37 PASS, 3 XFAIL
-(Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml, mermaid-cli
-11.12 с локальным Chrome).
+инструмента — SKIP, а не PASS. Инструменты, которых нет в окружении,
+заменяет записывающая подделка (`fake_tools` случая,
+`scripts/diagram_fake_tool.py`): обе стороны запускают её из начала
+`PATH` со своими `TMPDIR` и журналом, журналы вызовов (имя, аргументы с
+нормализованными временными путями, stdin, входные файлы, каталог)
+сравниваются, а детерминированный результат (SVG, PNG, GIF, PDF, текст,
+отказ, пустой вывод, HTML-ошибка) проходит обычную обработку изображений.
+Так проверены протоколы всех новых типов, но не вывод их настоящих
+программ (переписывание их SVG, размеры). Результат 2026-11-05: 67 PASS,
+3 XFAIL (Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml,
+mermaid-cli 11.12 с локальным Chrome, остальное — подделки).
 
 Совпадают побайтно: имена `diag-<type>-md5-…` (MD5 по коду и атрибутам в
 порядке Ruby, включая позиционные значения после именованных как
@@ -121,10 +158,22 @@ Ruby, как и adoctra, не пропускает через `apply_subs`: он
 * отсутствующий файл inline-макроса: как у block macro, Ruby прерывает
   конвертацию; adoctra выводит ошибку и моноширинный текст с ней.
 
+Ruby недетерминирован после записей атрибутов: записи атрибутов прямо
+перед блоком попадают в его атрибуты (`:attribute_entries`), и в MD5
+уходит `to_s` объекта с адресом в памяти. Имя `diag-<type>-md5-…` без
+`target` и контрольная сумма в `.cache` у такого блока меняются от
+запуска к запуску; adoctra такого ключа не передаёт, её имена
+детерминированы. Случаи `diagram-v1` отделяют записи атрибутов от блока
+абзацем.
+
 Ограничения (не реализовано или не проверено):
 
-* остальные типы asciidoctor-diagram (ditaa, d2, vega, wavedrom и другие)
-  через локальные инструменты; через Kroki они не регистрируются;
+* ditaa, structurizr, meme и barcode (16 типов) не перенесены (этапы
+  «Остальные типы asciidoctor-diagram» в плане); JSyntrax через JAR
+  (`DIAGRAM_JSYNTRAX_CLASSPATH`/`_HOME`) не поддержан;
+* вывод настоящих программ новых типов с Ruby не сравнивался (в
+  окружении их нет): проверены аргументы, stdin, файлы и обработка
+  детерминированного результата;
 * `subs` кроме `attributes` и `specialcharacters`;
 * сериализация REXML воспроизведена для SVG, которые выдают поддержанные
   инструменты; внутреннее подмножество DOCTYPE и кодировки, отличные от

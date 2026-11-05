@@ -71,72 +71,80 @@ impl Converter for Mermaid {
         let resolve = |path: &str| crate::source::expand_path(path, &base_dir);
         let mmdc = find_command(source, host, Find::new("mmdc"))?.unwrap_or_default();
         let code = self.code(source, host)?;
-        generate_file(host, &mmdc, "mmd", format, &code, |input, output| {
-            let mut args = vec![
-                "-i".to_owned(),
-                input.to_owned(),
-                "-o".to_owned(),
-                output.to_owned(),
-            ];
-            if let Some(css) = get(options, "css") {
-                args.extend(["--cssFile".to_owned(), resolve(css)]);
-            }
-            if let Some(theme) = get(options, "theme") {
-                args.extend(["--theme".to_owned(), theme.to_owned()]);
-            }
-            if let Some(width) = get(options, "width") {
-                args.extend(["--width".to_owned(), width.to_owned()]);
-            }
-            if let Some(height) = get(options, "height") {
-                args.extend(["--height".to_owned(), height.to_owned()]);
-            }
-            if let Some(scale) = get(options, "scale") {
-                args.extend(["--scale".to_owned(), scale.to_owned()]);
-            }
-            if let Some(background) = get(options, "background") {
-                let background = if background.starts_with('#') {
-                    background.to_owned()
-                } else {
-                    format!("#{background}")
+        generate_file(
+            host,
+            &mmdc,
+            "mmd",
+            format,
+            code.as_bytes(),
+            |input, output| {
+                let mut args = vec![
+                    "-i".to_owned(),
+                    input.to_owned(),
+                    "-o".to_owned(),
+                    output.to_owned(),
+                ];
+                if let Some(css) = get(options, "css") {
+                    args.extend(["--cssFile".to_owned(), resolve(css)]);
+                }
+                if let Some(theme) = get(options, "theme") {
+                    args.extend(["--theme".to_owned(), theme.to_owned()]);
+                }
+                if let Some(width) = get(options, "width") {
+                    args.extend(["--width".to_owned(), width.to_owned()]);
+                }
+                if let Some(height) = get(options, "height") {
+                    args.extend(["--height".to_owned(), height.to_owned()]);
+                }
+                if let Some(scale) = get(options, "scale") {
+                    args.extend(["--scale".to_owned(), scale.to_owned()]);
+                }
+                if let Some(background) = get(options, "background") {
+                    let background = if background.starts_with('#') {
+                        background.to_owned()
+                    } else {
+                        format!("#{background}")
+                    };
+                    args.extend(["--backgroundColor".to_owned(), background]);
+                }
+                if let Some(config) = get(options, "config") {
+                    args.extend(["--configFile".to_owned(), resolve(config)]);
+                } else if get(options, "gantt_config").is_some()
+                    || get(options, "seq_config").is_some()
+                {
+                    let mut parts = Vec::new();
+                    if let Some(gantt) = get(options, "gantt_config") {
+                        let text = host
+                            .read(&resolve(gantt))
+                            .map_err(|e| format!("{gantt}: {e}"))?;
+                        parts.push(format!("\"gantt\": {}", String::from_utf8_lossy(&text)));
+                    }
+                    if let Some(sequence) = get(options, "seq_config") {
+                        let text = host
+                            .read(&resolve(sequence))
+                            .map_err(|e| format!("{sequence}: {e}"))?;
+                        parts.push(format!("\"sequence\": {}", String::from_utf8_lossy(&text)));
+                    }
+                    let config = format!("{input}.json");
+                    host.write(&config, format!("{{{}}}", parts.join(",")).as_bytes())
+                        .map_err(|e| format!("{config}: {e}"))?;
+                    args.extend(["--configFile".to_owned(), config]);
+                }
+                if let Some(puppeteer) = get(options, "puppeteer_config") {
+                    args.extend(["--puppeteerConfigFile".to_owned(), resolve(puppeteer)]);
+                }
+                let mut command = Command {
+                    program: mmdc.clone(),
+                    args,
+                    chdir: Some(base_dir.clone()),
+                    ..Command::default()
                 };
-                args.extend(["--backgroundColor".to_owned(), background]);
-            }
-            if let Some(config) = get(options, "config") {
-                args.extend(["--configFile".to_owned(), resolve(config)]);
-            } else if get(options, "gantt_config").is_some() || get(options, "seq_config").is_some()
-            {
-                let mut parts = Vec::new();
-                if let Some(gantt) = get(options, "gantt_config") {
-                    let text = host
-                        .read(&resolve(gantt))
-                        .map_err(|e| format!("{gantt}: {e}"))?;
-                    parts.push(format!("\"gantt\": {}", String::from_utf8_lossy(&text)));
-                }
-                if let Some(sequence) = get(options, "seq_config") {
-                    let text = host
-                        .read(&resolve(sequence))
-                        .map_err(|e| format!("{sequence}: {e}"))?;
-                    parts.push(format!("\"sequence\": {}", String::from_utf8_lossy(&text)));
-                }
-                let config = format!("{input}.json");
-                host.write(&config, format!("{{{}}}", parts.join(",")).as_bytes())
-                    .map_err(|e| format!("{config}: {e}"))?;
-                args.extend(["--configFile".to_owned(), config]);
-            }
-            if let Some(puppeteer) = get(options, "puppeteer_config") {
-                args.extend(["--puppeteerConfigFile".to_owned(), resolve(puppeteer)]);
-            }
-            let mut command = Command {
-                program: mmdc.clone(),
-                args,
-                chdir: Some(base_dir.clone()),
-                ..Command::default()
-            };
-            command.env.insert(
-                "NODE_OPTIONS".to_owned(),
-                "--unhandled-rejections=strict".to_owned(),
-            );
-            Ok(command)
-        })
+                command.env.insert(
+                    "NODE_OPTIONS".to_owned(),
+                    "--unhandled-rejections=strict".to_owned(),
+                );
+                Ok(command)
+            },
+        )
     }
 }

@@ -74,25 +74,59 @@ impl Fake {
         std::mem::take(&mut self.state.lock().unwrap().requests)
     }
 
-    fn output_for(&self, command: &Command) -> Vec<u8> {
-        let format = command
+    /// The temporary file a tool writes: `-o<path>`, `-o <path>`, else the
+    /// last argument naming a temporary file that does not exist yet.
+    fn target_of(&self, command: &Command) -> Option<String> {
+        command
             .args
             .iter()
-            .find_map(|a| a.strip_prefix("-T").or_else(|| a.strip_prefix("-t")))
-            .map(str::to_owned)
+            .find_map(|a| {
+                a.strip_prefix("-o")
+                    .filter(|p| p.starts_with('/'))
+                    .map(str::to_owned)
+            })
             .or_else(|| {
                 command
                     .args
                     .iter()
                     .skip_while(|a| *a != "-o")
                     .nth(1)
-                    .and_then(|o| o.rsplit('.').next().map(str::to_owned))
+                    .cloned()
+            })
+            .or_else(|| {
+                command
+                    .args
+                    .iter()
+                    .rev()
+                    .find(|a| a.starts_with("/tmp/") && !self.exists(a))
+                    .cloned()
+            })
+    }
+
+    fn output_for(&self, command: &Command, target: Option<&str>) -> Vec<u8> {
+        let stdin = String::from_utf8_lossy(command.stdin.as_deref().unwrap_or_default());
+        let format = command
+            .args
+            .iter()
+            .find_map(|a| {
+                a.strip_prefix("-T")
+                    .or_else(|| a.strip_prefix("-t"))
+                    .filter(|f| !f.is_empty())
+            })
+            .map(str::to_owned)
+            .or_else(|| target.and_then(|o| o.rsplit('.').next().map(str::to_owned)))
+            .or_else(|| {
+                stdin
+                    .strip_prefix("set term ")
+                    .and_then(|rest| rest.split([' ', '\n']).next())
+                    .map(str::to_owned)
             })
             .unwrap_or_default();
         match format.as_str() {
             "png" => PNG.to_vec(),
             "svg" => SVG.as_bytes().to_vec(),
             "utxt" | "txt" => b"ASCII ART  \nline\n".to_vec(),
+            "jpeg" => b"JPEG".to_vec(),
             _ => Vec::new(),
         }
     }
@@ -117,24 +151,13 @@ impl DiagramHost for Fake {
                 stderr: Vec::new(),
             });
         }
-        let data = self.output_for(command);
-        // A file target is named by `-o<path>`, `-o <path>`; otherwise stdout.
-        let target = command
-            .args
-            .iter()
-            .find_map(|a| {
-                a.strip_prefix("-o")
-                    .filter(|p| !p.is_empty())
-                    .map(str::to_owned)
-            })
-            .or_else(|| {
-                command
-                    .args
-                    .iter()
-                    .skip_while(|a| *a != "-o")
-                    .nth(1)
-                    .cloned()
-            });
+        let target = self.target_of(command);
+        let data = self.output_for(command, target.as_deref());
+        // LilyPond writes `<output>.cropped.<format>`.
+        let target = match (command.program.ends_with("lilypond"), target) {
+            (true, Some(target)) => Some(format!("{target}.cropped.png")),
+            (_, target) => target,
+        };
         match target {
             Some(target) => {
                 self.put(&target, &data);
@@ -777,4 +800,132 @@ fn empty_positional_values_enter_the_checksum_as_rubys_nil_keys() {
         cache.starts_with("{\"checksum\":\"graphviz-md5-30ba37dad309f17166bd206973b6f08c\","),
         "{cache}"
     );
+}
+
+/// The arguments of the recorded commands, temporary paths as `<tmp>`.
+fn command_lines(host: &Fake) -> Vec<String> {
+    host.commands()
+        .iter()
+        .map(|command| {
+            let line = std::iter::once(command.program.as_str())
+                .chain(command.args.iter().map(String::as_str))
+                .map(|arg| match arg.find("/tmp/") {
+                    Some(at) => format!("{}<tmp>", &arg[..at]),
+                    None => arg.to_owned(),
+                })
+                .collect::<Vec<_>>()
+                .join(" ");
+            match &command.stdin {
+                Some(stdin) => format!("{line} <<{}", String::from_utf8_lossy(stdin)),
+                None => line,
+            }
+        })
+        .collect()
+}
+
+#[test]
+fn command_line_tools_run_like_rubys_converters() {
+    // Command lines compared with Ruby through diagram-v1's recording tools.
+    let host = Fake::with(&[
+        "/usr/bin/d2",
+        "/usr/bin/a2s",
+        "/usr/bin/gnuplot",
+        "/usr/bin/lilypond",
+        "/usr/bin/svgbob_cli",
+    ]);
+    let result = parse(
+        &host,
+        "[d2,d1,svg,layout=elk,sketch=false,font-regular=f.ttf]\n----\na -> b\n----\n\n\
+         [d2,d2b,png,sketch=yes]\n----\nx\n----\n\n\
+         [a2s,a1,svg,scalex=2,scaley=3,noblur=true]\n----\n+-+\n----\n\n\
+         [gnuplot,g1,svg,width=3,height=2,transparent=false,font=Arial]\n----\nplot x\n----\n\n\
+         [lilypond,l1,png,resolution=150]\n----\n{ c' }\n----\n\n\
+         [svgbob,s1,txt]\n----\n-->\n----\n",
+    );
+    assert!(errors(&result).is_empty(), "{:?}", errors(&result));
+    assert_eq!(
+        command_lines(&host),
+        [
+            "/usr/bin/d2 --browser false --layout elk --sketch false --font-regular f.ttf - <tmp> \
+             <<a -> b",
+            "/usr/bin/d2 --browser false --sketch - <tmp> <<x",
+            "/usr/bin/a2s -o <tmp> -s 2,3 -b <<+-+",
+            "/usr/bin/gnuplot <<set term svg size 3,2 transparent font \"Arial\"\nplot x\n",
+            "/usr/bin/lilypond -daux-files=#f -dbackend=eps -dno-gs-load-fonts \
+             -dinclude-eps-fonts -o <tmp> -f png -dcrop=#t -dresolution=150 \
+             -dpixmap-format=pngalpha - <<\\paper{\n  oddFooterMarkup=##f\n  \
+             oddHeaderMarkup=##f\n  bookTitleMarkup=##f\n  scoreTitleMarkup=##f\n}\n\n{ c' }",
+        ]
+    );
+    // LilyPond's cropped file is the image; svgbob's text format is the code.
+    assert!(host.file("/doc/l1.png").is_some());
+    assert!(
+        html(&result).contains("<pre class=\"literalblock\">--&gt;</pre>"),
+        "{}",
+        html(&result)
+    );
+}
+
+#[test]
+fn tool_paths_are_cached_per_processor_like_rubys_config() {
+    // Only `wavedrom` is installed: Ruby's first lookup caches `nil` under
+    // `cmd-wavedrom`, which the second lookup (for `wavedrom`) reuses.
+    let host = Fake::with(&["/usr/bin/wavedrom", "/usr/bin/phantomjs"]);
+    let result = parse(&host, "[wavedrom]\n----\n{}\n----\n");
+    assert_eq!(
+        errors(&result),
+        [
+            "error: Failed to generate image: Could not find the 'wavedrom-cli' executable in \
+          PATH; add it to the PATH or specify its location using the 'wavedrom' document \
+          attribute"
+        ]
+    );
+    let host = Fake::with(&["/usr/bin/wavedrom-cli"]);
+    parse(&host, "[wavedrom,w,svg]\n----\n{}\n----\n");
+    assert_eq!(
+        command_lines(&host),
+        ["/usr/bin/wavedrom-cli --input <tmp> --svg <tmp>"]
+    );
+}
+
+#[test]
+fn ruby_failures_after_the_tool_ran_become_error_listings() {
+    let host = Fake::with(&["/usr/bin/bpmn-js"]);
+    let result = parse(&host, "[bpmn,p,jpeg]\n----\n<x/>\n----\n");
+    // The tool runs; Ruby has no `IMAGE_PARAMS` for `jpeg`.
+    assert_eq!(host.commands().len(), 1);
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: undefined method `[]' for nil"]
+    );
+    let host = Fake::with(&["/usr/bin/vhs"]);
+    let result = parse(&host, "[tape]\n----\nType x\n----\n");
+    assert_eq!(
+        errors(&result),
+        [
+            "error: Failed to generate image: vhs diagram generation is not allowed in safe \
+          mode 1. vhs executes terminal commands and requires UNSAFE mode (0)."
+        ]
+    );
+    assert!(host.commands().is_empty());
+}
+
+#[test]
+fn server_generated_images_scale_even_for_native_scaling_tools() {
+    // Ruby's `HttpConverter` has no native scaling.
+    let host = Fake {
+        http: true,
+        ..Fake::default()
+    };
+    let result = parse(
+        &host,
+        ":diagram-server-url: http://kroki/\n:diagram-server-type: kroki_io\n\n\
+         [svgbob,k,scale=2]\n----\n-->\n----\n",
+    );
+    assert!(
+        html(&result).contains("width=\"133\" height=\"53\""),
+        "{}",
+        html(&result)
+    );
+    assert_eq!(host.requests()[0].url.split('/').nth(3), Some("svgbob"));
 }

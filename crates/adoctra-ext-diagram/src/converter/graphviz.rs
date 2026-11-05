@@ -37,7 +37,7 @@ impl Converter for Graphviz {
             (&"layout", OptValue::Str(layout)) => Some(layout.clone()),
             _ => None,
         });
-        generate_stdin(host, &dot, format, &code, |output| {
+        generate_stdin(host, &dot, format, code.as_bytes(), |output| {
             let mut args = vec![format!("-o{output}"), format!("-T{format}")];
             if let Some(layout) = layout {
                 args.push(format!("-K{layout}"));

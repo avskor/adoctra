@@ -85,11 +85,14 @@ pub(crate) fn post_process(
         "png" => png(data),
         "gif" => gif(data),
         "svg" => svg(data, optimise),
-        _ => Ok(Processed {
+        "pdf" => Ok(Processed {
             data,
             width: None,
             height: None,
         }),
+        // Formats a converter offers without `IMAGE_PARAMS` (bpmn's `jpeg`,
+        // gnuplot's `literal`): Ruby's `params[:encoding]` on `nil`.
+        _ => Err("undefined method `[]' for nil".to_owned()),
     }
 }
 

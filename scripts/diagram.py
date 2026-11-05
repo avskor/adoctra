@@ -147,6 +147,35 @@ def files_view(root, inputs):
     return view
 
 
+FAKE_TOOL = Path(__file__).resolve().parent / "diagram_fake_tool.py"
+
+
+def fake_tools(case, root, env):
+    """`fake_tools`: the named tools are the recording stand-in
+    (diagram_fake_tool.py), first on PATH, with a side's own TMPDIR and
+    log."""
+    env = dict(env)
+    tmp = root.parent / f"{root.name}-tmp"
+    tmp.mkdir()
+    env["TMPDIR"] = str(tmp)
+    names = case.get("fake_tools", [])
+    if not names:
+        return env, None
+    bin_dir = root.parent / f"{root.name}-bin"
+    bin_dir.mkdir()
+    for name in names:
+        # A wrapper with the absolute interpreter: a fake `python3` must not
+        # find itself through `env`.
+        wrapper = bin_dir / name
+        wrapper.write_text(f'#!/bin/sh\nFAKE_TOOL_NAME={name} exec {sys.executable} {FAKE_TOOL} "$@"\n')
+        wrapper.chmod(0o755)
+    env["PATH"] = f"{bin_dir}{os.pathsep}{env.get('PATH', '')}"
+    env["FAKE_DIAGRAM_LOG"] = str(root.parent / f"{root.name}-tools.jsonl")
+    if "java" in names:
+        env.pop("JAVA_HOME", None)
+    return env, Path(env["FAKE_DIAGRAM_LOG"])
+
+
 def run_side(command, case, root, env, server):
     source = case["source"].replace("{server}", server.url).replace("{mmdc}", env["MMDC"])
     files = {"d.adoc": source, **case.get("files", {})}
@@ -154,8 +183,10 @@ def run_side(command, case, root, env, server):
     for name, content in files.items():
         (root / name).parent.mkdir(parents=True, exist_ok=True)
         (root / name).write_text(content, encoding="utf-8")
+    env, log = fake_tools(case, root, env)
     server.take()
-    result = subprocess.run(command + ["-S", "safe", "-s", "-o", "out.html", *case.get("args", []), "d.adoc"],
+    result = subprocess.run(command + ["-S", case.get("safe", "safe"), "-s", "-o", "out.html",
+                                       *case.get("args", []), "d.adoc"],
                             cwd=root, capture_output=True, env=env, timeout=300)
     out = root / "out.html"
     html = out.read_text(encoding="utf-8") if out.exists() else None
@@ -168,6 +199,8 @@ def run_side(command, case, root, env, server):
                                       command[0] == "asciidoctor"),
         "files": files_view(root, files),
         "requests": server.take(),
+        **({"tools": [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines()]
+            if log.exists() else []} if log else {}),
     }
 
 

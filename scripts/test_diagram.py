@@ -1,5 +1,7 @@
 import base64
 import json
+import os
+import subprocess
 from pathlib import Path
 import tempfile
 import types
@@ -66,6 +68,31 @@ class CaseTests(unittest.TestCase):
             view = diagram.files_view(root, {"d.adoc": "x"})
             self.assertEqual(sorted(view), [".asciidoctor/diagram/a.png.cache", "a.png"])
             self.assertEqual(len(view["a.png"]), 64)
+
+    def test_fake_tools_record_their_invocation_and_write_results(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch) / "r"
+            root.mkdir()
+            env, log = diagram.fake_tools({"fake_tools": ["d2", "gnuplot"]}, root, dict(os.environ))
+            tmp = Path(env["TMPDIR"])
+            target = tmp / "d220261105-42-abc.svg"
+            subprocess.run(["d2", "--browser", "false", "-", str(target)], input=b"a -> b",
+                           env=env, cwd=root, check=True)
+            self.assertTrue(target.read_bytes().startswith(b"<svg"))
+            out = subprocess.run(["gnuplot"], input=b"set term dumb\nplot x\n", env=env, cwd=root,
+                                 capture_output=True, check=True).stdout
+            self.assertEqual(out, b"fake text\n")
+            failed = subprocess.run(["d2", "-"], input=b"FAKE-FAIL", env=env, cwd=root, capture_output=True)
+            self.assertEqual((failed.returncode, failed.stderr), (1, b"d2: fake failure\n"))
+            entries = [json.loads(line) for line in log.read_text().splitlines()]
+            self.assertEqual(entries[0], {"tool": "d2", "args": ["--browser", "false", "-", "<tmp>/d2*.svg"],
+                                          "stdin": "a -> b", "inputs": {}, "cwd": str(root)})
+            self.assertEqual([e["tool"] for e in entries], ["d2", "gnuplot", "d2"])
+            # Without fake tools only TMPDIR is set.
+            other = Path(scratch) / "o"
+            other.mkdir()
+            env, log = diagram.fake_tools({}, other, {})
+            self.assertEqual((sorted(env), log), (["TMPDIR"], None))
 
     def test_manifest_is_complete(self):
         manifest = json.loads(diagram.CASES.read_text(encoding="utf-8"))

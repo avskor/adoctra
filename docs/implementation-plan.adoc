@@ -209,6 +209,26 @@ Core не запускает процессы и не читает ресурс�
   правилам браузера. Двойного вызова процессора в заголовке нет ни у Ruby,
   ни у adoctra; значения в одинарных кавычках без `apply_subs` совпадают
   с Ruby.
+. *Остальные типы asciidoctor-diagram* (решение пользователя от
+  2026-11-05) — по этапам:
+.. *Регистрация и CLI-конвертеры* — сделано 2026-11-05 (`diagram-v1`:
+   67 PASS, 3 XFAIL; настоящие программы новых типов не ставились, их
+   протоколы сверены подделками). Все типы 3.2.1 с именами, классами,
+   форматами, опциями и `native_scaling?` Ruby, inline-макросы в порядке
+   `require`, Kroki и PlantUML-сервер для каждого типа; конвертеры по
+   протоколам `CliGenerator` (`generate_stdin`, `_stdout`, `_file`,
+   `_file_stdout`, `_stdin_file`, `out_file`): a2s, actdiag, blockdiag,
+   bpmn, bytefield, d2, dbml, diagrams, dpic, erd, gnuplot, goat,
+   graphviz_py, lilypond, msc, nomnoml, nwdiag, oxdraw, packetdiag,
+   penrose, pikchr, pintora, rackdiag, seqdiag, shaape, smcat, svgbob,
+   symbolator, syntrax (CLI), tape (vhs), tikz, umlet, vega, vegalite,
+   wavedrom. Сверка в `diagram-v1`: поддельные инструменты с журналом
+   вызовов (argv, stdin, каталог) на обеих сторонах и настоящие
+   инструменты, где они ставятся.
+.. *Java-сервер* — ditaa, syntrax через JAR, structurizr с рендерерами.
+.. *meme* — ImageMagick (`magick` или `convert`/`identify`).
+.. *barcode* — 16 типов (barby, rqrcode, chunky_png); объём порта
+   согласовать с пользователем.
 
 Решение пользователя от 2026-10-31 о цели проекта: adoctra конвертирует
 документы, строит синтаксическое дерево и поддерживает редактор. Совместимость
