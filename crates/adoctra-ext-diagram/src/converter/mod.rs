@@ -95,6 +95,16 @@ pub(crate) trait Converter: Send + Sync {
         options: &Options,
         host: &dyn DiagramHost,
     ) -> Result<Vec<u8>, String>;
+    /// The options Ruby stores in the cache metadata after converting
+    /// (a converter may change the hash it was given).
+    fn stored_options(
+        &self,
+        options: &Options,
+        _format: &str,
+        _source: &Source<'_, '_>,
+    ) -> Options {
+        options.clone()
+    }
 }
 
 /// `find_command(cmd, attrs:/alt_attrs:, alt_cmds:, raise_on_error:)`.

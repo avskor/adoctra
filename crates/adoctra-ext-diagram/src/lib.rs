@@ -20,6 +20,7 @@
 //! What the processors run, read and write goes through the
 //! [`DiagramHost`] the host supplies.
 
+mod barcode;
 mod cache;
 mod converter;
 mod host;
@@ -42,8 +43,24 @@ use std::sync::Arc;
 /// The diagram types (processor names) this crate registers, in Ruby's
 /// registration order (the order `asciidoctor-diagram.rb` requires them),
 /// which is also the order inline macros apply.
-pub const DIAGRAM_TYPES: [&str; 42] = [
+pub const DIAGRAM_TYPES: [&str; 58] = [
     "a2s",
+    "bookland",
+    "codabar",
+    "code25",
+    "code25iata",
+    "code25interleaved",
+    "code39",
+    "code93",
+    "code128",
+    "code128a",
+    "code128b",
+    "code128c",
+    "ean8",
+    "ean13",
+    "gs1_128",
+    "qrcode",
+    "upca",
     "blockdiag",
     "seqdiag",
     "actdiag",
@@ -88,7 +105,10 @@ pub const DIAGRAM_TYPES: [&str; 42] = [
 ];
 
 /// The converter and Ruby's processor class prefix of a type.
-fn diagram_type(name: &str) -> (&'static str, Box<dyn Converter>) {
+fn diagram_type(name: &'static str) -> (&'static str, Box<dyn Converter>) {
+    if barcode::BARCODE_TYPES.contains(&name) {
+        return ("Barcode", Box::new(barcode::Barcode { kind: name }));
+    }
     let blockdiag = |tool: &'static str, alt_tool: &'static str| -> Box<dyn Converter> {
         Box::new(BlockDiag { tool, alt_tool })
     };
@@ -154,6 +174,7 @@ pub fn register(registry: &mut adoctra_core::Registry, host: Arc<dyn DiagramHost
                         host: Arc::clone(&host),
                         macro_positional: &["format"],
                         meme: false,
+                        barcode: false,
                     })
                 };
                 Arc::new(Structurizr {
@@ -193,6 +214,7 @@ pub fn register(registry: &mut adoctra_core::Registry, host: Arc<dyn DiagramHost
                 &["format"]
             },
             meme,
+            barcode: barcode::BARCODE_TYPES.contains(&name),
         });
         if !meme {
             registry.register_block(DiagramBlock(Arc::clone(&diagram), Default::default()));

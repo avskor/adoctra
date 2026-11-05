@@ -8,15 +8,18 @@
 
 Крейт `adoctra-ext-diagram` переносит asciidoctor-diagram 3.2.1 (версия
 закреплена в `compatibility/asciidoctor-diagram-version`): block, block
-macro и inline macro процессоры 42 типов (`DIAGRAM_TYPES`, порядок
-`require` Ruby): `a2s`, `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`,
+macro и inline macro процессоры 58 типов (`DIAGRAM_TYPES`, порядок
+`require` Ruby): `a2s`, 16 типов barcode (`bookland`, `codabar`, `code25`,
+`code25iata`, `code25interleaved`, `code39`, `code93`, `code128`,
+`code128a`, `code128b`, `code128c`, `ean8`, `ean13`, `gs1_128`, `qrcode`,
+`upca`), `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`,
 `rackdiag`, `packetdiag`, `bpmn`, `bytefield`, `d2`, `dbml`, `diagrams`,
 `ditaa`, `dpic`, `erd`, `goat`, `gnuplot`, `graphviz`, `graphviz_py`, `lilypond`,
 `meme` (только block macro и inline-макрос), `mermaid`, `msc`, `nomnoml`, `oxdraw`, `penrose`, `pikchr`, `pintora`,
 `plantuml`, `salt`, `shaape`, `smcat`, `structurizr` (только блок и
 block macro, как в Ruby), `svgbob`, `symbolator`, `syntrax`,
-`tikz`, `umlet`, `vega`, `vegalite`, `tape` (vhs), `wavedrom`. Ещё не
-перенесён barcode (см. план). Kroki и
+`tikz`, `umlet`, `vega`, `vegalite`, `tape` (vhs), `wavedrom` — все типы
+asciidoctor-diagram 3.2.1. Kroki и
 PlantUML-сервер подключаются, как в Ruby, атрибутами
 `diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`)
 для любого типа.
@@ -123,6 +126,17 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
    с заголовком получает подпись рисунка, поэтому счётчик рисунков
    увеличивается дважды (`NewBlock::discarded_captions` в core), а текст
    ошибки первого шага рисуется рендерером.
+* barcode — без внешних программ: порт barby 0.6.9 (символики и
+  outputter'ы SVG с заплаткой asciidoctor-diagram, PNG и текст),
+  rqrcode_core 1.2.0 (QR: режимы, блоки Рида — Соломона, маски, `nil`
+  в многочленах) и chunky_png 1.4.0 (разбор цветов, выбор кодирования
+  PNG по палитре, фильтр UP) с портом `deflate` zlib 1.3.1 (уровень 6;
+  сверен побайтно, в том числе на данных длиннее окна). Цель макроса —
+  данные штрихкода (с `external` — файл), ошибки как у Ruby (`Invalid
+  <type> data`, `data not valid`, `NoMethodError` и ошибки кодировок
+  code128). Опции `xdim`, `ydim`, `margin`, `height` (`to_i`),
+  `foreground`, `background`; в кэш пишутся опции после изменений Ruby
+  (`title` и цвета SVG, числа цветов PNG).
 * meme — цель макроса становится атрибутом `background` (после
   `sub_attributes` и нормализации пути), код пустой, позиционные атрибуты
   `top bottom target format`; ImageMagick `magick convert`/`identify` (или
@@ -171,7 +185,7 @@ safe-режиме
 `vg2svg`, wavedrom-cli, bytefield-svg, dbml-renderer; случаи `real-*`,
 нужные программы — на `PATH`): он нашёл, что REXML пишет декларацию XML
 как `version`, `encoding` в верхнем регистре и `standalone` (vg2svg
-выдаёт `utf-8`), исправлено. Результат 2026-11-05: 84 PASS, 5 XFAIL
+выдаёт `utf-8`), исправлено. Результат 2026-11-05: 89 PASS, 6 XFAIL
 (Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml,
 mermaid-cli 11.12 с локальным Chrome, перечисленные npm-программы,
 ditaamini 1.0.3 и JSyntrax 1.38 из gem'ов, ImageMagick 7.1.1 (с
@@ -212,6 +226,10 @@ Ruby, как и adoctra, не пропускает через `apply_subs`: он
 * `on-error=abort`: Ruby прерывает конвертацию; adoctra ведёт себя как `log`;
 * отсутствующий файл inline-макроса: как у block macro, Ruby прерывает
   конвертацию; adoctra выводит ошибку и моноширинный текст с ней;
+* управляющий символ в данных code128 попадает в `<title>` SVG: REXML
+  отвергает его, и сообщение Ruby содержит его бэктрейс (пути установки
+  Ruby) и позицию парсера; adoctra отвергает символ так же (`REXML::Text`)
+  и выводит первую строку сообщения;
 * синтаксическая ошибка PlantUML через JAR: Java-сервер Ruby выдаёт
   текстовую отрисовку ошибки PlantUML (`[From <input> (line N) ]`, код,
   `^^^^^`, метка), adoctra — отчёт командной строки `-failfast2`;
@@ -229,8 +247,7 @@ Ruby недетерминирован после записей атрибуто
 
 Ограничения (не реализовано или не проверено):
 
-* barcode (16 типов) не перенесён (этап «Остальные типы
-  asciidoctor-diagram» в плане); рендерер `d2` у structurizr требует
+* рендерер `d2` у structurizr требует
   плагина экспорта, которого нет в structurizr-cli (ошибка, как у Ruby
   без плагина);
 * вывод остальных настоящих программ (d2, svgbob, blockdiag, gnuplot,

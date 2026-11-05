@@ -1939,7 +1939,35 @@ caches, `Cli.run` without chdir, `calculate_height`, `prepare_label`,
 `+0+<h - bottom>` possibly negative, options JSON with Ruby's defaults).
 The harness now runs both sides in one directory in turn (absolute paths
 in attributes and cache files agree) and passes a case's `env`
-(`SOURCE_DATE_EPOCH` makes ImageMagick's PNG deterministic). Tests: `tests/diagrams.rs`
+(`SOURCE_DATE_EPOCH` makes ImageMagick's PNG deterministic).
+**barcode** (2026-11-05, user decision: port the libraries): `barcode/`
+registers the 16 `BARCODE_TYPES` (class `Barcode`); a macro's target is
+the code (`Origin::Barcode`, `external` makes it a file) as
+`BarcodeMacroProcessor#create_source`. `barby.rs` ports the symbologies
+(EAN-13/8, UPC-A, Bookland ISBN parsing, Codabar, Code 25 family, Code 39,
+Code 93 with barby's extended table), Ruby's line-anchored `^…$` checks
+(`some_line`) and `to_i` of characters, and the split between
+construction `ArgumentError`s (`Failure::Invalid` → `Invalid <type> data`)
+and later errors; `code128.rs` the shortest encoding (`extract_codec`
+emulating the `/x` split with captures and `(?!\d)` backtracking,
+`handle_code_a/b`), nested segments after code changes, checksums with
+`nil` errors, the binary-regexp encoding errors and GS1-128 placeholders;
+`qr.rs` rqrcode_core (modes, bit buffer, Reed-Solomon with `Option`
+polynomial tails, masks and demerit points, barby's level-L capacities;
+`qr_rs_blocks.rs` generated from Ruby). Outputters in `mod.rs`: ASCII
+(defaults), SVG (rects for odd `xdim`, patched path) with `title`; PNG in
+`png.rs`: `ChunkyPNG::Color.parse` (decimal, hex, `colors.rs` names
+generated from Ruby, `@ opacity`), the canvas with `OutOfBounds`,
+`to_datastream({})` (palette-driven mode: 1-bit grayscale for black and
+white, grayscale/alpha, indexed with PLTE/tRNS, truecolor), FILTER_UP,
+chunks with CRC-32; `deflate.rs` ports zlib 1.3.1 `deflate` (level 6,
+`deflate_slow`, `longest_match` reading past the data, `fill_window`
+sliding and `high_water`, trees.c with the Freq/Code and Dad/Len unions,
+stored/static/dynamic choice), verified against Ruby's `Zlib::Deflate` on
+vectors up to 300 KB. `Converter::stored_options` stores Ruby's mutated
+options hash (SVG `title` and `#` colors, PNG color integers). REXML's
+`Text.check` rejects characters XML does not allow (`image.rs`
+`check_text`, first line of Ruby's message). Tests: `tests/diagrams.rs`
 (`command_line_tools_run_like_rubys_converters`, `tool_paths_are_cached_…`,
 `ruby_failures_after_the_tool_ran_…`, `server_generated_images_scale_…`),
 unit tests in `converter/{mod,tools}.rs`, `scripts/test_diagram.py`.

@@ -220,7 +220,7 @@ fn unescape(value: &str) -> String {
 /// `&apos;`), empty elements self-closed, text, comments, CDATA and
 /// instructions as read, and whitespace outside the root element kept only
 /// before a DOCTYPE.
-mod rexml {
+pub(crate) mod rexml {
     #[derive(Debug, Clone, PartialEq)]
     pub enum Node {
         Decl(Vec<(String, String)>),
@@ -287,6 +287,50 @@ mod rexml {
         None
     }
 
+    /// `REXML::Text.check`: a character XML does not allow fails the
+    /// parse. Ruby's message (a `ParseException`) also carries the Ruby
+    /// backtrace and the parser's position; this is its first line.
+    fn check_text(text: &str) -> Result<(), String> {
+        let legal = |c: char| {
+            matches!(c, '\t' | '\n' | '\r' | '\u{20}'..='\u{d7ff}' | '\u{e000}'..='\u{fffd}')
+                || c >= '\u{10000}'
+        };
+        match text.chars().find(|c| !legal(*c)) {
+            Some(c) => Err(format!(
+                "#<RuntimeError: Illegal character {} in raw string {}>",
+                ruby_inspect(&c.to_string()),
+                ruby_inspect(text)
+            )),
+            None => Ok(()),
+        }
+    }
+
+    /// Ruby's `String#inspect` for a UTF-8 string.
+    pub(crate) fn ruby_inspect(text: &str) -> String {
+        let mut out = String::from("\"");
+        let mut chars = text.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                '"' => out.push_str("\\\""),
+                '\\' => out.push_str("\\\\"),
+                '\n' => out.push_str("\\n"),
+                '\t' => out.push_str("\\t"),
+                '\r' => out.push_str("\\r"),
+                '\u{7}' => out.push_str("\\a"),
+                '\u{8}' => out.push_str("\\b"),
+                '\u{b}' => out.push_str("\\v"),
+                '\u{c}' => out.push_str("\\f"),
+                '\u{1b}' => out.push_str("\\e"),
+                '#' if matches!(chars.peek(), Some('{' | '$' | '@')) => out.push_str("\\#"),
+                '\u{7f}' => out.push_str("\\x7F"),
+                c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04X}", c as u32)),
+                c => out.push(c),
+            }
+        }
+        out.push('"');
+        out
+    }
+
     pub fn parse(text: &str) -> Result<Vec<Node>, String> {
         let invalid = || "Invalid SVG markup".to_owned();
         let mut nodes = Vec::new();
@@ -337,6 +381,7 @@ mod rexml {
                 rest = &body[end + 1..];
             } else {
                 let end = rest.find('<').unwrap_or(rest.len());
+                check_text(&rest[..end])?;
                 nodes.push(Node::Text(rest[..end].to_owned()));
                 rest = &rest[end..];
             }
@@ -545,6 +590,18 @@ fn view_box(value: &str) -> Option<[Number; 4]> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rexml_rejects_characters_xml_does_not_allow() {
+        assert_eq!(
+            rexml::parse("<svg><title>HELLO\u{1}world</title></svg>").err().as_deref(),
+            Some("#<RuntimeError: Illegal character \"\\u0001\" in raw string \"HELLO\\u0001world\">")
+        );
+        assert_eq!(
+            rexml::ruby_inspect("a\"b\\#{x}\u{7f}\u{1f}é"),
+            "\"a\\\"b\\\\\\#{x}\\x7F\\u001Fé\""
+        );
+    }
+
     use super::*;
 
     #[test]

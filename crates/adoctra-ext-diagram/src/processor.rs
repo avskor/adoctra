@@ -27,14 +27,18 @@ pub(crate) struct Diagram {
     pub macro_positional: &'static [&'static str],
     /// meme: a macro's target is the `background` image, the code empty.
     pub meme: bool,
+    /// barcode: a macro's target is the code, unless `external`.
+    pub barcode: bool,
 }
 
 impl Diagram {
     /// A macro's source: its file (`FileSource`), or for meme the
     /// `background` with no code (`MemeProcessor#create_source`).
-    fn origin(&self, file: String) -> Origin {
+    fn origin(&self, file: String, target: String) -> Origin {
         if self.meme {
             Origin::Meme(file)
+        } else if self.barcode {
+            Origin::Barcode { file, code: target }
         } else {
             Origin::File(Some(file))
         }
@@ -252,7 +256,7 @@ impl BlockMacroProcessor for DiagramBlockMacro {
             &class,
             self.0.macro_positional.len(),
             request.attributes,
-            self.0.origin(file),
+            self.0.origin(file, request.target.clone()),
             context,
             Kind::Block,
         ))
@@ -285,6 +289,7 @@ impl InlineMacroProcessor for DiagramInlineMacro {
             &mut warnings,
         );
         let file = Paths::new(context).normalize(&target, None, &mut warnings);
+        let code = target.clone();
         for warning in warnings {
             context.warning_unlocated(warning);
         }
@@ -294,7 +299,7 @@ impl InlineMacroProcessor for DiagramInlineMacro {
             &class,
             self.0.macro_positional.len(),
             request.attributes,
-            self.0.origin(file),
+            self.0.origin(file, code),
             context,
             Kind::Inline,
         );
@@ -436,6 +441,15 @@ fn process(
         Origin::Meme(background) => {
             normalised.set("background", background);
             Origin::Lines(Vec::new())
+        }
+        // `BarcodeMacroProcessor#create_source`: the target is the code
+        // unless the `external` attribute names it a file.
+        Origin::Barcode { file, code } => {
+            if normalised.get("external").is_some() {
+                Origin::File(Some(file))
+            } else {
+                Origin::Lines(vec![code])
+            }
         }
         origin => origin,
     };
@@ -596,7 +610,7 @@ fn image_block(
             }
             None => {
                 let result = converter.convert(source, format, &options, host);
-                (options.clone(), result)
+                (converter.stored_options(&options, format, source), result)
             }
         };
         let processed =

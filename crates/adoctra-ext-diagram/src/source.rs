@@ -14,6 +14,8 @@ pub(crate) enum Origin {
     File(Option<String>),
     /// meme's macro target: the `background` attribute, no code.
     Meme(String),
+    /// A barcode macro's target: its code, or with `external` a file.
+    Barcode { file: String, code: String },
 }
 
 /// A processor's `config` cache of tool paths (`cmd-<attr>`).
@@ -146,7 +148,7 @@ impl<'c, 'a> Source<'c, 'a> {
         if self.code.is_none() {
             let code = match &self.origin {
                 Origin::Lines(lines) => lines.join("\n"),
-                Origin::File(None) | Origin::Meme(_) => String::new(),
+                Origin::File(None) | Origin::Meme(_) | Origin::Barcode { .. } => String::new(),
                 Origin::File(Some(path)) => {
                     let data = host
                         .read(path)

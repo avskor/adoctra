@@ -31,9 +31,11 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`).
   Depends on `adoctra-core` **only** — never on backends.
 - `adoctra-ext-diagram` — diagram extension (port of asciidoctor-diagram
-  3.2.1: PlantUML, Graphviz, Mermaid, Kroki) on the extension API; depends
-  on `core` (+ `flate2`); all I/O goes through a host-supplied
-  `DiagramHost`. Contract in `docs/diagrams.adoc`.
+  3.2.1: all 58 types, their tools or Kroki; barcodes via ports of barby,
+  rqrcode_core, chunky_png and zlib's deflate, notices in
+  `LICENSE-third-party`) on the extension API; depends on `core`
+  (+ `flate2`); all I/O goes through a host-supplied `DiagramHost`.
+  Contract in `docs/diagrams.adoc`.
 - `adoctra-highlight` — std-only port of Rouge (pinned in
   `compatibility/rouge-version`, MIT, `LICENSE-rouge`) for
   `source-highlighter=rouge`; depends on nothing in the workspace (a backend

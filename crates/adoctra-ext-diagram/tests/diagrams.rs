@@ -1118,3 +1118,45 @@ fn meme_draws_labels_over_the_background_with_imagemagick() {
         host.paths()
     );
 }
+
+#[test]
+fn barcodes_are_generated_without_tools_like_barby() {
+    let host = Fake::default();
+    host.put("/doc/code.txt", b"FROM FILE\n");
+    let result = parse(
+        &host,
+        "code128::Hello[png]\n\n\
+         [qrcode,q,svg,xdim=2]\n----\nHELLO\n----\n\n\
+         [ean13,format=txt]\n----\n123456789012\n----\n\n\
+         code39::lower[svg]\n\n\
+         code39::code.txt[svg,external]\n\n\
+         Inline upca:01234567890[svg] end.\n",
+    );
+    // No tool runs; the PNG is chunky_png's (1-bit grayscale, zlib).
+    assert!(host.commands().is_empty());
+    let path = host
+        .paths()
+        .into_iter()
+        .find(|p| p.starts_with("/doc/diag-code128-md5-") && p.ends_with(".png"))
+        .expect("png");
+    let png = host.file(&path).unwrap();
+    assert_eq!(&png[..8], b"\x89PNG\r\n\x1a\n");
+    assert_eq!(&png[24..26], [1, 0], "bit depth 1, grayscale");
+    let svg = String::from_utf8(host.file("/doc/q.svg").unwrap()).unwrap();
+    assert!(svg.contains("<title>HELLO</title>"), "{svg}");
+    assert!(svg.contains("stroke-width='2'"), "{svg}");
+    let out = html(&result);
+    assert!(out.contains("<pre class=\"literalblock\">#"), "{out}");
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: Invalid code39 data"]
+    );
+    // `external`: the target names the file with the code (and the image,
+    // like any file source).
+    let svg = String::from_utf8(host.file("/doc/code.svg").unwrap()).unwrap();
+    assert!(svg.contains("<title>FROM FILE</title>"), "{svg}");
+    assert!(
+        out.contains("<span class=\"image\"><img src=\"diag-upca-md5-"),
+        "{out}"
+    );
+}
