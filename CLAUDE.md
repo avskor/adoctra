@@ -28,8 +28,9 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra` — umbrella crate. Re-exports core; backends behind feature flags
   (`html` default, plus `docx`, `json`, `all-backends`).
 - `adoctra-cli` — the `adoctra` binary (native only).
-- `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`).
-  Depends on `adoctra-core` **only** — never on backends.
+- `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`,
+  `DiagramWorkspace` for diagrams through Kroki). Depends on `adoctra-core`
+  and `adoctra-ext-diagram` only — never on backends.
 - `adoctra-ext-diagram` — diagram extension (port of asciidoctor-diagram
   3.2.1: all 58 types, their tools or Kroki; barcodes via ports of barby,
   rqrcode_core, chunky_png and zlib's deflate, notices in
@@ -43,9 +44,10 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 
 Dependency direction is one-way: `cli -> adoctra -> {core, backends}`, each
 backend depends only on `core` (plus `adoctra-highlight`); extension crates
-(`adoctra-ext-*`) depend only on `core` and are wired by the CLI. Keep it
-that way. `core` must never depend on a
-backend, and `adoctra-wasm` must never pull in a backend.
+(`adoctra-ext-*`) depend only on `core` and are wired by the CLI and the
+WASM `DiagramWorkspace`. Keep it that way. `core` must never depend on a
+backend, and `adoctra-wasm` must never pull in a backend (extension crates
+are allowed).
 
 ## Three consumers, one parser
 

@@ -3,6 +3,8 @@
 //! Exposes only what an editor needs — never the converters:
 //!   * [`parse_json`]  — error-tolerant parse → JSON `{ document, diagnostics, tokens }`
 //!   * [`tokens_json`] — highlight tokens → JSON array
+//!   * [`DiagramWorkspace`] — the same parse with diagrams rendered by a
+//!     diagram server (Kroki), the requests fetched by the host
 //!
 //! The JSON producers below are pure Rust (no wasm-bindgen), so they compile
 //! and unit-test on the native target. The `#[wasm_bindgen]` wrappers are
@@ -18,7 +20,9 @@
 //! host maps source ids to buffers and converts UTF-8 byte offsets into its
 //! editor's coordinate system (for example UTF-16 positions).
 
+mod diagrams;
 mod resources;
+pub use diagrams::DiagramWorkspace;
 pub use resources::ResourceWorkspace;
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};

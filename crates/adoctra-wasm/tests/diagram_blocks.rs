@@ -2,7 +2,8 @@
 //! register Rust processors): a diagram block stays a listing with its style
 //! and source, so the frontend can render it (e.g. with mermaid.js), its
 //! block macro stays a paragraph and an inline macro stays text, exactly like
-//! Asciidoctor without asciidoctor-diagram.
+//! Asciidoctor without asciidoctor-diagram. Diagrams themselves come from
+//! `DiagramWorkspace` (tests/diagram_workspace.rs).
 
 #[test]
 fn editor_keeps_diagram_blocks_as_styled_listings() {
