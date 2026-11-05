@@ -103,7 +103,9 @@ class CaseTests(unittest.TestCase):
         self.assertEqual(len(names), len(set(names)))
         for case in manifest["cases"]:
             self.assertTrue(case["source"], case["name"])
-            self.assertTrue(set(case.get("requires", [])) <= {"dot", "plantuml", "mmdc", "server"})
+            self.assertTrue(set(case.get("requires", [])) <= {
+                "dot", "plantuml", "mmdc", "server", "nomnoml", "smcat", "vl2vg", "vg2svg",
+                "wavedrom-cli", "bytefield-svg", "dbml-renderer"})
             if "xfail" in case:
                 # An expected failure freezes adoctra's complete result.
                 self.assertTrue(case["xfail"]["reason"])

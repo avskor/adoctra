@@ -410,9 +410,24 @@ mod rexml {
             let top = depth == 0;
             match &nodes[i] {
                 Node::Decl(fields) => {
-                    out.push_str("<?xml");
-                    for (name, value) in fields {
-                        out.push_str(&format!(" {name}='{value}'"));
+                    // `XMLDecl#content`: the version, the encoding upcased
+                    // by `REXML::Encoding#encoding=` when the source names
+                    // one, the standalone value.
+                    let field = |name: &str| {
+                        fields
+                            .iter()
+                            .find(|(n, _)| n == name)
+                            .map(|(_, v)| v.as_str())
+                    };
+                    out.push_str(&format!(
+                        "<?xml version='{}'",
+                        field("version").unwrap_or("1.0")
+                    ));
+                    if let Some(encoding) = field("encoding") {
+                        out.push_str(&format!(" encoding='{}'", encoding.to_uppercase()));
+                    }
+                    if let Some(standalone) = field("standalone") {
+                        out.push_str(&format!(" standalone='{standalone}'"));
                     }
                     out.push_str("?>");
                 }
@@ -593,6 +608,15 @@ mod tests {
         );
         // Whitespace before the root is kept without a DOCTYPE; comments
         // stay unless optimising.
+        let (text, ..) = svg_text(
+            "<?xml encoding=\"utf-8\" version=\"1.0\" standalone=\"yes\"?><svg/>",
+            false,
+        );
+        // vg2svg writes `utf-8`; REXML upcases it and orders the fields.
+        assert!(
+            text.starts_with("<?xml version='1.0' encoding='UTF-8' standalone='yes'?>"),
+            "{text}"
+        );
         let (text, ..) = svg_text("<?xml version=\"1.0\"?>\n\n  <!-- c -->\n<svg/>\n", false);
         assert_eq!(
             text,

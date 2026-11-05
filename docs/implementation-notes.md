@@ -1900,7 +1900,11 @@ interpreter, `FAKE_TOOL_NAME`) first on `PATH` with per-side `TMPDIR` and
 `FAKE_DIAGRAM_LOG`; the log (tool, normalized args, stdin, input files,
 cwd) is compared. Ruby's checksum includes `:attribute_entries` object
 addresses for blocks right after attribute entries (non-deterministic);
-cases separate them with a paragraph. Tests: `tests/diagrams.rs`
+cases separate them with a paragraph. `real-*` cases run npm tools on
+`PATH` (nomnoml, smcat, vl2vg/vg2svg, wavedrom-cli, bytefield-svg,
+dbml-renderer); vg2svg's `encoding="utf-8"` showed that REXML's
+`XMLDecl#content` writes version, the upcased encoding and standalone, in
+that order (`image.rs` `Node::Decl`). Tests: `tests/diagrams.rs`
 (`command_line_tools_run_like_rubys_converters`, `tool_paths_are_cached_…`,
 `ruby_failures_after_the_tool_ran_…`, `server_generated_images_scale_…`),
 unit tests in `converter/{mod,tools}.rs`, `scripts/test_diagram.py`.
