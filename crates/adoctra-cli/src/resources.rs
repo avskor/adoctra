@@ -100,9 +100,7 @@ impl FileResources {
     #[cfg(test)]
     pub fn new(root: impl AsRef<Path>) -> ResourceResult<Self> {
         let input = root.as_ref();
-        let root = input
-            .canonicalize()
-            .map_err(|e| io_error(&input.to_string_lossy(), e))?;
+        let root = canonicalize(input).map_err(|e| io_error(&input.to_string_lossy(), e))?;
         if !root.is_dir() {
             return Err(ResourceError::new(
                 ResourceErrorKind::InvalidTarget,
@@ -123,7 +121,7 @@ impl FileResources {
     /// root is canonical, as reads compare canonical paths.
     pub fn base_dir(root: &Path) -> Self {
         Self {
-            root: root.canonicalize().unwrap_or_else(|_| root.to_path_buf()),
+            root: canonicalize(root).unwrap_or_else(|_| root.to_path_buf()),
             jail: true,
             input: None,
             uri_cache: UriCache::default(),
@@ -276,7 +274,7 @@ impl ResourceProvider for FileResources {
             .and_then(|name| Path::new(name).parent())
             .unwrap_or(&self.root);
         let path = self.root.join(parent).join(target);
-        let path = path.canonicalize().map_err(|e| io_error(target, e))?;
+        let path = canonicalize(&path).map_err(|e| io_error(target, e))?;
         if self.jail && !path.starts_with(&self.root) && self.input.as_ref() != Some(&path) {
             return Err(ResourceError::new(
                 ResourceErrorKind::AccessDenied,
@@ -284,13 +282,14 @@ impl ResourceProvider for FileResources {
                 "path escapes the resource root",
             ));
         }
-        let name = path.to_str().ok_or_else(|| {
+        let name = file_name(&path).ok_or_else(|| {
             ResourceError::new(
                 ResourceErrorKind::InvalidTarget,
                 target,
                 "resolved path is not UTF-8",
             )
         })?;
+        let name = name.as_str();
         if !path.metadata().map_err(|e| io_error(target, e))?.is_file() {
             return Err(ResourceError::new(
                 ResourceErrorKind::InvalidTarget,
@@ -305,6 +304,34 @@ impl ResourceProvider for FileResources {
             content_type: None,
         })
     }
+}
+
+/// `fs::canonicalize` without Windows' verbatim prefix: `\\?\C:\x` is
+/// `C:\x` and `\\?\UNC\host\share` is `\\host\share`, the paths Ruby's
+/// `File.expand_path` names (std adds the prefix back for long paths).
+pub(crate) fn canonicalize(path: &Path) -> std::io::Result<PathBuf> {
+    let path = path.canonicalize()?;
+    Ok(match path.to_str().and_then(strip_verbatim) {
+        Some(plain) => PathBuf::from(plain),
+        None => path,
+    })
+}
+
+/// The plain form of a verbatim disk or UNC path, if it is one.
+fn strip_verbatim(path: &str) -> Option<String> {
+    if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        return Some(format!(r"\\{rest}"));
+    }
+    let rest = path.strip_prefix(r"\\?\")?;
+    match rest.as_bytes() {
+        [drive, b':', ..] if drive.is_ascii_alphabetic() => Some(rest.to_owned()),
+        _ => None,
+    }
+}
+
+/// A resolved file's name, posixified like Ruby's paths (`C:/x/a.adoc`).
+fn file_name(path: &Path) -> Option<String> {
+    path.to_str().map(adoctra::posixify_path)
 }
 
 fn io_error(target: &str, error: std::io::Error) -> ResourceError {
@@ -381,6 +408,27 @@ mod tests {
             self.stop.store(true, Ordering::SeqCst);
             self.worker.take().unwrap().join().unwrap();
         }
+    }
+
+    /// Regression: Windows' `canonicalize` names files `\\?\C:\...`; the
+    /// verbatim prefix leaked into diagnostics and `docfile`.
+    #[test]
+    fn verbatim_prefixes_are_stripped_like_ruby_paths() {
+        assert_eq!(
+            strip_verbatim(r"\\?\C:\Work\a.adoc").as_deref(),
+            Some(r"C:\Work\a.adoc")
+        );
+        assert_eq!(
+            strip_verbatim(r"\\?\UNC\host\share\a.adoc").as_deref(),
+            Some(r"\\host\share\a.adoc")
+        );
+        // Other verbatim forms (volume GUIDs, devices) stay as they are.
+        assert_eq!(strip_verbatim(r"\\?\Volume{x}\a"), None);
+        assert_eq!(strip_verbatim(r"\\.\COM1"), None);
+        assert_eq!(strip_verbatim("/home/a.adoc"), None);
+        assert_eq!(strip_verbatim(r"C:\a.adoc"), None);
+        let here = std::env::current_dir().unwrap();
+        assert_eq!(canonicalize(&here).unwrap(), here.canonicalize().unwrap());
     }
 
     #[test]
@@ -935,7 +983,7 @@ mod tests {
         std::fs::write(root.join("chapters/a.png"), [0x89, 0xff, 0x00]).unwrap();
         std::fs::write(tree.0.join("outside.png"), "x").unwrap();
         let provider = FileResources::new(&root).unwrap();
-        let main = root.join("main.adoc").canonicalize().unwrap();
+        let main = canonicalize(&root.join("main.adoc")).unwrap();
         let request = |target| ResourceRequest {
             target,
             referrer: main.to_str(),
@@ -990,7 +1038,7 @@ mod tests {
         std::fs::write(tree.0.join("main.adoc"), "main").unwrap();
         std::fs::write(tree.0.join("other.adoc"), "other").unwrap();
         std::fs::write(tree.0.join("docs/inside.adoc"), "inside").unwrap();
-        let input = tree.0.join("main.adoc").canonicalize().unwrap();
+        let input = canonicalize(&tree.0.join("main.adoc")).unwrap();
         fn request(target: &str) -> ResourceRequest<'_> {
             ResourceRequest {
                 target,

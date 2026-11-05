@@ -1147,6 +1147,10 @@ normalize), core (`docdir` base, referrer dir, `OutputTarget::File` dir),
 HTML stylesheet messages and the diagram extension (`expand_path` keeps a
 drive root). Covered by Windows-style unit tests in system_path.rs; there is
 no Windows CI run of the CLI suite.
+The CLI's file provider canonicalizes through `resources::canonicalize`,
+which strips Windows' verbatim prefix (`\\?\C:\` → `C:\`, `\\?\UNC\` →
+`\\`), and names files posixified (`C:/Work/a.adoc`), so diagnostics,
+`docfile` and `docdir` match Ruby's `File.expand_path` (before: `//?/C:/…`).
 Includes support lines/tag/tags selection before preprocessing, including ordered
 wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
 separate provenance fragments for disjoint retained lines, even within one source

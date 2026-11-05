@@ -4,6 +4,14 @@ All notable changes to this project are documented in this file. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- Windows: file names in messages and the `docfile`/`docdir` attributes
+  no longer carry the `\\?\` prefix (`\\?\C:\Work\a.adoc`); they are
+  written like Asciidoctor's, `C:/Work/a.adoc`.
+
 ## [0.0.2] - 2026-11-05
 
 ### Fixed

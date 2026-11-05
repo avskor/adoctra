@@ -903,7 +903,7 @@ fn load_source(
         // Ruby reads the requested file by its path; `-B` (which need not
         // exist) is the root and jail of everything else, else the file's
         // directory.
-        let path = std::fs::canonicalize(&args.input).map_err(adoctra::Error::from)?;
+        let path = resources::canonicalize(Path::new(&args.input)).map_err(adoctra::Error::from)?;
         let root = match &args.base_dir {
             Some(dir) => expand_path(dir).map_err(adoctra::Error::from)?,
             None => path.parent().map(Path::to_path_buf).ok_or_else(|| {
@@ -915,6 +915,7 @@ fn load_source(
         };
         let name = path
             .to_str()
+            .map(adoctra::posixify_path)
             .ok_or_else(|| {
                 adoctra::Error::from(std::io::Error::new(
                     std::io::ErrorKind::InvalidInput,
