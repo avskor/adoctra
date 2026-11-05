@@ -39,7 +39,7 @@ pub(crate) fn some_line(data: &str, line: impl Fn(&str) -> bool) -> bool {
 }
 
 fn all_digits(text: &str, count: Option<usize>) -> bool {
-    text.bytes().all(|b| b.is_ascii_digit()) && count.map_or(true, |n| text.len() == n)
+    text.bytes().all(|b| b.is_ascii_digit()) && count.is_none_or(|n| text.len() == n)
 }
 
 /// `String#to_i` of one character.
@@ -265,7 +265,7 @@ fn interleaved(widths: &[bool]) -> String {
 fn code25(data: &str, kind: Code25Kind) -> Result<String, Failure> {
     let digits: Vec<usize> = data.chars().map(|c| digit(c) as usize).collect();
     let valid = some_line(data, |line| all_digits(line, None))
-        && (kind != Code25Kind::Interleaved || digits.len() % 2 == 0);
+        && (kind != Code25Kind::Interleaved || digits.len().is_multiple_of(2));
     if !valid {
         return Err(Failure::Message("data not valid".to_owned()));
     }

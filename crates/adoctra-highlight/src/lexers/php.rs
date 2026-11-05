@@ -23,7 +23,7 @@ pub(crate) fn init(lexer: &mut Lexer) -> Result<(), LexError> {
     let funcnamehighlighting = lexer
         .options
         .get("funcnamehighlighting")
-        .map_or(true, OptionValue::as_bool);
+        .is_none_or(OptionValue::as_bool);
     let disabledmodules = match lexer.options.remove("disabledmodules") {
         Some(OptionValue::Str(text)) => split(&text),
         Some(OptionValue::List(items)) => items.iter().flat_map(|item| split(item)).collect(),

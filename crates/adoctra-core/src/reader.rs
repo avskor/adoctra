@@ -840,7 +840,7 @@ impl<'a> Reader<'a> {
         line: Arc<str>,
         context: &mut ParseContext,
     ) -> Option<(usize, Arc<str>)> {
-        let active = self.stack.last().map_or(true, |c| c.active);
+        let active = self.stack.last().is_none_or(|c| c.active);
         let span = Span::new(off, off + line.len());
         let directive_line = line.ruby_rstrip();
         let (escaped, candidate) = directive_line

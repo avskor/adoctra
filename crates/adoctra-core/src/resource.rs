@@ -105,7 +105,7 @@ pub(crate) fn framed_snapshot_lines(
     frames: Option<&SourceLineFrames>,
 ) -> Vec<crate::include_indent::Line> {
     use crate::include_indent::Line;
-    let strip_bom = omissions.first().map_or(true, |line| line.line != 1)
+    let strip_bom = omissions.first().is_none_or(|line| line.line != 1)
         && !frames.is_some_and(|frames| frames.normalized);
     let lines = if let Some(frames) = frames {
         frames

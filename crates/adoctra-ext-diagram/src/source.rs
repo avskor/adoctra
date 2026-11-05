@@ -313,14 +313,18 @@ fn prepare_source_array(data: &[u8]) -> Vec<String> {
     let text = if let Some(rest) = data.strip_prefix(&[0xff, 0xfe]) {
         String::from_utf16_lossy(
             &rest
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| u16::from_le_bytes([c[0], c[1]]))
                 .collect::<Vec<_>>(),
         )
     } else if let Some(rest) = data.strip_prefix(&[0xfe, 0xff]) {
         String::from_utf16_lossy(
             &rest
-                .chunks_exact(2)
+                .as_chunks::<2>()
+                .0
+                .iter()
                 .map(|c| u16::from_be_bytes([c[0], c[1]]))
                 .collect::<Vec<_>>(),
         )

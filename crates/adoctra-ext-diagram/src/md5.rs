@@ -40,7 +40,7 @@ impl Md5 {
         self.buffer.extend_from_slice(data);
         let full = self.buffer.len() / 64 * 64;
         let blocks: Vec<u8> = self.buffer.drain(..full).collect();
-        for block in blocks.chunks_exact(64) {
+        for block in blocks.as_chunks::<64>().0 {
             self.block(block);
         }
     }

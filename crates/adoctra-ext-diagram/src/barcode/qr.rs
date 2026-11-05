@@ -138,7 +138,7 @@ impl Polynomial {
     fn new(num: &[Option<i32>], shift: usize) -> Self {
         let offset = num.iter().take_while(|n| **n == Some(0)).count();
         let mut out: Vec<Option<i32>> = num[offset..].to_vec();
-        out.extend(std::iter::repeat(None).take(shift));
+        out.extend(std::iter::repeat_n(None, shift));
         Polynomial(out)
     }
     fn len(&self) -> usize {
@@ -251,14 +251,14 @@ fn bch_version(data: u32) -> u32 {
 
 fn mask(pattern: usize, i: usize, j: usize) -> bool {
     match pattern {
-        0 => (i + j) % 2 == 0,
-        1 => i % 2 == 0,
-        2 => j % 3 == 0,
-        3 => (i + j) % 3 == 0,
-        4 => (i / 2 + j / 3) % 2 == 0,
+        0 => (i + j).is_multiple_of(2),
+        1 => i.is_multiple_of(2),
+        2 => j.is_multiple_of(3),
+        3 => (i + j).is_multiple_of(3),
+        4 => (i / 2 + j / 3).is_multiple_of(2),
         5 => (i * j) % 2 + (i * j) % 3 == 0,
-        6 => ((i * j) % 2 + (i * j) % 3) % 2 == 0,
-        _ => ((i * j) % 3 + (i + j) % 2) % 2 == 0,
+        6 => ((i * j) % 2 + (i * j) % 3).is_multiple_of(2),
+        _ => ((i * j) % 3 + (i + j) % 2).is_multiple_of(2),
     }
 }
 
@@ -468,7 +468,7 @@ fn create_data(version: usize, data: &str, mode: Mode) -> Result<Vec<Option<i32>
             buffer.length
         ));
     }
-    while buffer.length % 8 != 0 {
+    while !buffer.length.is_multiple_of(8) {
         buffer.put_bit(false);
     }
     while buffer.length < max_bits {

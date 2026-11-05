@@ -140,7 +140,7 @@ fn apply_stage(
                 return None;
             }
             if stage.constrained {
-                if src[..at].chars().next_back().map_or(true, space) {
+                if src[..at].chars().next_back().is_none_or(space) {
                     return None;
                 }
                 if src[at + stage.close.len()..]

@@ -436,7 +436,7 @@ impl Ids<'_> {
             let anchor = self.anchors.peek().map(|(_, entry)| entry.span.start);
             let definition = self.definitions.peek().map(|d| d.span.start);
             match (anchor, definition) {
-                (Some(a), d) if a < position && d.map_or(true, |d| a <= d) => self.anchor(),
+                (Some(a), d) if a < position && d.is_none_or(|d| a <= d) => self.anchor(),
                 (_, Some(d)) if d < position => self.define(),
                 _ => break,
             }
@@ -599,7 +599,7 @@ impl Ids<'_> {
                 span,
             ));
         }
-        if xref.refid.as_deref().map_or(true, str::is_empty) {
+        if xref.refid.as_deref().is_none_or(str::is_empty) {
             return self.reading_top_label(span, attributes);
         }
         let id = decoded_refid(xref, lexical)?;

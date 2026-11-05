@@ -30,7 +30,7 @@ pub(crate) fn init_moonscript(lexer: &mut Lexer) -> Result<(), LexError> {
     let highlighting = lexer
         .options
         .get("function_highlighting")
-        .map_or(true, OptionValue::as_bool);
+        .is_none_or(OptionValue::as_bool);
     let modules = match lexer.options.remove("disabled_modules") {
         Some(OptionValue::Str(text)) => split(&text),
         Some(OptionValue::List(items)) => items.iter().flat_map(|item| split(item)).collect(),

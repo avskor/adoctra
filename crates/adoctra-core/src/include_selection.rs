@@ -373,7 +373,7 @@ impl Selection {
         // stay raw (or omitted); only kept body lines were transcoded.
         let mut views = raw_views.to_vec();
         let strip_bom = resource.bytes.starts_with(&[0xef, 0xbb, 0xbf])
-            && raw_omissions.first().map_or(true, |line| line.line != 1);
+            && raw_omissions.first().is_none_or(|line| line.line != 1);
         for (index, line) in views.iter_mut().enumerate() {
             let bom = usize::from(index == 0 && strip_bom) * 3;
             line.original = Some(offsets[index] + bom);
@@ -749,7 +749,7 @@ fn binary_tag_directive(raw: &[u8]) -> Option<(bool, &[u8], usize, usize)> {
                 && &line[close..close + 2] == b"[]"
                 && line
                     .get(close + 2)
-                    .map_or(true, |byte| matches!(byte, b' ' | b'\r'))
+                    .is_none_or(|byte| matches!(byte, b' ' | b'\r'))
             {
                 return Some((end, &line[name_start..close], start, close + 2));
             }
@@ -828,7 +828,7 @@ fn tag_directive(line: &str) -> Option<(bool, &str)> {
             if name
                 .as_bytes()
                 .get(close + 2)
-                .map_or(true, |c| matches!(c, b' ' | b'\r'))
+                .is_none_or(|c| matches!(c, b' ' | b'\r'))
             {
                 return Some((end, &name[..close]));
             }

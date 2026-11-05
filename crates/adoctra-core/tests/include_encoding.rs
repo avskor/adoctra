@@ -1868,7 +1868,7 @@ fn physical_tag_warnings_precede_missing_tag_reports_across_repeated_includes() 
         .unwrap();
     let result = parse_resource(&mut sources, &options, &resources).unwrap();
     assert_eq!(result.diagnostics.len(), 4);
-    for (pair, line) in result.diagnostics.chunks_exact(2).zip([1, 3]) {
+    for (pair, line) in result.diagnostics.as_chunks::<2>().0.iter().zip([1, 3]) {
         assert_eq!(pair[0].message, "unexpected end tag 'body'");
         assert_eq!(sources.slice(pair[0].span), Some("// end::body[]"));
         assert_eq!(

@@ -729,7 +729,7 @@ fn relative_dir(path: &str, base: &str) -> String {
     let path: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
     let base: Vec<&str> = base.split('/').filter(|s| !s.is_empty()).collect();
     let common = path.iter().zip(&base).take_while(|(a, b)| a == b).count();
-    let mut parts: Vec<&str> = std::iter::repeat("..").take(base.len() - common).collect();
+    let mut parts: Vec<&str> = std::iter::repeat_n("..", base.len() - common).collect();
     parts.extend(&path[common..]);
     if parts.is_empty() {
         ".".to_owned()

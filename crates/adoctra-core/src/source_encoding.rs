@@ -66,7 +66,7 @@ fn decode_utf8_mac(input: &str) -> String {
         let scalar = if (0x1100..=0x1112).contains(&first) && (0x1161..=0x1175).contains(&second) {
             0xac00 + ((first - 0x1100) * 21 + second - 0x1161) * 28
         } else if (0xac00..=0xd7a3).contains(&first)
-            && (first - 0xac00) % 28 == 0
+            && (first - 0xac00).is_multiple_of(28)
             && (0x11a8..=0x11c2).contains(&second)
         {
             first + second - 0x11a7
@@ -651,7 +651,7 @@ impl BinaryResource {
                 text
             }
             Encoding::Utf16(endian) => {
-                if bytes.len() % 2 != 0 {
+                if !bytes.len().is_multiple_of(2) {
                     return Err(invalid());
                 }
                 let little = endian
@@ -669,7 +669,7 @@ impl BinaryResource {
                     None => bytes.get(2..).unwrap_or_default(),
                     Some(_) => bytes,
                 };
-                let units = bytes.chunks_exact(2).map(|b| {
+                let units = bytes.as_chunks::<2>().0.iter().map(|b| {
                     if little {
                         u16::from_le_bytes([b[0], b[1]])
                     } else {
@@ -681,7 +681,7 @@ impl BinaryResource {
                     .map_err(|_| invalid())?
             }
             Encoding::Utf32(endian) => {
-                if bytes.len() % 4 != 0 {
+                if !bytes.len().is_multiple_of(4) {
                     return Err(invalid());
                 }
                 let little = endian
@@ -698,7 +698,7 @@ impl BinaryResource {
                     Some(_) => bytes,
                 };
                 let mut text = String::with_capacity(bytes.len());
-                for b in bytes.chunks_exact(4) {
+                for b in bytes.as_chunks::<4>().0 {
                     let word = [b[0], b[1], b[2], b[3]];
                     let value = if little {
                         u32::from_le_bytes(word)

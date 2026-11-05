@@ -725,7 +725,7 @@ impl ParseContext<'_> {
                     attributes.remove("notitle");
                 }
                 if soft.contains("showtitle")
-                    && attributes.get("showtitle").map_or(true, str::is_empty)
+                    && attributes.get("showtitle").is_none_or(str::is_empty)
                 {
                     soft.insert("notitle".to_owned());
                 } else {
@@ -738,8 +738,7 @@ impl ParseContext<'_> {
                 } else {
                     attributes.remove("showtitle");
                 }
-                if soft.contains("notitle") && attributes.get("notitle").map_or(true, str::is_empty)
-                {
+                if soft.contains("notitle") && attributes.get("notitle").is_none_or(str::is_empty) {
                     soft.insert("showtitle".to_owned());
                 }
             } else {
@@ -1062,10 +1061,10 @@ impl ParseContext<'_> {
         crate::resolve::resolve_attribute_definitions(&mut document.attributes, &fixed);
         // The converter resolves its start assets (a stylesheet) from Ruby's
         // base directory.
-        let start = start.map(|start| {
+        let mut start = start;
+        if let Some(start) = start.as_deref_mut() {
             start.base_dir(document.base_dir.as_deref());
-            start
-        });
+        }
         // Ruby's Asciidoctor.convert resolves the output file after loading
         // (with the attributes reading left) and Document#convert assigns
         // `outfile`/`outdir` before converting, below server mode.

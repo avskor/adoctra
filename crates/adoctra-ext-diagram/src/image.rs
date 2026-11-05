@@ -569,9 +569,7 @@ fn valid_number(text: &str) -> bool {
     let frac = parts.next();
     !int.is_empty()
         && int.chars().all(|c| c.is_ascii_digit())
-        && frac.map_or(true, |f| {
-            !f.is_empty() && f.chars().all(|c| c.is_ascii_digit())
-        })
+        && frac.is_none_or(|f| !f.is_empty() && f.chars().all(|c| c.is_ascii_digit()))
 }
 
 /// `VIEWBOX_REGEX` (whitespace-separated; the minimums may be negative).

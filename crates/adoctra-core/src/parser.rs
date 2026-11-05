@@ -1133,9 +1133,9 @@ fn nest_sections(
     // block is an abstract.
     let preamble_open = has_header
         || (book
-            && blocks.first().map_or(true, |block| {
-                block.attrs.style.as_deref() != Some("abstract")
-            }));
+            && blocks
+                .first()
+                .is_none_or(|block| block.attrs.style.as_deref() != Some("abstract")));
     let mut top = Vec::new();
     let mut preamble = Vec::new();
     // Open sections, innermost last, with their children's ordinals and

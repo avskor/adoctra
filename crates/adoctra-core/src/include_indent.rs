@@ -237,7 +237,7 @@ pub(crate) fn adjust(
                 }
                 let width = tabsize - column % tabsize;
                 let start = expanded.len();
-                expanded.extend(std::iter::repeat(' ').take(width));
+                expanded.extend(std::iter::repeat_n(' ', width));
                 fragments.push(Fragment {
                     start,
                     end: expanded.len(),

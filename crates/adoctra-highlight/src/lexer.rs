@@ -153,7 +153,7 @@ impl OptionValue {
             OptionValue::Str(value) => !matches!(value.as_str(), "0" | "false" | "off"),
             OptionValue::List(values) => values
                 .last()
-                .map_or(true, |last| !matches!(last.as_str(), "0" | "false" | "off")),
+                .is_none_or(|last| !matches!(last.as_str(), "0" | "false" | "off")),
         }
     }
 

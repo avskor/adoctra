@@ -432,7 +432,7 @@ fn control_before_lowercase(data: &[u16]) -> bool {
         Some(ctrl) => data
             .iter()
             .position(|s| is_lower(*s))
-            .map_or(true, |lower| ctrl < lower),
+            .is_none_or(|lower| ctrl < lower),
         None => false,
     }
 }

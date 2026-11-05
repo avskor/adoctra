@@ -779,7 +779,7 @@ fn fold_line_breaks(text: &str) -> String {
                     run += 1;
                 }
                 if run >= 2 {
-                    out.extend(std::iter::repeat('\n').take(run));
+                    out.extend(std::iter::repeat_n('\n', run));
                 } else {
                     out.push(' ');
                 }
