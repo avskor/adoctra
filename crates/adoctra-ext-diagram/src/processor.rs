@@ -29,6 +29,148 @@ pub(crate) struct DiagramBlock(pub Arc<Diagram>, pub Commands);
 pub(crate) struct DiagramBlockMacro(pub Arc<Diagram>, pub Commands);
 pub(crate) struct DiagramInlineMacro(pub Arc<Diagram>, pub Commands);
 
+/// Ruby's `StructurizrBlockProcessor`/`StructurizrBlockMacroProcessor`:
+/// a `StructurizrConvert…Processor` turns the workspace into the text of a
+/// view (format `txt`), which the renderer's block processor (named
+/// `structurizr`) draws with the block's attributes.
+pub(crate) struct Structurizr {
+    pub convert: Arc<Diagram>,
+    /// `d2`, `graphviz`, `mermaid`, `plantuml` (also for `plantuml-c4`).
+    pub renderers: [Arc<Diagram>; 4],
+}
+
+/// Each processor instance owns its convert and renderer instances (and
+/// their tool caches), as Ruby's `initialize` creates them.
+pub(crate) struct StructurizrBlock(pub Arc<Structurizr>, pub Commands, pub [Commands; 4]);
+pub(crate) struct StructurizrBlockMacro(pub Arc<Structurizr>, pub Commands, pub [Commands; 4]);
+
+impl Structurizr {
+    /// Render the converted text: `Renderers#get_renderer` from the
+    /// block's `renderer` attribute (`structurizr-renderer` inherited,
+    /// `plantuml-c4` by default).
+    fn render(
+        &self,
+        first: NewBlock,
+        attributes: ExtensionAttributes,
+        caches: &[Commands; 4],
+        context: &mut ProcessContext<'_>,
+    ) -> NewBlock {
+        let renderer = attributes
+            .get("renderer")
+            .map(str::to_owned)
+            .or_else(|| context.attribute("structurizr-renderer").map(str::to_owned))
+            .unwrap_or_else(|| crate::converter::java_tools::DEFAULT_RENDERER.to_owned());
+        let index = match renderer.as_str() {
+            "d2" => 0,
+            "graphviz" => 1,
+            "mermaid" => 2,
+            "plantuml" | "plantuml-c4" => 3,
+            other => {
+                // Ruby raises outside the processor's error handling, which
+                // ends the conversion; adoctra reports it like `on-error=log`.
+                let text = format!("Failed to generate image: Unsupported renderer: '{other}'");
+                context.error(text.clone());
+                return NewBlock::listing(text, attributes);
+            }
+        };
+        // The renderer reads the block's lines (`prepare_source_string`).
+        // A converted (literal) block was titled and given a figure caption
+        // first, which advanced the figure counter.
+        let (text, converted) = match first.kind {
+            NewBlockKind::Literal { source } => (source, true),
+            NewBlockKind::Listing { source } => (source, false),
+            _ => (String::new(), false),
+        };
+        let mut lines: Vec<String> = text
+            .split('\n')
+            .map(|line| line.trim_end().to_owned())
+            .collect();
+        while lines.last().is_some_and(String::is_empty) {
+            lines.pop();
+        }
+        let diagram = &self.renderers[index];
+        let class = format!("Asciidoctor::Diagram::{}BlockProcessor", diagram.class);
+        let mut block = process(
+            diagram,
+            &caches[index],
+            &class,
+            2,
+            attributes,
+            Origin::Lines(lines),
+            context,
+            Kind::Block,
+        );
+        if converted {
+            block.discarded_captions.push("figure".to_owned());
+        }
+        block
+    }
+}
+
+impl BlockProcessor for StructurizrBlock {
+    fn name(&self) -> &str {
+        "structurizr"
+    }
+    fn contexts(&self) -> &[BlockContext] {
+        &[
+            BlockContext::Listing,
+            BlockContext::Literal,
+            BlockContext::Open,
+        ]
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["target", "format"]
+    }
+    fn process(&self, request: BlockRequest, context: &mut ProcessContext<'_>) -> Option<NewBlock> {
+        let mut attributes = request.attributes.clone();
+        attributes.set("format", "txt");
+        let first = process(
+            &self.0.convert,
+            &self.1,
+            "Asciidoctor::Diagram::StructurizrConvertBlockProcessor",
+            2,
+            attributes,
+            Origin::Lines(request.lines),
+            context,
+            Kind::Block,
+        );
+        Some(self.0.render(first, request.attributes, &self.2, context))
+    }
+}
+
+impl BlockMacroProcessor for StructurizrBlockMacro {
+    fn name(&self) -> &str {
+        "structurizr"
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["format"]
+    }
+    fn process(
+        &self,
+        request: BlockMacroRequest,
+        context: &mut ProcessContext<'_>,
+    ) -> Option<NewBlock> {
+        let mut warnings = Vec::new();
+        let file = Paths::new(context).normalize(&request.target, None, &mut warnings);
+        for warning in warnings {
+            context.warning_unlocated(warning);
+        }
+        let mut attributes = request.attributes.clone();
+        attributes.set("format", "txt");
+        let first = process(
+            &self.0.convert,
+            &self.1,
+            "Asciidoctor::Diagram::StructurizrConvertBlockMacroProcessor",
+            1,
+            attributes,
+            Origin::File(Some(file)),
+            context,
+            Kind::Block,
+        );
+        Some(self.0.render(first, request.attributes, &self.2, context))
+    }
+}
+
 /// Which processor runs `process`: blocks re-apply the listing's `subs` to an
 /// error, inline macros support no text formats.
 #[derive(Clone, Copy, PartialEq, Eq)]

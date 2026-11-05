@@ -8,14 +8,15 @@
 
 Крейт `adoctra-ext-diagram` переносит asciidoctor-diagram 3.2.1 (версия
 закреплена в `compatibility/asciidoctor-diagram-version`): block, block
-macro и inline macro процессоры 39 типов (`DIAGRAM_TYPES`, порядок
+macro и inline macro процессоры 41 типа (`DIAGRAM_TYPES`, порядок
 `require` Ruby): `a2s`, `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`,
 `rackdiag`, `packetdiag`, `bpmn`, `bytefield`, `d2`, `dbml`, `diagrams`,
-`dpic`, `erd`, `goat`, `gnuplot`, `graphviz`, `graphviz_py`, `lilypond`,
+`ditaa`, `dpic`, `erd`, `goat`, `gnuplot`, `graphviz`, `graphviz_py`, `lilypond`,
 `mermaid`, `msc`, `nomnoml`, `oxdraw`, `penrose`, `pikchr`, `pintora`,
-`plantuml`, `salt`, `shaape`, `smcat`, `svgbob`, `symbolator`, `syntrax`,
+`plantuml`, `salt`, `shaape`, `smcat`, `structurizr` (только блок и
+block macro, как в Ruby), `svgbob`, `symbolator`, `syntrax`,
 `tikz`, `umlet`, `vega`, `vegalite`, `tape` (vhs), `wavedrom`. Ещё не
-перенесены ditaa, structurizr, meme и barcode (см. план). Kroki и
+перенесены meme и barcode (см. план). Kroki и
 PlantUML-сервер подключаются, как в Ruby, атрибутами
 `diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`)
 для любого типа.
@@ -91,8 +92,42 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
   WaveDromEditor или PhantomJS, umlet — `java -jar umlet.jar`, vhs
   (`tape`) работает только в режиме unsafe. Форматы без `IMAGE_PARAMS`
   Ruby (`jpeg` у bpmn, `literal` у gnuplot) после запуска инструмента
-  дают ошибку `undefined method `[]' for nil`, как в Ruby. syntrax
-  запускается командой `syntrax` (JSyntrax через JAR — этап Java-сервера).
+  дают ошибку `undefined method `[]' for nil`, как в Ruby.
+* ditaa, JSyntrax и Structurizr Ruby запускает внутри своего Java-сервера
+  (`StdInOutCommandServer` с адаптерами из gem'а); adoctra — командной
+  строкой самих инструментов, которая вызывает те же функции библиотек
+  (решение пользователя от 2026-11-05: совместимость по итоговому
+  результату). Classpath — как у единственной JVM Ruby: JAR из
+  `DIAGRAM_DITAA_CLASSPATH`, `DIAGRAM_PLANTUML_CLASSPATH`,
+  `DIAGRAM_STRUCTURIZR_CLASSPATH` (или `lib` из
+  `DIAGRAM_STRUCTURIZRCLI_HOME`) и `DIAGRAM_JSYNTRAX_CLASSPATH` (или
+  `DIAGRAM_JSYNTRAX_HOME`) вместе, в порядке `require` (PNG JSyntrax
+  рисует Batik из JAR PlantUML); несуществующий элемент — ошибка Ruby
+  `Classpath item … does not exist`. Gem'ы Ruby (ditaamini, jsyntrax)
+  adoctra не читает: нужны переменные окружения.
+** ditaa — `CommandLineConverter --encoding UTF-8 [--svg] <X-Options> - -`
+   (аргументы адаптера; `X-Options` разбиваются по пробелу, как в Java),
+   `txt` — исходный код; без JAR — сообщение Ruby `Could not load Ditaa…`.
+** syntrax — при JAR `org.atpfivt.jsyntrax.Main -i … -o …` с теми же
+   опциями, иначе команда `syntrax`.
+** structurizr — `structurizr-cli export -f
+   plantuml/c4plantuml|plantuml/structurizr|mermaid|dot` (экспортёры
+   адаптера); представление — по `view`, иначе с наименьшим ключом
+   (`findView`); DSL — если код начинается с `workspace`, иначе JSON.
+   Файл workspace пишется скрытым временным файлом в base directory и
+   сразу удаляется: так относительные `!include`/`!docs` разрешаются, как
+   у адаптера (`X-Structurizr-IncludeDir`). Текст представления рисует
+   процессор рендерера (`renderer`: `plantuml-c4` по умолчанию,
+   `plantuml`, `graphviz`, `mermaid`, `d2`) с именем `structurizr`
+   (`diag-structurizr-md5-…`); как у Ruby, литеральный блок первого шага
+   с заголовком получает подпись рисунка, поэтому счётчик рисунков
+   увеличивается дважды (`NewBlock::discarded_captions` в core), а текст
+   ошибки первого шага рисуется рендерером.
+** Ошибки — как текст сервера Ruby (`Java.create_error`): `Ditaa image
+   generation failed: <сообщение>`, `Structurizr code generation failed:
+   <класс>: <сообщение>` (без имени файла), представление не найдено —
+   `NullPointerException` адаптера, `d2` — `D2 exporter not available`,
+   ошибка сценария JSyntrax — NPE адаптера.
 * Найденный путь инструмента кэшируется в процессоре, как `config` Ruby
   (`cmd-<первый атрибут>`, и `nil` тоже): отдельно у блока, block macro и
   inline-макроса каждого типа, на время одного документа (реестр CLI
@@ -126,10 +161,13 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
 `vg2svg`, wavedrom-cli, bytefield-svg, dbml-renderer; случаи `real-*`,
 нужные программы — на `PATH`): он нашёл, что REXML пишет декларацию XML
 как `version`, `encoding` в верхнем регистре и `standalone` (vg2svg
-выдаёт `utf-8`), исправлено. Результат 2026-11-05: 74 PASS, 3 XFAIL
+выдаёт `utf-8`), исправлено. Результат 2026-11-05: 82 PASS, 5 XFAIL
 (Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml,
 mermaid-cli 11.12 с локальным Chrome, перечисленные npm-программы,
-остальное — подделки).
+ditaamini 1.0.3 и JSyntrax 1.38 из gem'ов, structurizr-cli 2025.11.09
+(`DIAGRAM_STRUCTURIZRCLI_HOME` или `ADOCTRA_STRUCTURIZRCLI_HOME` стенда),
+остальное — подделки). Путь syntrax через команду `syntrax` сверен
+2026-11-05 до установки gem'а jsyntrax (с ним Ruby всегда выбирает Java).
 
 Совпадают побайтно: имена `diag-<type>-md5-…` (MD5 по коду и атрибутам в
 порядке Ruby, включая позиционные значения после именованных как
@@ -161,7 +199,13 @@ Ruby, как и adoctra, не пропускает через `apply_subs`: он
   прерывает всю конвертацию; разбор adoctra не падает — ошибка и листинг;
 * `on-error=abort`: Ruby прерывает конвертацию; adoctra ведёт себя как `log`;
 * отсутствующий файл inline-макроса: как у block macro, Ruby прерывает
-  конвертацию; adoctra выводит ошибку и моноширинный текст с ней.
+  конвертацию; adoctra выводит ошибку и моноширинный текст с ней;
+* синтаксическая ошибка PlantUML через JAR: Java-сервер Ruby выдаёт
+  текстовую отрисовку ошибки PlantUML (`[From <input> (line N) ]`, код,
+  `^^^^^`, метка), adoctra — отчёт командной строки `-failfast2`;
+* ошибка сценария JSyntrax: текст ошибки тот же, но JVM Ruby сама
+  печатает сообщения Groovy в терминал, adoctra вывод инструмента не
+  передаёт.
 
 Ruby недетерминирован после записей атрибутов: записи атрибутов прямо
 перед блоком попадают в его атрибуты (`:attribute_entries`), и в MD5
@@ -173,9 +217,10 @@ Ruby недетерминирован после записей атрибуто
 
 Ограничения (не реализовано или не проверено):
 
-* ditaa, structurizr, meme и barcode (16 типов) не перенесены (этапы
-  «Остальные типы asciidoctor-diagram» в плане); JSyntrax через JAR
-  (`DIAGRAM_JSYNTRAX_CLASSPATH`/`_HOME`) не поддержан;
+* meme и barcode (16 типов) не перенесены (этапы «Остальные типы
+  asciidoctor-diagram» в плане); рендерер `d2` у structurizr требует
+  плагина экспорта, которого нет в structurizr-cli (ошибка, как у Ruby
+  без плагина);
 * вывод остальных настоящих программ (d2, svgbob, blockdiag, gnuplot,
   LilyPond, TikZ и других) с Ruby не сравнивался — их нет в окружении:
   проверены аргументы, stdin, файлы и обработка детерминированного

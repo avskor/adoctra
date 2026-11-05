@@ -122,6 +122,34 @@ def plantuml_classpath():
     return ":".join(jars)
 
 
+def gem_jars(gem):
+    result = subprocess.run(["gem", "contents", gem], capture_output=True, text=True)
+    return ":".join(sorted(line for line in result.stdout.splitlines() if line.endswith(".jar")))
+
+
+def java_tools():
+    """The JARs of the Java-based types, given to both sides (adoctra does
+    not read Ruby's gems): ditaa and JSyntrax from their gems, Structurizr
+    from a structurizr-cli unpacked in $ADOCTRA_STRUCTURIZRCLI_HOME or
+    ~/.local/share/adoctra-diagram-tools/structurizr-cli."""
+    env = {}
+    ditaa = gem_jars("asciidoctor-diagram-ditaamini")
+    if ditaa:
+        env["DIAGRAM_DITAA_CLASSPATH"] = ditaa
+    jsyntrax = gem_jars("asciidoctor-diagram-jsyntrax")
+    if jsyntrax:
+        env["DIAGRAM_JSYNTRAX_CLASSPATH"] = jsyntrax
+    home = Path(os.environ.get("ADOCTRA_STRUCTURIZRCLI_HOME",
+                               Path.home() / ".local/share/adoctra-diagram-tools/structurizr-cli"))
+    if (home / "lib").is_dir():
+        env["DIAGRAM_STRUCTURIZRCLI_HOME"] = str(home)
+    return env
+
+
+JAVA_TOOL_ENV = {"ditaa": "DIAGRAM_DITAA_CLASSPATH", "jsyntrax": "DIAGRAM_JSYNTRAX_CLASSPATH",
+                 "structurizr": "DIAGRAM_STRUCTURIZRCLI_HOME"}
+
+
 def available(tools, args):
     missing = []
     for tool in tools:
@@ -131,6 +159,8 @@ def available(tools, args):
             ok = bool(args.classpath) and shutil.which("java") is not None
         elif tool == "server":
             ok = True
+        elif tool in JAVA_TOOL_ENV:
+            ok = JAVA_TOOL_ENV[tool] in args.java_tools and shutil.which("java") is not None
         else:
             ok = shutil.which(tool) is not None
         if not ok:
@@ -208,7 +238,8 @@ def check(case, args, server):
     missing = available(case.get("requires", []), args)
     if missing:
         return "SKIP", {"missing": missing}
-    env = {**os.environ, "DIAGRAM_PLANTUML_CLASSPATH": args.classpath, "MMDC": args.mmdc or ""}
+    env = {**os.environ, **args.java_tools, "DIAGRAM_PLANTUML_CLASSPATH": args.classpath,
+           "MMDC": args.mmdc or ""}
     with tempfile.TemporaryDirectory() as scratch:
         scratch = Path(scratch)
         ruby = run_side(["asciidoctor", "-r", "asciidoctor-diagram"], case, scratch / "r", env, server)
@@ -238,6 +269,7 @@ def main(argv=None):
     parser.add_argument("--report", action="store_true", help=f"write {REPORT.relative_to(ROOT)}")
     args = parser.parse_args(argv)
     args.classpath = plantuml_classpath()
+    args.java_tools = java_tools()
     manifest = json.loads(CASES.read_text(encoding="utf-8"))
     if manifest["profile"] != PROFILE or manifest["asciidoctor_diagram"] != \
             (ROOT / "compatibility" / "asciidoctor-diagram-version").read_text().strip():

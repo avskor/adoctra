@@ -3,9 +3,12 @@
 
 pub(crate) mod graphviz;
 pub(crate) mod http;
+pub(crate) mod java_tools;
 pub(crate) mod mermaid;
 pub(crate) mod plantuml;
 pub(crate) mod tools;
+
+pub(crate) use tools::Syntrax;
 
 use crate::host::{Command, DiagramHost};
 use crate::source::{expand_path, Inherit, Source};

@@ -114,6 +114,20 @@ impl Fake {
                     .filter(|f| !f.is_empty())
             })
             .map(str::to_owned)
+            .or_else(|| {
+                // ditaa's command line: PNG unless `--svg`.
+                command
+                    .args
+                    .iter()
+                    .any(|a| a.ends_with("CommandLineConverter"))
+                    .then(|| {
+                        if command.args.iter().any(|a| a == "--svg") {
+                            "svg".to_owned()
+                        } else {
+                            "png".to_owned()
+                        }
+                    })
+            })
             .or_else(|| target.and_then(|o| o.rsplit('.').next().map(str::to_owned)))
             .or_else(|| {
                 stdin
@@ -143,6 +157,23 @@ impl DiagramHost for Fake {
                 stdout: Vec::new(),
                 stderr: b"Error: syntax error in line 1".to_vec(),
             });
+        }
+        // structurizr-cli: one file per view in the `-o` directory.
+        if command.args.iter().any(|a| a == "export") {
+            let out = command
+                .args
+                .iter()
+                .skip_while(|a| *a != "-o")
+                .nth(1)
+                .cloned()
+                .unwrap_or_default();
+            for key in ["land", "ctx"] {
+                self.put(
+                    &format!("{out}/structurizr-{key}.dot"),
+                    format!("digraph{{{key}}}").as_bytes(),
+                );
+            }
+            return Ok(Output::default());
         }
         if command.args.iter().any(|a| a == "-preproc") {
             return Ok(Output {
@@ -207,6 +238,15 @@ impl DiagramHost for Fake {
     }
     fn env(&self, name: &str) -> Option<String> {
         self.env.get(name).cloned()
+    }
+    fn list_dir(&self, path: &str) -> Vec<String> {
+        let prefix = format!("{path}/");
+        self.paths()
+            .iter()
+            .filter_map(|p| p.strip_prefix(&prefix))
+            .filter(|name| !name.contains('/'))
+            .map(str::to_owned)
+            .collect()
     }
 }
 
@@ -928,4 +968,105 @@ fn server_generated_images_scale_even_for_native_scaling_tools() {
         html(&result)
     );
     assert_eq!(host.requests()[0].url.split('/').nth(3), Some("svgbob"));
+}
+
+#[test]
+fn ditaa_runs_its_command_line_with_the_servers_arguments() {
+    let mut host = Fake::with(&["/usr/bin/java"]);
+    let result = parse(&host, "[ditaa]\n----\n+-+\n----\n");
+    assert_eq!(
+        errors(&result),
+        [
+            "error: Failed to generate image: Could not load Ditaa. Either require \
+          'asciidoctor-diagram-ditaamini' or specify the location of the Ditaa JAR(s) using \
+          the 'DIAGRAM_DITAA_CLASSPATH' environment variable."
+        ]
+    );
+    host.env
+        .insert("DIAGRAM_DITAA_CLASSPATH".into(), "/j/ditaa.jar".into());
+    host.put("/j/ditaa.jar", b"jar");
+    let result = parse(
+        &host,
+        "[ditaa,d,svg,scale=2,shadows=false,bullet-characters=* o]\n----\n+-+\n----\n\n\
+         [ditaa,t,txt]\n----\n+-+\n----\n",
+    );
+    assert!(errors(&result).is_empty(), "{:?}", errors(&result));
+    // The adapter's `--encoding`, `--svg` and `X-Options` (split at
+    // spaces), stdin to stdout; a text format is the code.
+    assert_eq!(
+        command_lines(&host),
+        [
+            "/usr/bin/java -Djava.awt.headless=true -Djava.net.useSystemProxies=true \
+          -Dfile.encoding=UTF-8 -cp /j/ditaa.jar \
+          org.stathissideris.ditaa.core.CommandLineConverter --encoding UTF-8 --svg --scale 2 \
+          --no-shadows --bullet-characters * o - - <<+-+"
+        ]
+    );
+    assert!(
+        html(&result).contains("<img src=\"d.svg\""),
+        "{}",
+        html(&result)
+    );
+    // A classpath item that does not exist stops the server, as in Ruby.
+    host.env
+        .insert("DIAGRAM_DITAA_CLASSPATH".into(), "/j/missing.jar".into());
+    let result = parse(&host, "[ditaa,m]\n----\n+-+\n----\n");
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: Classpath item /j/missing.jar does not exist"]
+    );
+}
+
+#[test]
+fn structurizr_exports_a_view_and_renders_it() {
+    let mut host = Fake::with(&["/usr/bin/java", "/usr/bin/dot"]);
+    host.env
+        .insert("DIAGRAM_STRUCTURIZRCLI_HOME".into(), "/s".into());
+    host.put("/s/lib/b.jar", b"jar");
+    host.put("/s/lib/a.jar", b"jar");
+    let result = parse(
+        &host,
+        "[structurizr,renderer=graphviz]\n----\nworkspace {}\n----\n\n\
+         .Land\n[structurizr,l,svg,view=land,renderer=graphviz]\n----\nworkspace {}\n----\n\n\
+         [structurizr,n,view=none,renderer=graphviz]\n----\n{}\n----\n",
+    );
+    let lines = command_lines(&host);
+    // The workspace file, its export, then Graphviz on the chosen view: the
+    // smallest key by default.
+    assert!(
+        lines[0].contains("-cp /s/lib/a.jar:/s/lib/b.jar"),
+        "{lines:?}"
+    );
+    assert!(lines[0]
+        .contains("com.structurizr.cli.StructurizrCliApplication export -w /doc/.structurizr"));
+    assert!(lines[0].ends_with(".dsl -f dot -o <tmp>"), "{lines:?}");
+    assert!(lines[4].ends_with(".json -f dot -o <tmp>"), "{lines:?}");
+    assert!(lines[1].starts_with("/usr/bin/dot") && lines[1].ends_with("<<digraph{ctx}"));
+    assert!(lines[3].ends_with("<<digraph{land}"), "{lines:?}");
+    let out = html(&result);
+    // The image block is named after the `structurizr` renderer; the
+    // titled one is figure 2 (Ruby captions the converted block too).
+    assert!(out.contains("src=\"diag-structurizr-md5-"), "{out}");
+    assert!(out.contains("Figure 2. Land"), "{out}");
+    // A missing view: Ruby's server error; the renderer then draws the
+    // error listing's text, as Ruby's renderer reads that block.
+    assert!(
+        lines[5].contains("<<Failed to generate image: Structurizr"),
+        "{lines:?}"
+    );
+    assert_eq!(
+        errors(&result)[0],
+        "error: Failed to generate image: Structurizr code generation failed: \
+         java.lang.NullPointerException: Cannot invoke \"Object.getClass()\" because \"view\" \
+         is null"
+    );
+    // Temporary files are removed, the workspace (written to the base
+    // directory for relative includes) too.
+    assert!(
+        host.paths()
+            .iter()
+            .all(|p| !p.starts_with("/tmp/") && !p.starts_with("/doc/.structurizr")),
+        "{:?}",
+        host.paths()
+    );
 }

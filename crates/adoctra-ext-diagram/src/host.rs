@@ -66,6 +66,13 @@ pub trait DiagramHost: Send + Sync {
     }
     /// An environment variable (e.g. `DIAGRAM_PLANTUML_CLASSPATH`).
     fn env(&self, name: &str) -> Option<String>;
+    /// The names of the entries of a directory (structurizr's exported
+    /// views); none by default.
+    fn list_dir(&self, _path: &str) -> Vec<String> {
+        Vec::new()
+    }
+    /// Remove an empty directory; nothing by default.
+    fn remove_dir(&self, _path: &str) {}
 }
 
 /// The real system: processes, files and the process environment. HTTP
@@ -175,6 +182,21 @@ impl DiagramHost for SystemHost {
 
     fn env(&self, name: &str) -> Option<String> {
         std::env::var(name).ok()
+    }
+
+    fn list_dir(&self, path: &str) -> Vec<String> {
+        std::fs::read_dir(path)
+            .map(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .map(|entry| entry.file_name().to_string_lossy().into_owned())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn remove_dir(&self, path: &str) {
+        let _ = std::fs::remove_dir(path);
     }
 }
 

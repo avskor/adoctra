@@ -533,12 +533,11 @@
    "source": ":svgbob-option-font-size: 12\n\nIntro.\n\n[svgbob,v1,svg,font-family=Mono,stroke-width=2,scale=3]\n----\n-->\n----\n\n[svgbob,v2,txt]\n----\n<--\n----\n\n[svgbob,v3]\n----\n|\n----\n\n"
   },
   {
-   "name": "fake-symbolator-syntrax",
+   "name": "fake-symbolator",
    "fake_tools": [
-    "symbolator",
-    "syntrax"
+    "symbolator"
    ],
-   "source": ":syntrax-style: s.ini\n\nIntro.\n\n[symbolator,w1,png]\n----\nentity e is end;\n----\n\n[syntrax,w2,svg,heading=Title,scale=2,transparent=true]\n----\nindentstack(10)\n----\n\n[syntrax,w3,png,style-file=o.ini,transparent=false]\n----\nline('a')\n----\n\n"
+   "source": "[symbolator,w1,png]\n----\nentity e is end;\n----\n\n"
   },
   {
    "name": "fake-tikz",
@@ -693,6 +692,156 @@
     "b.smcat": "a => b;\n"
    },
    "source": "A nomnoml:a.nomnoml[] and smcat:b.smcat[svg,width=50] end.\n"
+  },
+  {
+   "name": "real-ditaa",
+   "requires": [
+    "ditaa"
+   ],
+   "source": "[ditaa,d1]\n----\n+--------+   +-------+\n|  cBLU  +-->| {d}   |\n| Text   |   +-------+\n+--------+\n----\n\n[ditaa,d2,svg,scale=2,round-corners=true,shadows=false]\n----\n+--------+   +-------+\n|  cBLU  +-->| {d}   |\n| Text   |   +-------+\n+--------+\n----\n\n[ditaa,d3,png,transparent=true,background=FF0000,separation=false,antialias=false]\n----\n+--------+   +-------+\n|  cBLU  +-->| {d}   |\n| Text   |   +-------+\n+--------+\n----\n\n[ditaa,d4,txt]\n----\n+--------+   +-------+\n|  cBLU  +-->| {d}   |\n| Text   |   +-------+\n+--------+\n----\n\n"
+  },
+  {
+   "name": "real-ditaa-options-inherited",
+   "requires": [
+    "ditaa"
+   ],
+   "source": ":ditaa-option-round-corners: true\n:ditaa-scale: 1.5\n\nIntro.\n\n[ditaa,d5,svg]\n----\n+--------+   +-------+\n|  cBLU  +-->| {d}   |\n| Text   |   +-------+\n+--------+\n----\n\nInline ditaa:x.txt[svg] end.\n",
+   "files": {
+    "x.txt": "+--+\n|A |\n+--+\n"
+   }
+  },
+  {
+   "name": "real-ditaa-error",
+   "requires": [
+    "ditaa"
+   ],
+   "source": "[ditaa,d6,png,background=zz]\n----\n+-+\n| |\n+-+\n----\n\n"
+  },
+  {
+   "name": "real-jsyntrax",
+   "requires": [
+    "jsyntrax",
+    "plantuml"
+   ],
+   "source": "[syntrax,j1,svg]\n----\nindentstack(10,\n  line('[', loop('a', ','), ']'))\n----\n\n[syntrax,j2,png,heading=Title,scale=2,transparent=true]\n----\nline('a', 'b')\n----\n\n"
+  },
+  {
+   "name": "real-structurizr",
+   "requires": [
+    "structurizr",
+    "plantuml",
+    "dot"
+   ],
+   "source": "[structurizr,s1,svg]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n[structurizr,s2,svg,view=land]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n[structurizr,s3,svg,renderer=graphviz]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n[structurizr,s4,svg,renderer=plantuml]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n"
+  },
+  {
+   "name": "real-structurizr-errors",
+   "requires": [
+    "structurizr",
+    "plantuml",
+    "dot"
+   ],
+   "source": "[structurizr,s5,svg,view=nope,renderer=graphviz]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n[structurizr,s6,svg,renderer=d2]\n----\nworkspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n----\n\n[structurizr,s7,svg,renderer=graphviz]\n----\nworkspace {\n  model {\n    a -> b\n  }\n}\n----\n\n"
+  },
+  {
+   "name": "real-structurizr-macro",
+   "requires": [
+    "structurizr",
+    "plantuml",
+    "dot"
+   ],
+   "files": {
+    "w.dsl": "workspace {\n    model {\n        user = person \"User\"\n        sys = softwareSystem \"System\"\n        user -> sys \"Uses\"\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n        systemLandscape \"land\" {\n            include *\n        }\n    }\n}\n"
+   },
+   "source": "structurizr::w.dsl[svg,renderer=graphviz]\n\n.Title\nstructurizr::w.dsl[png,view=land]\n"
+  },
+  {
+   "name": "plantuml-jar-syntax-error",
+   "requires": [
+    "plantuml"
+   ],
+   "source": "[plantuml,e1,svg]\n----\nthis is not plantuml\n----\n",
+   "xfail": {
+    "reason": "PlantUML through its JARs: Ruby's Java server reports a preprocessing failure as PlantUML's text rendering of the error ([From <input> (line N) ], the code, ^^^^^, the label); adoctra runs PlantUML's command line with -failfast2 and reports its protocolVersion/status/lineNumber/label output",
+    "actual": {
+     "code": 0,
+     "html": [
+      {
+       "tag": "listing",
+       "attrs": {},
+       "children": [
+        "Failed to generate image: java failed: protocolVersion=1\nstatus=ERROR\nlineNumber=2\nlabel=Syntax Error?\n\nthis is not plantuml"
+       ]
+      }
+     ],
+     "diagnostics": [
+      [
+       "error",
+       "d.adoc",
+       2,
+       "Failed to generate image: java failed: protocolVersion=1"
+      ],
+      [
+       "message",
+       "status=ERROR"
+      ],
+      [
+       "message",
+       "lineNumber=2"
+      ],
+      [
+       "message",
+       "label=Syntax Error?"
+      ]
+     ],
+     "files": {},
+     "requests": []
+    }
+   }
+  },
+  {
+   "name": "real-structurizr-include",
+   "requires": [
+    "structurizr",
+    "dot"
+   ],
+   "files": {
+    "model.dsl": "user = person \"User\"\nsys = softwareSystem \"System\"\nuser -> sys \"Uses\"\n"
+   },
+   "source": "[structurizr,i1,svg,renderer=graphviz]\n----\nworkspace {\n    model {\n        !include model.dsl\n    }\n    views {\n        systemContext sys \"ctx\" {\n            include *\n        }\n    }\n}\n----\n"
+  },
+  {
+   "name": "real-jsyntrax-error",
+   "requires": [
+    "jsyntrax",
+    "plantuml"
+   ],
+   "source": "[syntrax,je,svg]\n----\nline('a',\n----\n",
+   "xfail": {
+    "reason": "Ruby's Java server prints Groovy's script errors to the terminal itself before Ruby logs the error; adoctra reports the same error text but does not pass a tool's output through to the terminal",
+    "actual": {
+     "code": 0,
+     "html": [
+      {
+       "tag": "listing",
+       "attrs": {},
+       "children": [
+        "Failed to generate image: JSyntrax code generation failed: Cannot invoke \"String.getBytes(java.nio.charset.Charset)\" because \"result\" is null\nline('a',"
+       ]
+      }
+     ],
+     "diagnostics": [
+      [
+       "error",
+       "d.adoc",
+       2,
+       "Failed to generate image: JSyntrax code generation failed: Cannot invoke \"String.getBytes(java.nio.charset.Charset)\" because \"result\" is null"
+      ]
+     ],
+     "files": {},
+     "requests": []
+    }
+   }
   }
  ]
 }

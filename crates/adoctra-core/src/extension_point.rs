@@ -205,6 +205,7 @@ pub(crate) fn run(
             invoke(context, span, |ctx| processor.process(request, ctx))
         }
     }?;
+    context.discarded_captions = new.discarded_captions.clone();
     Some(new_block(new, span, metadata))
 }
 

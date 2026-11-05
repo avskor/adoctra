@@ -52,7 +52,7 @@ class ServerTests(unittest.TestCase):
 
 class CaseTests(unittest.TestCase):
     def test_missing_tools_skip_instead_of_passing(self):
-        args = types.SimpleNamespace(mmdc="", classpath="", binary=Path("/nonexistent"))
+        args = types.SimpleNamespace(mmdc="", classpath="", binary=Path("/nonexistent"), java_tools={})
         status, details = diagram.check({"name": "m", "source": "", "requires": ["mmdc"]}, args, None)
         self.assertEqual((status, details), ("SKIP", {"missing": ["mmdc"]}))
         self.assertEqual(diagram.available(["plantuml", "server"], args), ["plantuml"])
@@ -105,7 +105,7 @@ class CaseTests(unittest.TestCase):
             self.assertTrue(case["source"], case["name"])
             self.assertTrue(set(case.get("requires", [])) <= {
                 "dot", "plantuml", "mmdc", "server", "nomnoml", "smcat", "vl2vg", "vg2svg",
-                "wavedrom-cli", "bytefield-svg", "dbml-renderer"})
+                "wavedrom-cli", "bytefield-svg", "dbml-renderer", "ditaa", "jsyntrax", "structurizr"})
             if "xfail" in case:
                 # An expected failure freezes adoctra's complete result.
                 self.assertTrue(case["xfail"]["reason"])

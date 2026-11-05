@@ -1137,8 +1137,8 @@ impl Converter for Symbolator {
     }
 }
 
-/// `SyntraxConverter` through the `syntrax` command (without the JSyntrax
-/// JARs).
+/// `SyntraxConverter`: JSyntrax when its JARs are configured (see
+/// `java_tools`), else the `syntrax` command.
 pub(crate) struct Syntrax;
 
 impl Converter for Syntrax {
@@ -1180,8 +1180,11 @@ impl Converter for Syntrax {
         if let Some(style) = option(options, "style") {
             shared.extend(["--style".to_owned(), style.to_owned()]);
         }
-        let tool = find(source, host, "syntrax")?;
         let code = self.code(source, host)?;
+        if let Some(result) = self.jsyntrax(format, &shared, &code, host) {
+            return result;
+        }
+        let tool = find(source, host, "syntrax")?;
         generate_file(
             host,
             &tool,

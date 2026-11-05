@@ -30,14 +30,19 @@ mod source;
 
 pub use host::{Command, DiagramHost, HttpClient, HttpRequest, Output, SystemHost};
 
-use converter::{graphviz::Graphviz, mermaid::Mermaid, plantuml::PlantUml, tools::*, Converter};
-use processor::{Diagram, DiagramBlock, DiagramBlockMacro, DiagramInlineMacro};
+use converter::{
+    graphviz::Graphviz, java_tools, mermaid::Mermaid, plantuml::PlantUml, tools::*, Converter,
+};
+use processor::{
+    Diagram, DiagramBlock, DiagramBlockMacro, DiagramInlineMacro, Structurizr, StructurizrBlock,
+    StructurizrBlockMacro,
+};
 use std::sync::Arc;
 
 /// The diagram types (processor names) this crate registers, in Ruby's
 /// registration order (the order `asciidoctor-diagram.rb` requires them),
 /// which is also the order inline macros apply.
-pub const DIAGRAM_TYPES: [&str; 39] = [
+pub const DIAGRAM_TYPES: [&str; 41] = [
     "a2s",
     "blockdiag",
     "seqdiag",
@@ -50,6 +55,7 @@ pub const DIAGRAM_TYPES: [&str; 39] = [
     "d2",
     "dbml",
     "diagrams",
+    "ditaa",
     "dpic",
     "erd",
     "goat",
@@ -68,6 +74,7 @@ pub const DIAGRAM_TYPES: [&str; 39] = [
     "salt",
     "shaape",
     "smcat",
+    "structurizr",
     "svgbob",
     "symbolator",
     "syntrax",
@@ -97,6 +104,7 @@ fn diagram_type(name: &str) -> (&'static str, Box<dyn Converter>) {
         "d2" => ("D2", Box::new(D2)),
         "dbml" => ("Dbml", Box::new(Dbml)),
         "diagrams" => ("Diagrams", Box::new(Diagrams)),
+        "ditaa" => ("Ditaa", Box::new(java_tools::Ditaa)),
         "dpic" => ("Dpic", Box::new(Dpic)),
         "erd" => ("Erd", Box::new(Erd)),
         "goat" => ("GoAT", Box::new(GoAT)),
@@ -133,6 +141,40 @@ fn diagram_type(name: &str) -> (&'static str, Box<dyn Converter>) {
 /// this registry.
 pub fn register(registry: &mut adoctra_core::Registry, host: Arc<dyn DiagramHost>) {
     for name in DIAGRAM_TYPES {
+        if name == "structurizr" {
+            // Block and block macro only, each with its own processors.
+            let structurizr = || {
+                let diagram = |class, converter: Box<dyn Converter>| {
+                    Arc::new(Diagram {
+                        name: "structurizr",
+                        class,
+                        converter,
+                        host: Arc::clone(&host),
+                    })
+                };
+                Arc::new(Structurizr {
+                    convert: diagram("StructurizrConvert", Box::new(java_tools::Structurizr)),
+                    renderers: [
+                        diagram("D2", Box::new(D2)),
+                        diagram("Graphviz", Box::new(Graphviz)),
+                        diagram("Mermaid", Box::new(Mermaid)),
+                        diagram("PlantUml", Box::new(PlantUml { tag: "uml" })),
+                    ],
+                })
+            };
+            registry
+                .register_block(StructurizrBlock(
+                    structurizr(),
+                    Default::default(),
+                    Default::default(),
+                ))
+                .register_block_macro(StructurizrBlockMacro(
+                    structurizr(),
+                    Default::default(),
+                    Default::default(),
+                ));
+            continue;
+        }
         let (class, converter) = diagram_type(name);
         let diagram = Arc::new(Diagram {
             name,

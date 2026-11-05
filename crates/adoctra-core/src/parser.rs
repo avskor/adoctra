@@ -847,6 +847,9 @@ impl<'s, 'c> Run<'s, 'c> {
             }
             // Caption counters are assigned on completion, before an anchored
             // title is cached. Unanchored titles run during conversion instead.
+            for discarded in std::mem::take(&mut context.discarded_captions) {
+                context.discard_caption(&discarded, &block);
+            }
             context.assign_caption(&mut block);
             if let Some(title) = title {
                 if block.id.is_some() && title.text.contains('{') {

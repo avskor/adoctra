@@ -1893,8 +1893,7 @@ d2's `sketch=false` as a valued flag, gnuplot's truthy `transparent`/
 (`scale_svg_attribute`, `String#to_f`), pikchr's tag-stripped error,
 tikz's `~~~~` preamble split, umlet's `.jar` sibling, vega's
 `/schema/vega-lite/` test and truthy `vegalite`, vhs refusing safe modes
-(`SafeMode` integers). Not ported yet: ditaa, structurizr, meme, barcode,
-JSyntrax JARs. Harness: `fake_tools` cases run
+(`SafeMode` integers). Not ported yet: meme, barcode. Harness: `fake_tools` cases run
 `scripts/diagram_fake_tool.py` through shell wrappers (absolute
 interpreter, `FAKE_TOOL_NAME`) first on `PATH` with per-side `TMPDIR` and
 `FAKE_DIAGRAM_LOG`; the log (tool, normalized args, stdin, input files,
@@ -1904,7 +1903,32 @@ cases separate them with a paragraph. `real-*` cases run npm tools on
 `PATH` (nomnoml, smcat, vl2vg/vg2svg, wavedrom-cli, bytefield-svg,
 dbml-renderer); vg2svg's `encoding="utf-8"` showed that REXML's
 `XMLDecl#content` writes version, the upcased encoding and standalone, in
-that order (`image.rs` `Node::Decl`). Tests: `tests/diagrams.rs`
+that order (`image.rs` `Node::Decl`).
+**Java diagram tools** (2026-11-05, user decision: the tools' command lines
+instead of Ruby's Java server, compatibility by final result).
+`converter/java_tools.rs`: `classpath` is Ruby's single-JVM classpath (ditaa,
+PlantUML, Structurizr, JSyntrax JARs from the `DIAGRAM_*` variables, `lib`
+JARs via `DiagramHost::list_dir`, missing items fail like the server);
+`java_command` adds the server's JVM options. Ditaa runs
+`CommandLineConverter --encoding UTF-8 [--svg] <X-Options split at spaces>
+- -` (the adapter's arguments, same `doConvert`); JSyntrax `Main -i -o`
+(same `generateSVG`/`svg2Png`; the PNG needs Batik from the PlantUML JARs);
+Structurizr `structurizr-cli export` (same exporters as the adapter),
+picking `structurizr-<view>.<ext>` or the smallest key (`findView`), DSL
+when the code starts with `workspace` (`(?i)^\s*workspace`), the workspace
+written hidden into the base directory for relative includes. Errors are
+mapped to `Java.create_error` texts (`run_java`/`java_exception`: message,
+or class and message when the adapter wraps; Structurizr messages lose the
+file name; constant NPE texts for a missing view and a failed JSyntrax
+script). `processor.rs` `Structurizr`: step one `StructurizrConvert…`
+(format `txt`), step two the renderer's block processor named
+`structurizr` on the literal's `prepare_source_string` lines; a converted
+step one with a title advances the figure counter
+(`NewBlock::discarded_captions`, core `ParseContext::discard_caption`
+before `assign_caption`, Ruby numbers both blocks). Harness passes the
+gems' JARs and a structurizr-cli to both sides (`java_tools()`); with the
+jsyntrax gem installed Ruby never runs the `syntrax` command, so that path
+is covered by Rust tests and the comparison made before. Tests: `tests/diagrams.rs`
 (`command_line_tools_run_like_rubys_converters`, `tool_paths_are_cached_…`,
 `ruby_failures_after_the_tool_ran_…`, `server_generated_images_scale_…`),
 unit tests in `converter/{mod,tools}.rs`, `scripts/test_diagram.py`.

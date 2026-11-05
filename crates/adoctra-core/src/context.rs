@@ -399,6 +399,9 @@ pub(crate) struct ParseContext<'i> {
     /// section title restores because `next_section` reads it without
     /// `next_block`.
     pub marking: bool,
+    /// Caption contexts a processor's answer numbered on dropped blocks
+    /// ([`crate::NewBlock::discarded_captions`]), for its completion.
+    pub discarded_captions: Vec<String>,
     pub reader_mark: Option<crate::DiagnosticCursor>,
     pub previous_mark: Option<crate::DiagnosticCursor>,
     /// Blocks of AsciiDoc cells Ruby creates and then drops, keyed by the
@@ -798,6 +801,7 @@ impl ParseContext<'_> {
             nested_titles: BTreeSet::new(),
             first_body_line: None,
             marking: false,
+            discarded_captions: Vec::new(),
             reader_mark: None,
             previous_mark: None,
             dropped_blocks: BTreeMap::new(),
@@ -1355,6 +1359,37 @@ impl ParseContext<'_> {
     ) -> Option<Arc<dyn crate::extension::BlockProcessor>> {
         let style = style?;
         self.extensions.as_ref()?.block(style, context).cloned()
+    }
+
+    /// Advance `<context>-number` for a titled block a processor created and
+    /// dropped (Ruby numbered it with `assign_caption(caption, context)`):
+    /// only where that call would number `block` in `context`.
+    pub(crate) fn discard_caption(&mut self, context: &str, block: &crate::Block) {
+        if block.title.is_none()
+            || block_caption(&block.attrs).is_some()
+            || self.attributes.value_parts("caption").is_some()
+            || self.attributes.get(&format!("{context}-caption")).is_none()
+        {
+            return;
+        }
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &self.attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        )
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images);
+        evaluation.execute(
+            &format!("counter:{context}-number"),
+            block.span,
+            &mut None,
+            &mut self.diagnostics,
+        );
+        if let Some(attributes) = evaluation.changed_attributes() {
+            self.attributes = Arc::new(attributes);
+        }
     }
 
     pub fn assign_caption(&mut self, block: &mut crate::Block) {

@@ -773,3 +773,42 @@ fn titles_converted_while_reading_report_at_rubys_mark_then() {
         assert_eq!(report_lines(source), *lines, "{source:?}");
     }
 }
+
+/// An image whose processor first captioned (and dropped) a figure, as
+/// asciidoctor-diagram's Structurizr processor does.
+struct Twice;
+
+impl BlockProcessor for Twice {
+    fn name(&self) -> &str {
+        "twice"
+    }
+    fn contexts(&self) -> &[BlockContext] {
+        &[BlockContext::Listing]
+    }
+    fn process(&self, request: BlockRequest, _: &mut ProcessContext<'_>) -> Option<NewBlock> {
+        let mut block = NewBlock::image("t.png", request.attributes);
+        block.discarded_captions.push("figure".to_owned());
+        Some(block)
+    }
+}
+
+#[test]
+fn discarded_captions_advance_the_figure_counter_like_ruby() {
+    let mut registry = Registry::new();
+    registry.register_block(Twice);
+    let source = ".A\n[twice]\n----\nx\n----\n\n[twice]\n----\nx\n----\n\n\
+                  .B\nimage::b.png[]\n\n:figure-caption!:\n\n.C\n[twice]\n----\nx\n----\n";
+    let result = parse_with(source, registry);
+    let captions: Vec<Option<&str>> = result
+        .document
+        .blocks
+        .iter()
+        .map(|block| block.caption.as_deref())
+        .collect();
+    // The titled image is figure 2; the untitled one numbers nothing; the
+    // next figure is 3; without `figure-caption` nothing is numbered.
+    assert_eq!(
+        captions,
+        [Some("Figure 2. "), None, Some("Figure 3. "), None]
+    );
+}

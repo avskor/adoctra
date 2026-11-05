@@ -415,6 +415,12 @@ pub enum NewBlockKind {
 pub struct NewBlock {
     pub kind: NewBlockKind,
     pub attributes: ExtensionAttributes,
+    /// Caption contexts (`figure`, …) of titled blocks the processor
+    /// created and then dropped after Ruby's `assign_caption` numbered
+    /// them: each advances `<context>-number` before this block is
+    /// numbered, under the same conditions (a title, no `caption`
+    /// attribute, a `<context>-caption` prefix).
+    pub discarded_captions: Vec<String>,
 }
 
 impl NewBlock {
@@ -424,6 +430,7 @@ impl NewBlock {
                 target: target.into(),
             },
             attributes,
+            discarded_captions: Vec::new(),
         }
     }
 
@@ -433,6 +440,7 @@ impl NewBlock {
                 source: source.into(),
             },
             attributes,
+            discarded_captions: Vec::new(),
         }
     }
 
@@ -442,6 +450,7 @@ impl NewBlock {
                 source: source.into(),
             },
             attributes,
+            discarded_captions: Vec::new(),
         }
     }
 
@@ -451,6 +460,7 @@ impl NewBlock {
                 source: source.into(),
             },
             attributes,
+            discarded_captions: Vec::new(),
         }
     }
 }
