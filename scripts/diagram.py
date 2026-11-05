@@ -213,7 +213,7 @@ def run_side(command, case, root, env, server):
     for name, content in files.items():
         (root / name).parent.mkdir(parents=True, exist_ok=True)
         (root / name).write_text(content, encoding="utf-8")
-    env, log = fake_tools(case, root, env)
+    env, log = fake_tools(case, root, {**env, **case.get("env", {})})
     server.take()
     result = subprocess.run(command + ["-S", case.get("safe", "safe"), "-s", "-o", "out.html",
                                        *case.get("args", []), "d.adoc"],
@@ -242,12 +242,19 @@ def check(case, args, server):
            "MMDC": args.mmdc or ""}
     with tempfile.TemporaryDirectory() as scratch:
         scratch = Path(scratch)
-        ruby = run_side(["asciidoctor", "-r", "asciidoctor-diagram"], case, scratch / "r", env, server)
-        ours = run_side([str(args.binary), "-r", "asciidoctor-diagram"], case, scratch / "o", env, server)
-    # Ruby's absolute fixture paths differ only by the side's directory.
-    text = json.dumps(ours).replace(str(scratch / "o"), "<root>")
-    ours = json.loads(text)
-    ruby = json.loads(json.dumps(ruby).replace(str(scratch / "r"), "<root>"))
+        # Both sides run in the same directory, one after the other, so
+        # absolute paths (in attributes, checksums, cache files) agree.
+        work = scratch / "w"
+
+        def side(command, name):
+            result = run_side(command, case, work, env, server)
+            for entry in list(scratch.iterdir()):
+                if entry.name == "w" or entry.name.startswith("w-"):
+                    entry.rename(scratch / (name + entry.name[1:]))
+            return json.loads(json.dumps(result).replace(str(work), "<root>"))
+
+        ruby = side(["asciidoctor", "-r", "asciidoctor-diagram"], "r")
+        ours = side([str(args.binary), "-r", "asciidoctor-diagram"], "o")
     xfail = case.get("xfail")
     if ruby["code"] != 0 and not xfail:
         return "RUBY_ERROR", {"ruby": ruby, "adoctra": ours}

@@ -1928,7 +1928,18 @@ step one with a title advances the figure counter
 before `assign_caption`, Ruby numbers both blocks). Harness passes the
 gems' JARs and a structurizr-cli to both sides (`java_tools()`); with the
 jsyntrax gem installed Ruby never runs the `syntrax` command, so that path
-is covered by Rust tests and the comparison made before. Tests: `tests/diagrams.rs`
+is covered by Rust tests and the comparison made before.
+**meme** (2026-11-05): registered as block macro and inline macro only
+(`Diagram::meme`, `macro_positional` `top bottom target format`); the
+macro's substituted and normalized target becomes `background` after the
+attribute normalisation (`Origin::Meme`, then empty code, `docdir` base) as
+`MemeProcessor#create_source`. `converter/meme.rs` ports `MemeConverter`
+(`magick` subcommands or `convert`/`identify` via `cmd-magick`/`cmd-convert`
+caches, `Cli.run` without chdir, `calculate_height`, `prepare_label`,
+`+0+<h - bottom>` possibly negative, options JSON with Ruby's defaults).
+The harness now runs both sides in one directory in turn (absolute paths
+in attributes and cache files agree) and passes a case's `env`
+(`SOURCE_DATE_EPOCH` makes ImageMagick's PNG deterministic). Tests: `tests/diagrams.rs`
 (`command_line_tools_run_like_rubys_converters`, `tool_paths_are_cached_…`,
 `ruby_failures_after_the_tool_ran_…`, `server_generated_images_scale_…`),
 unit tests in `converter/{mod,tools}.rs`, `scripts/test_diagram.py`.

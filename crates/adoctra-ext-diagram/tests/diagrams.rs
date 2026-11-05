@@ -158,6 +158,14 @@ impl DiagramHost for Fake {
                 stderr: b"Error: syntax error in line 1".to_vec(),
             });
         }
+        // ImageMagick's identify: the image size.
+        if command.args.first().is_some_and(|a| a == "identify") {
+            return Ok(Output {
+                status: 0,
+                stdout: b"83 155".to_vec(),
+                stderr: Vec::new(),
+            });
+        }
         // structurizr-cli: one file per view in the `-o` directory.
         if command.args.iter().any(|a| a == "export") {
             let out = command
@@ -1066,6 +1074,46 @@ fn structurizr_exports_a_view_and_renders_it() {
         host.paths()
             .iter()
             .all(|p| !p.starts_with("/tmp/") && !p.starts_with("/doc/.structurizr")),
+        "{:?}",
+        host.paths()
+    );
+}
+
+#[test]
+fn meme_draws_labels_over_the_background_with_imagemagick() {
+    let host = Fake::with(&["/usr/bin/magick"]);
+    host.put("/doc/bg.png", PNG);
+    let result = parse(
+        &host,
+        "meme::bg.png[One // two,Low,m,bottom-height=200,font=Sans]\n\n\
+         meme::bg.png[,only bottom,n,opts=noupcase,height-fraction=10%]\n\n\
+         [meme]\n----\nx\n----\n",
+    );
+    assert!(errors(&result).is_empty(), "{:?}", errors(&result));
+    assert_eq!(
+        command_lines(&host),
+        [
+            "/usr/bin/magick identify -format %w %h /doc/bg.png",
+            "/usr/bin/magick convert -background none -fill white -stroke black -strokewidth 2 \
+             -font Sans -size 83x31 -gravity north label:ONE\\nTWO <tmp>",
+            "/usr/bin/magick convert -background none -fill white -stroke black -strokewidth 2 \
+             -font Sans -size 83x200 -gravity south label:LOW <tmp>",
+            // A label taller than the image: Ruby's negative offset.
+            "/usr/bin/magick convert /doc/bg.png <tmp> -geometry +0+0 -composite <tmp> -geometry \
+             +0+-45 -composite <tmp>",
+            "/usr/bin/magick identify -format %w %h /doc/bg.png",
+            "/usr/bin/magick convert -background none -fill white -stroke black -strokewidth 2 \
+             -font Impact -size 83x15 -gravity south label:only bottom <tmp>",
+            "/usr/bin/magick convert /doc/bg.png <tmp> -geometry +0+140 -composite <tmp>",
+        ]
+    );
+    // No block processor: the `[meme]` listing stays a listing.
+    let out = html(&result);
+    assert!(out.contains("<img src=\"m.png\""), "{out}");
+    assert!(out.contains("<img src=\"n.png\""), "{out}");
+    assert!(out.contains("<pre class=\"listing\">x</pre>"), "{out}");
+    assert!(
+        host.paths().iter().all(|p| !p.starts_with("/tmp/")),
         "{:?}",
         host.paths()
     );

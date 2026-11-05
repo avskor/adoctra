@@ -8,15 +8,15 @@
 
 Крейт `adoctra-ext-diagram` переносит asciidoctor-diagram 3.2.1 (версия
 закреплена в `compatibility/asciidoctor-diagram-version`): block, block
-macro и inline macro процессоры 41 типа (`DIAGRAM_TYPES`, порядок
+macro и inline macro процессоры 42 типов (`DIAGRAM_TYPES`, порядок
 `require` Ruby): `a2s`, `blockdiag`, `seqdiag`, `actdiag`, `nwdiag`,
 `rackdiag`, `packetdiag`, `bpmn`, `bytefield`, `d2`, `dbml`, `diagrams`,
 `ditaa`, `dpic`, `erd`, `goat`, `gnuplot`, `graphviz`, `graphviz_py`, `lilypond`,
-`mermaid`, `msc`, `nomnoml`, `oxdraw`, `penrose`, `pikchr`, `pintora`,
+`meme` (только block macro и inline-макрос), `mermaid`, `msc`, `nomnoml`, `oxdraw`, `penrose`, `pikchr`, `pintora`,
 `plantuml`, `salt`, `shaape`, `smcat`, `structurizr` (только блок и
 block macro, как в Ruby), `svgbob`, `symbolator`, `syntrax`,
 `tikz`, `umlet`, `vega`, `vegalite`, `tape` (vhs), `wavedrom`. Ещё не
-перенесены meme и barcode (см. план). Kroki и
+перенесён barcode (см. план). Kroki и
 PlantUML-сервер подключаются, как в Ruby, атрибутами
 `diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`)
 для любого типа.
@@ -123,6 +123,14 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
    с заголовком получает подпись рисунка, поэтому счётчик рисунков
    увеличивается дважды (`NewBlock::discarded_captions` в core), а текст
    ошибки первого шага рисуется рендерером.
+* meme — цель макроса становится атрибутом `background` (после
+  `sub_attributes` и нормализации пути), код пустой, позиционные атрибуты
+  `top bottom target format`; ImageMagick `magick convert`/`identify` (или
+  `convert` и `identify`) без каталога запуска: размер фона, подписи
+  `label:` (в верхнем регистре без `noupcase`, ` // ` — перевод строки),
+  высоты `height-fraction`/`top-height`/`bottom-height` (`N%` или `N[px]`,
+  смещение нижней подписи может быть отрицательным, как у Ruby), наложение
+  `-composite`.
 ** Ошибки — как текст сервера Ruby (`Java.create_error`): `Ditaa image
    generation failed: <сообщение>`, `Structurizr code generation failed:
    <класс>: <сообщение>` (без имени файла), представление не найдено —
@@ -141,7 +149,9 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
 
 Профиль `diagram-v1` (`scripts/diagram.py`, случаи в
 `compatibility/diagram/cases.json`, отчёт `compatibility/diagram/report.json`)
-запускает Ruby `asciidoctor -r asciidoctor-diagram` и adoctra в safe-режиме
+запускает Ruby `asciidoctor -r asciidoctor-diagram` и adoctra по очереди в
+одном и том же каталоге (абсолютные пути в атрибутах и кэше совпадают) в
+safe-режиме
 с одними и теми же инструментами и сравнивает HTML в проекции body-dom-v1,
 построенной по правилам браузера (Ruby пишет текст inline-макроса без
 экранирования, и ошибка с `<stdin>` у `dot` даёт несбалансированную
@@ -161,10 +171,12 @@ inline-макроса Ruby пишет с позицией `cursor_at_mark` чи�
 `vg2svg`, wavedrom-cli, bytefield-svg, dbml-renderer; случаи `real-*`,
 нужные программы — на `PATH`): он нашёл, что REXML пишет декларацию XML
 как `version`, `encoding` в верхнем регистре и `standalone` (vg2svg
-выдаёт `utf-8`), исправлено. Результат 2026-11-05: 82 PASS, 5 XFAIL
+выдаёт `utf-8`), исправлено. Результат 2026-11-05: 84 PASS, 5 XFAIL
 (Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml,
 mermaid-cli 11.12 с локальным Chrome, перечисленные npm-программы,
-ditaamini 1.0.3 и JSyntrax 1.38 из gem'ов, structurizr-cli 2025.11.09
+ditaamini 1.0.3 и JSyntrax 1.38 из gem'ов, ImageMagick 7.1.1 (с
+`SOURCE_DATE_EPOCH` случая для детерминированного PNG), structurizr-cli
+2025.11.09
 (`DIAGRAM_STRUCTURIZRCLI_HOME` или `ADOCTRA_STRUCTURIZRCLI_HOME` стенда),
 остальное — подделки). Путь syntrax через команду `syntrax` сверен
 2026-11-05 до установки gem'а jsyntrax (с ним Ruby всегда выбирает Java).
@@ -217,7 +229,7 @@ Ruby недетерминирован после записей атрибуто
 
 Ограничения (не реализовано или не проверено):
 
-* meme и barcode (16 типов) не перенесены (этапы «Остальные типы
+* barcode (16 типов) не перенесён (этап «Остальные типы
   asciidoctor-diagram» в плане); рендерер `d2` у structurizr требует
   плагина экспорта, которого нет в structurizr-cli (ошибка, как у Ruby
   без плагина);

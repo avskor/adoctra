@@ -42,7 +42,7 @@ use std::sync::Arc;
 /// The diagram types (processor names) this crate registers, in Ruby's
 /// registration order (the order `asciidoctor-diagram.rb` requires them),
 /// which is also the order inline macros apply.
-pub const DIAGRAM_TYPES: [&str; 41] = [
+pub const DIAGRAM_TYPES: [&str; 42] = [
     "a2s",
     "blockdiag",
     "seqdiag",
@@ -63,6 +63,7 @@ pub const DIAGRAM_TYPES: [&str; 41] = [
     "graphviz",
     "graphviz_py",
     "lilypond",
+    "meme",
     "mermaid",
     "msc",
     "nomnoml",
@@ -112,6 +113,7 @@ fn diagram_type(name: &str) -> (&'static str, Box<dyn Converter>) {
         "graphviz" => ("Graphviz", Box::new(Graphviz)),
         "graphviz_py" => ("GraphvizPy", Box::new(GraphvizPy)),
         "lilypond" => ("Lilypond", Box::new(Lilypond)),
+        "meme" => ("Meme", Box::new(converter::meme::Meme)),
         "mermaid" => ("Mermaid", Box::new(Mermaid)),
         "msc" => ("Msc", Box::new(Msc)),
         "nomnoml" => ("Nomnoml", Box::new(Nomnoml)),
@@ -150,6 +152,8 @@ pub fn register(registry: &mut adoctra_core::Registry, host: Arc<dyn DiagramHost
                         class,
                         converter,
                         host: Arc::clone(&host),
+                        macro_positional: &["format"],
+                        meme: false,
                     })
                 };
                 Arc::new(Structurizr {
@@ -176,14 +180,24 @@ pub fn register(registry: &mut adoctra_core::Registry, host: Arc<dyn DiagramHost
             continue;
         }
         let (class, converter) = diagram_type(name);
+        // meme: a block macro and an inline macro (background, top, bottom).
+        let meme = name == "meme";
         let diagram = Arc::new(Diagram {
             name,
             class,
             converter,
             host: Arc::clone(&host),
+            macro_positional: if meme {
+                &["top", "bottom", "target", "format"]
+            } else {
+                &["format"]
+            },
+            meme,
         });
+        if !meme {
+            registry.register_block(DiagramBlock(Arc::clone(&diagram), Default::default()));
+        }
         registry
-            .register_block(DiagramBlock(Arc::clone(&diagram), Default::default()))
             .register_block_macro(DiagramBlockMacro(Arc::clone(&diagram), Default::default()))
             .register_inline_macro(DiagramInlineMacro(diagram, Default::default()));
     }

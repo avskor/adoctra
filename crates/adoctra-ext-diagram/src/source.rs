@@ -12,6 +12,8 @@ pub(crate) enum Origin {
     Lines(Vec<String>),
     /// A block macro's file (`FileSource`), an absolute path or none.
     File(Option<String>),
+    /// meme's macro target: the `background` attribute, no code.
+    Meme(String),
 }
 
 /// A processor's `config` cache of tool paths (`cmd-<attr>`).
@@ -144,7 +146,7 @@ impl<'c, 'a> Source<'c, 'a> {
         if self.code.is_none() {
             let code = match &self.origin {
                 Origin::Lines(lines) => lines.join("\n"),
-                Origin::File(None) => String::new(),
+                Origin::File(None) | Origin::Meme(_) => String::new(),
                 Origin::File(Some(path)) => {
                     let data = host
                         .read(path)

@@ -105,7 +105,7 @@ class CaseTests(unittest.TestCase):
             self.assertTrue(case["source"], case["name"])
             self.assertTrue(set(case.get("requires", [])) <= {
                 "dot", "plantuml", "mmdc", "server", "nomnoml", "smcat", "vl2vg", "vg2svg",
-                "wavedrom-cli", "bytefield-svg", "dbml-renderer", "ditaa", "jsyntrax", "structurizr"})
+                "wavedrom-cli", "bytefield-svg", "dbml-renderer", "ditaa", "jsyntrax", "structurizr", "magick"})
             if "xfail" in case:
                 # An expected failure freezes adoctra's complete result.
                 self.assertTrue(case["xfail"]["reason"])

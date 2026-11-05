@@ -22,6 +22,23 @@ pub(crate) struct Diagram {
     pub class: &'static str,
     pub converter: Box<dyn Converter>,
     pub host: Arc<dyn DiagramHost>,
+    /// The macros' positional attributes (`format`; meme's `top bottom
+    /// target format`).
+    pub macro_positional: &'static [&'static str],
+    /// meme: a macro's target is the `background` image, the code empty.
+    pub meme: bool,
+}
+
+impl Diagram {
+    /// A macro's source: its file (`FileSource`), or for meme the
+    /// `background` with no code (`MemeProcessor#create_source`).
+    fn origin(&self, file: String) -> Origin {
+        if self.meme {
+            Origin::Meme(file)
+        } else {
+            Origin::File(Some(file))
+        }
+    }
 }
 
 /// Each processor instance has its own `config` cache of tool paths.
@@ -213,7 +230,7 @@ impl BlockMacroProcessor for DiagramBlockMacro {
         self.0.name
     }
     fn positional_attributes(&self) -> &[&str] {
-        &["format"]
+        self.0.macro_positional
     }
     fn process(
         &self,
@@ -233,9 +250,9 @@ impl BlockMacroProcessor for DiagramBlockMacro {
             &self.0,
             &self.1,
             &class,
-            1,
+            self.0.macro_positional.len(),
             request.attributes,
-            Origin::File(Some(file)),
+            self.0.origin(file),
             context,
             Kind::Block,
         ))
@@ -247,7 +264,7 @@ impl InlineMacroProcessor for DiagramInlineMacro {
         self.0.name
     }
     fn positional_attributes(&self) -> &[&str] {
-        &["format"]
+        self.0.macro_positional
     }
     /// `DiagramInlineMacroProcessor#process`: the block `generate_block`
     /// creates becomes an inline image, or (an error listing) monospaced
@@ -275,9 +292,9 @@ impl InlineMacroProcessor for DiagramInlineMacro {
             &self.0,
             &self.1,
             &class,
-            1,
+            self.0.macro_positional.len(),
             request.attributes,
-            Origin::File(Some(file)),
+            self.0.origin(file),
             context,
             Kind::Inline,
         );
@@ -414,6 +431,14 @@ fn process(
         normalised.set(value.to_owned(), "true");
         index += 1;
     }
+    // meme's source adds the background after the normalisation.
+    let origin = match origin {
+        Origin::Meme(background) => {
+            normalised.set("background", background);
+            Origin::Lines(Vec::new())
+        }
+        origin => origin,
+    };
     let host = Arc::clone(&diagram.host);
     let mut warnings = Vec::new();
     let (result, code) = {
