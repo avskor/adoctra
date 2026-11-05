@@ -15,9 +15,13 @@ type Log = Arc<Mutex<Vec<String>>>;
 fn describe(attributes: &ExtensionAttributes) -> String {
     attributes
         .iter()
-        .map(|(key, value)| match key {
-            AttrKey::Positional(index) => format!("{index}={value}"),
-            AttrKey::Named(name) => format!("{name}={value}"),
+        .map(|(key, value)| {
+            // Ruby's `nil` (an empty positional value).
+            let value = value.unwrap_or("nil");
+            match key {
+                AttrKey::Positional(index) => format!("{index}={value}"),
+                AttrKey::Named(name) => format!("{name}={value}"),
+            }
         })
         .collect::<Vec<_>>()
         .join(", ")
@@ -523,7 +527,7 @@ fn inline_macro_processors_receive_rubys_attributes() {
          tag:a[b]c[] and tag:t[x\\]y] and tag:sp ace[] and tag:{nope}[] *tag:in[]* say:[ hi \\] there ] say:[].\n\n\
          Multi tag:m[a\nb] end. tag:v[,,z]\n";
     let result = parse_with(source, inline_registry(&log));
-    // Ruby's log, except that an empty positional (Ruby's `nil`) is left out.
+    // Ruby's log; an empty positional is Ruby's `nil` under its index.
     assert_eq!(
         *log.lock().unwrap(),
         [
@@ -536,7 +540,7 @@ fn inline_macro_processors_receive_rubys_attributes() {
             "tag in [d=v]",
             "say \"hi ] there\" [text=hi ] there]",
             "say \"\" [text=]",
-            "tag v [d=v, 3=z]",
+            "tag v [d=v, 1=nil, 2=nil, 3=z]",
         ]
     );
     assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
@@ -602,4 +606,170 @@ fn inline_macros_need_a_registered_processor() {
             span: Span::new(0, 15),
         }]
     );
+}
+
+/// Logs Ruby's `warn "<kind> #{attributes.inspect}"` for a block (positional
+/// `target`, `format`), a block macro and an inline macro (`format`).
+struct Dump {
+    log: Log,
+}
+
+impl BlockProcessor for Dump {
+    fn name(&self) -> &str {
+        "dump"
+    }
+    fn contexts(&self) -> &[BlockContext] {
+        &[BlockContext::Listing, BlockContext::Literal]
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["target", "format"]
+    }
+    fn process(&self, request: BlockRequest, _: &mut ProcessContext<'_>) -> Option<NewBlock> {
+        let line = format!("block [{}]", describe(&request.attributes));
+        self.log.lock().unwrap().push(line);
+        None
+    }
+}
+
+impl BlockMacroProcessor for Dump {
+    fn name(&self) -> &str {
+        "dump"
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["format"]
+    }
+    fn process(&self, request: BlockMacroRequest, _: &mut ProcessContext<'_>) -> Option<NewBlock> {
+        let line = format!("bmacro [{}]", describe(&request.attributes));
+        self.log.lock().unwrap().push(line);
+        None
+    }
+}
+
+impl adoctra_core::InlineMacroProcessor for Dump {
+    fn name(&self) -> &str {
+        "dump"
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["format"]
+    }
+    fn process(
+        &self,
+        request: adoctra_core::InlineMacroRequest,
+        _: &mut ProcessContext<'_>,
+    ) -> Option<adoctra_core::NewInline> {
+        let line = format!("inline [{}]", describe(&request.attributes));
+        self.log.lock().unwrap().push(line);
+        None
+    }
+}
+
+#[test]
+fn empty_positional_values_are_rubys_nil_keys() {
+    let log = Log::default();
+    let mut registry = Registry::new();
+    registry
+        .register_block(Dump {
+            log: Arc::clone(&log),
+        })
+        .register_block_macro(Dump {
+            log: Arc::clone(&log),
+        })
+        .register_inline_macro(Dump {
+            log: Arc::clone(&log),
+        });
+    let source = ":who: W\n\n\
+        [dump,,svg]\n....\nx\n....\n\n\
+        [dump,format=svg,]\n....\nx\n....\n\n\
+        [dump,,,foo]\n....\nx\n....\n\n\
+        [dump,'x{who}',svg]\n....\nx\n....\n\n\
+        [dump, ,svg, ]\n....\nx\n....\n\n\
+        dump::g.dot[,]\n\n\
+        dump::g.dot[,,svg]\n\n\
+        dump::g.dot['{who}',\"{who}\"]\n\n\
+        A dump:g.dot[,,svg] dump:g.dot[,] dump:g.dot[svg,'*{who}*',k='{who}'] \
+        dump:g.dot[ , svg] dump:g.dot[,,]\n";
+    parse_with(source, registry);
+    // Asciidoctor 2.0.23 with the same Ruby extensions (`nil` is Ruby's).
+    assert_eq!(
+        *log.lock().unwrap(),
+        [
+            "block [1=dump, 2=nil, 3=svg, format=svg, cloaked-context=literal]",
+            "block [1=dump, format=svg, 3=nil, cloaked-context=literal]",
+            "block [1=dump, 2=nil, 3=nil, 4=foo, cloaked-context=literal]",
+            "block [1=dump, 2=xW, 3=svg, target=xW, format=svg, cloaked-context=literal]",
+            "block [1=dump, 2=nil, 3=svg, 4=nil, format=svg, cloaked-context=literal]",
+            "bmacro [1=nil, 2=nil]",
+            "bmacro [1=nil, 2=nil, 3=svg]",
+            "bmacro [format=W, 1=W, 2=W]",
+            "inline [1=nil, 2=nil, 3=svg]",
+            "inline [1=nil, 2=nil]",
+            "inline [format=svg, 1=svg, 2=<strong>W</strong>, k=W]",
+            "inline [1=nil, 2=svg]",
+            "inline [1=nil, 2=nil, 3=nil]",
+        ]
+    );
+}
+
+/// The lines of the processor's `bad tag` reports, in order.
+fn report_lines(source: &str) -> Vec<usize> {
+    let log = Log::default();
+    let result = parse_with(source, inline_registry(&log));
+    result
+        .diagnostics
+        .iter()
+        .filter(|d| d.message == "bad tag")
+        .map(|d| match d.report.location {
+            adoctra_core::DiagnosticLocation::Cursor(cursor) => cursor.line,
+            other => panic!("expected a cursor, got {other:?}"),
+        })
+        .collect()
+}
+
+#[test]
+fn titles_converted_while_reading_report_at_rubys_mark_then() {
+    // Lines from Asciidoctor 2.0.23 with asciidoctor-diagram reporting at
+    // `parent.document.reader.cursor_at_mark` (a dot error in each macro).
+    let cases: &[(&str, &[usize])] = &[
+        // `next_section` reads a section title without marking: before any
+        // block the mark is the cursor after the title lines.
+        ("== Sec tag:err[] one\n\npara\n", &[2]),
+        ("= D\n\n== Sec tag:err[] one\n\npara\n\nmore\n", &[4]),
+        ("Sec tag:err[] one\n-----------------\n\npara\n", &[3]),
+        ("== A\n\n=== Sec tag:err[] one\n\npara\n", &[4]),
+        // Otherwise the last block `next_block` read from the document.
+        ("x\n\n== Sec tag:err[] one\n\npara\n\nmore\n", &[1]),
+        ("* a\n* b\n\n== S tag:err[] t\n", &[1]),
+        (
+            "----\na <1>\nb <2>\n----\n<1> x\n<2> y\n\n== S tag:err[] t\n",
+            &[6],
+        ),
+        (
+            "para\n\n== S tag:err[] t\n\n== T tag:err[] t\n\npara\n",
+            &[1, 1],
+        ),
+        // A discrete heading is a block: its own mark, or its container's.
+        ("para\n\n[discrete]\n=== D tag:err[] t\n", &[4]),
+        (
+            "====\nin\n\n[discrete]\n== D tag:err[] t\n====\n\n== S tag:err[] t\n",
+            &[1, 1],
+        ),
+        // Without `sectids` the title converts with the document: at the end.
+        (
+            "= D\n:sectids!:\n\n== Sec tag:err[] one\n\npara\n\nmore\n",
+            &[8],
+        ),
+        // An AsciiDoc cell's document has its own reader and marks.
+        ("|===\na|\n== C tag:err[] t\n\nx\n|===\n", &[4]),
+        ("|===\na|\nx\n\n== C tag:err[] t\n|===\n\npara\n", &[3]),
+        ("|===\na|\nx tag:err[] y\n\nz\n|===\n\npara\n", &[5]),
+        ("|===\na|x tag:err[] y\n|===\n\npara\n", &[2]),
+        (
+            "|===\na|\n:sectids!:\n\n== C tag:err[] t\n|===\n\npara\n",
+            &[6],
+        ),
+        ("|===\n|x tag:err[] y\n|===\n\npara\n", &[5]),
+    ];
+    for (source, lines) in cases {
+        assert_eq!(report_lines(source), *lines, "{source:?}");
+    }
 }

@@ -62,6 +62,9 @@ pub(crate) type Declaration = (usize, String, Option<Vec<AttributePart>>);
 /// attribute entries and its locked attributes (Ruby's inner document).
 #[derive(Clone)]
 pub(crate) struct Nested {
+    /// Its reader's `cursor_at_mark` when it converts (inline macro
+    /// processors report there).
+    pub mark: Option<crate::DiagnosticCursor>,
     pub attributes: Attributes,
     pub entries: Vec<Declaration>,
     pub locked: BTreeSet<String>,
@@ -1315,6 +1318,11 @@ impl Execution<'_, '_> {
                 } => {
                     let key = (cell.span.start, cell.span.end);
                     if let Some(nested) = self.nested.get(&key).cloned() {
+                        let images = self.images;
+                        let host = images.and_then(|images| images.inline_macros());
+                        let mark = host
+                            .zip(nested.mark)
+                            .map(|(host, mark)| host.mark.replace(Some(mark)));
                         let mut attributes =
                             Some(std::mem::replace(&mut self.attributes, nested.attributes));
                         // The nested document's `content` deletes it too.
@@ -1371,6 +1379,9 @@ impl Execution<'_, '_> {
                         self.locked = locked;
                         *catalog = std::mem::replace(&mut self.footnotes, footnotes)
                             .into_definitions(&self.fixed);
+                        if let (Some(host), Some(mark)) = (host, mark) {
+                            host.mark.set(mark);
+                        }
                     }
                 }
                 crate::ast::CellContent::Literal(_) => {}

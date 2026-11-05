@@ -1758,8 +1758,10 @@ positional names, defaults, `MacroContent`) runs first in the macros stage
 `list_end`) over the text the previous one left; an escape drops the
 backslash. The target is the lexical text of that stage; the list is
 `normalize_text`ed and parsed (`extension_request`: defaults first,
-positional name before index, `opts` as `*-option`, empty positional
-`nil` skipped, single-quoted values without `apply_subs`), or kept in
+positional name before index, `opts` as `*-option`, an empty positional
+is its index with Ruby's `nil` and no positional name, single-quoted
+values without `apply_subs` like Ruby's `parse_attributes` without
+`sub_result`: the quotes/attributes stages already ran), or kept in
 `text`; a short macro's target is the normalized list. `Registry` keeps
 Ruby's hash order (a re-registered name keeps its place). The answer
 (`NewInline`) becomes parts (`extension_parts`): an image is an
@@ -1775,7 +1777,22 @@ them. Reports use `ProcessContext::with_cursor`: `parse_reader` sets
 (`reader_mark`: the first line of the last block `next_block` read from
 the document reader — sections and preamble recursed, section/document
 titles skipped, a callout list's last item — else `eof_cursor`); the
-span stays the macro's. Matches are `InlineMacro` tokens. Tree processors run at the end of
+span stays the macro's. While reading, `ParseContext::marking` tracks
+the same mark (`reader_mark`, set in `read_blocks` before each block of
+the document reader's outermost run, a callout list's last item after it):
+a section title converted for its automatic id restores the previous mark
+(`next_section` reads titles without `next_block`) or, before any block,
+the cursor after its title lines (`reading_title_at`); a discrete heading
+uses the current mark (its own, or its container's). An AsciiDoc cell's
+document marks with its own reader (`Reader::mark_cursor` falls back to the
+parent's cursors), and its final mark (else its reader's end) becomes the
+host mark while the cell converts (`Nested::mark`). Checked against Ruby
+for section/setext/discrete titles, includes, callout lists and cells.
+`ExtensionAttributes` values are `Option<String>`: `None` is Ruby's `nil`
+(block metadata `[x,,svg]`, block/inline macro lists `[,]`); `get`,
+`positional` and `contains` treat it as missing, `iter` yields it, and
+`nil` values of a processor's answer never reach the output. Matches are
+`InlineMacro` tokens. Tree processors run at the end of
 `parse_reader` on the finished document (physical spans, after conversion-
 time substitutions; Ruby runs them before conversion) and their reports
 follow all others. Compound content returned by a processor and
@@ -1794,7 +1811,8 @@ asciidoctor-diagram 3.2.1 `diagram_processor.rb`/`diagram_source.rb`:
 (`@startuml`), `salt` (`@startsalt`), `graphviz`, `mermaid`, with Ruby's
 class names in the format error (`Asciidoctor::Diagram::<X>BlockProcessor`).
 `processor.rs` mirrors `process`: keys downcased, positional values after
-the named ones become `<value>=true` keys (they enter the MD5), the code is
+the named ones become `<value>=true` keys up to the first `nil` (they enter
+the MD5; a `nil` value adds only its key, `md5 << v.to_s if v`), the code is
 read first (a missing macro file: Ruby aborts the conversion, adoctra
 reports and lists it — XFAIL), formats (PDF last for HTML backends),
 `format`/`title`/`caption` removed before naming, errors become a listing
@@ -1838,7 +1856,10 @@ URL-safe Base64 with padding; POST over `max-get-size` unless plantuml.com).
 `HttpClient`) and `SystemHost`. The CLI enables it with
 `-r asciidoctor-diagram` (`args.diagrams`), its `DiagramHttp` maps ureq
 errors to Net::HTTP messages (`400 "Bad Request"`, `Failed to open TCP
-connection …`, `end of file reached`). Own MD5 (`md5.rs`). Tests:
+connection …`, `end of file reached`). Own MD5 (`md5.rs`). The harness
+projects both sides' HTML leniently, like a browser (`projection(html,
+lenient=True)`: Ruby writes inline macro text unescaped, so an error with
+`<stdin>` is not well formed). Tests:
 `crates/adoctra-ext-diagram/tests/diagrams.rs` (fake host), unit tests,
 `scripts/test_diagram.py`.
 

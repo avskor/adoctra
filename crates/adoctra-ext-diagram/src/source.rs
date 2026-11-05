@@ -130,7 +130,9 @@ impl<'c, 'a> Source<'c, 'a> {
     }
 
     /// `checksum`: `<type>-md5-<hex>` over the code and every attribute key
-    /// and value as they are when the image is named.
+    /// and value as they are when the image is named; a `nil` value (an
+    /// empty positional, `[,svg]`) adds only its key, like Ruby's
+    /// `md5 << v.to_s if v`.
     pub fn checksum(&mut self) -> String {
         if let Some(checksum) = &self.checksum {
             return checksum.clone();
@@ -142,7 +144,9 @@ impl<'c, 'a> Source<'c, 'a> {
                 AttrKey::Positional(index) => md5.update(index.to_string().as_bytes()),
                 AttrKey::Named(name) => md5.update(name.as_bytes()),
             }
-            md5.update(value.as_bytes());
+            if let Some(value) = value {
+                md5.update(value.as_bytes());
+            }
         }
         let checksum = format!("{}-md5-{}", self.diagram_type, md5.hexdigest());
         self.checksum = Some(checksum.clone());

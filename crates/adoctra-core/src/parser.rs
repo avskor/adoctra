@@ -298,6 +298,7 @@ pub(crate) fn parse_reader<'a>(
     let invalid_header = header.invalid;
     let mut i = header.body_start;
     context.first_body_line = None;
+    context.marking = true;
     let body = collect_blocks(
         &mut lines,
         &mut i,
@@ -305,6 +306,7 @@ pub(crate) fn parse_reader<'a>(
         None,
         header.body_pending.unwrap_or(header.pending),
     );
+    context.marking = false;
     context.close_sections(0, usize::MAX);
     let mut body = nest_sections(
         body,
@@ -944,13 +946,30 @@ fn read_blocks<'s, 'c>(
             {
                 env.context.first_body_line = Some(env.lines[*env.i].0);
             }
+            // Ruby's `next_block` marks the document reader at each block it
+            // reads there (a section title restores the previous mark).
+            let marking = outermost && env.context.marking;
+            if marking {
+                let at = env.lines[*env.i].0;
+                env.context.previous_mark = env.context.reader_mark;
+                if let Some(cursor) = env.lines.mark_cursor(at) {
+                    env.context.reader_mark = Some(cursor);
+                }
+            }
             let (metadata, _) = top.parsing.as_ref().expect("metadata");
-            Some(parse_block_step(
-                env,
-                ctx,
-                Some(&metadata.attrs),
-                metadata.id.is_some(),
-            ))
+            let step = parse_block_step(env, ctx, Some(&metadata.attrs), metadata.id.is_some());
+            // A callout list marks each of its items.
+            if let (true, Step::Done(Some(block))) = (marking, &step) {
+                if let BlockKind::CalloutList { items } = &block.kind {
+                    if let Some(cursor) = items
+                        .last()
+                        .and_then(|item| env.lines.mark_cursor(item.item.span.start))
+                    {
+                        env.context.reader_mark = Some(cursor);
+                    }
+                }
+            }
+            Some(step)
         });
         let step = match step {
             Some(step) => step,
@@ -2766,6 +2785,7 @@ fn read_nested_document(
         .preprocess_cell(text, context)
         .unwrap_or_else(|| Reader::cell_lines(text));
     let mut nested = Reader::nested(cell, lines.include_catalog.clone());
+    nested.inherit_mark_cursors(lines);
     let outer = context.enter_nested();
     let mut header = collect_header(&mut nested, context);
     // The root tokenizer scans only the document's own header lines.
@@ -2809,7 +2829,16 @@ fn read_nested_document(
     let snapshot = (*context.render_attributes()).clone();
     let mut i = header.body_start;
     let outer_first_line = context.first_body_line.take();
+    // A nested document has its own reader and marks.
+    let marks = (
+        std::mem::replace(&mut context.marking, true),
+        context.reader_mark.take(),
+        context.previous_mark.take(),
+    );
     let blocks = collect_blocks(&mut nested, &mut i, context, None, header.pending);
+    // Its reader's `cursor_at_mark` when the cell converts.
+    let mark = context.reader_mark.or_else(|| nested.nested_eof_mark());
+    (context.marking, context.reader_mark, context.previous_mark) = marks;
     context.close_sections(0, usize::MAX);
     let has_title = title.is_some();
     let top_level = TopLevel {
@@ -2820,7 +2849,7 @@ fn read_nested_document(
     };
     let blocks = nest_sections(blocks, top_level, context.book, None, context, &nested);
     let header = Arc::new(snapshot.clone());
-    context.exit_nested(outer, key, snapshot);
+    context.exit_nested(outer, key, snapshot, mark);
     lines.absorb(nested, true);
     (title.into_iter().chain(blocks).collect(), has_title, header)
 }
@@ -2995,10 +3024,28 @@ fn parse_block_content<'s, 'c>(
         // (`sectids`) or, with an explicit id, when it holds an attribute
         // reference; otherwise its first use during conversion does.
         let explicit_id = has_id || anchor.is_some();
+        // `next_section` reads a section title without `next_block`: the
+        // mark stays the previous block's, else Ruby's `cursor_at_mark` is
+        // the reader's cursor after the title lines.
+        let mark = if !context.marking {
+            None
+        } else if discrete {
+            // A discrete heading is a block: the mark is its own, or that of
+            // the document-level block holding it.
+            context.reader_mark
+        } else {
+            context.reader_mark = context.previous_mark;
+            context.reader_mark.or_else(|| {
+                lines.mark_cursor(off).map(|mut cursor| {
+                    cursor.line += consumed;
+                    cursor
+                })
+            })
+        };
         let inlines = if explicit_id && title.contains('{')
             || !explicit_id && context.attributes.get("sectids").is_some()
         {
-            context.reading_title(title, base, &heading_attrs, &lines.include_catalog)
+            context.reading_title_at(mark, title, base, &heading_attrs, &lines.include_catalog)
         } else {
             context
                 .body_subs

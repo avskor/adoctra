@@ -43,10 +43,15 @@ class Element:
 
 
 class BodyParser(HTMLParser):
-    def __init__(self):
+    def __init__(self, lenient=False):
         super().__init__(convert_charrefs=True)
         self.root = Element("root")
         self.stack = [self.root]
+        # A browser's tree for markup that is not well formed (raw text such
+        # as `<stdin>` in an unescaped inline): an end tag closes up to its
+        # open element and is ignored without one; open elements close at the
+        # end. Both sides are parsed the same way, nothing is dropped.
+        self.lenient = lenient
 
     def handle_starttag(self, tag, attrs):
         node = Element(tag, dict(attrs))
@@ -60,6 +65,12 @@ class BodyParser(HTMLParser):
             self.handle_endtag(tag)
 
     def handle_endtag(self, tag):
+        if self.lenient and len(self.stack) > 1 and self.stack[-1].tag != tag:
+            if any(node.tag == tag for node in self.stack[1:]):
+                while self.stack[-1].tag != tag:
+                    self.stack.pop()
+            else:
+                return
         if len(self.stack) == 1 or self.stack[-1].tag != tag:
             raise ValueError(f"unbalanced HTML closing tag: {tag}")
         self.stack.pop()
@@ -389,10 +400,12 @@ def normalize(node, verbatim=False, block_kind=None):
     return [element(tag, attrs, children)]
 
 
-def projection(html):
-    parser = BodyParser()
+def projection(html, lenient=False):
+    parser = BodyParser(lenient)
     parser.feed(html)
     parser.close()
+    if lenient:
+        del parser.stack[1:]
     if len(parser.stack) != 1:
         raise ValueError("unclosed HTML element")
     roots = parser.root.children

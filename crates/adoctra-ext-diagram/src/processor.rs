@@ -254,7 +254,7 @@ fn process(
             AttrKey::Named(name) => AttrKey::Named(name.to_lowercase()),
             key => key.clone(),
         };
-        normalised.set_key(key, value.to_owned());
+        normalised.set_value(key, value.map(str::to_owned));
     }
     let mut index = positional + 1;
     while let Some(value) = attributes.positional(index) {

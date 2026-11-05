@@ -604,6 +604,9 @@ fn extension_request(
             let posattrs = processor.positional_attributes();
             for field in crate::attribute_list::parse(&content) {
                 let Some(value) = field.text(&content) else {
+                    // An empty positional value is Ruby's `nil` under its
+                    // index (no positional name).
+                    attributes.set_value(AttrKey::Positional(field.index + 1), None);
                     continue;
                 };
                 match field.name(&content) {
@@ -655,7 +658,7 @@ fn extension_parts(
             let mut options = Vec::new();
             let mut alt = None;
             for (key, value) in created.attributes.iter() {
-                let AttrKey::Named(name) = key else {
+                let (AttrKey::Named(name), Some(value)) = (key, value) else {
                     continue;
                 };
                 if let Some(option) = name.strip_suffix("-option") {

@@ -161,7 +161,9 @@ def run_side(command, case, root, env, server):
     html = out.read_text(encoding="utf-8") if out.exists() else None
     return {
         "code": result.returncode,
-        "html": projection(html) if html is not None else None,
+        # Ruby writes an inline macro's text unescaped (an error message
+        # with `<stdin>`): both sides get a browser's tree.
+        "html": projection(html, lenient=True) if html is not None else None,
         "diagnostics": stderr_entries(result.stderr.decode("utf-8", "replace"),
                                       command[0] == "asciidoctor"),
         "files": files_view(root, files),

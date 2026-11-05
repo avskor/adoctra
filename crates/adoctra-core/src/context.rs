@@ -392,6 +392,15 @@ pub(crate) struct ParseContext<'i> {
     /// document being read) starts, after its metadata lines: the line
     /// Ruby's `is_next_line_section?` peeks, even when its block is dropped.
     pub first_body_line: Option<usize>,
+    /// Ruby's document reader mark while reading (`Reader#mark`, set by
+    /// `next_block` at each block it reads from the document's own reader):
+    /// tracked only while the top-level document body is read (`marking`),
+    /// with the mark before the current block (`previous_mark`), which a
+    /// section title restores because `next_section` reads it without
+    /// `next_block`.
+    pub marking: bool,
+    pub reader_mark: Option<crate::DiagnosticCursor>,
+    pub previous_mark: Option<crate::DiagnosticCursor>,
     /// Blocks of AsciiDoc cells Ruby creates and then drops, keyed by the
     /// cell's start: never output, but their ids register (Ruby's nested
     /// document shares the catalog while it is read).
@@ -788,6 +797,9 @@ impl ParseContext<'_> {
             sections: BTreeMap::new(),
             nested_titles: BTreeSet::new(),
             first_body_line: None,
+            marking: false,
+            reader_mark: None,
+            previous_mark: None,
             dropped_blocks: BTreeMap::new(),
             book: false,
             manpage: false,
@@ -879,8 +891,15 @@ impl ParseContext<'_> {
     /// Finish a nested document read for the cell at `key`: keep its
     /// conversion state and restore the parent's reading state.
     /// `header` is the nested header snapshot taken when its body started.
-    pub fn exit_nested(&mut self, outer: Outer, key: (usize, usize), header: Attributes) {
+    pub fn exit_nested(
+        &mut self,
+        outer: Outer,
+        key: (usize, usize),
+        header: Attributes,
+        mark: Option<crate::DiagnosticCursor>,
+    ) {
         let nested = crate::body_subs::Nested {
+            mark,
             attributes: header,
             entries: std::mem::replace(&mut self.body_subs.entries, outer.entries),
             locked: std::mem::replace(&mut self.locked, outer.locked),
@@ -1239,6 +1258,26 @@ impl ParseContext<'_> {
             for diagnostic in &mut self.diagnostics[before..] {
                 diagnostic.span = span;
             }
+        }
+        inlines
+    }
+
+    /// [`Self::reading_title`] with inline macro processors reporting at
+    /// `mark` (Ruby's `cursor_at_mark` while the title converts); `None`
+    /// keeps the macro's own location.
+    pub fn reading_title_at(
+        &mut self,
+        mark: Option<crate::DiagnosticCursor>,
+        value: &str,
+        base: usize,
+        attributes: &Attributes,
+        includes: &crate::xref_target::Includes,
+    ) -> Vec<crate::Inline> {
+        let host = self.images.and_then(|images| images.inline_macros());
+        let saved = host.map(|host| host.mark.replace(mark));
+        let inlines = self.reading_title(value, base, attributes, includes);
+        if let (Some(host), Some(saved)) = (host, saved) {
+            host.mark.set(saved);
         }
         inlines
     }

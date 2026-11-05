@@ -140,10 +140,12 @@ pub enum AttrKey {
 /// Block attributes in Ruby's insertion order (a Ruby `Hash`): metadata lines
 /// in reading order, then the keys the extension point adds (positional names,
 /// default attributes, `cloaked-context`). Setting an existing key keeps its
-/// position.
+/// position. A key can hold Ruby's `nil`: an empty positional value
+/// (`[,svg]`) is a key without a value, and Ruby code that walks the hash
+/// (asciidoctor-diagram's checksum) sees it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ExtensionAttributes {
-    entries: Vec<(AttrKey, String)>,
+    entries: Vec<(AttrKey, Option<String>)>,
 }
 
 impl ExtensionAttributes {
@@ -151,22 +153,26 @@ impl ExtensionAttributes {
         Self::default()
     }
 
-    /// The value of a named attribute.
+    /// The value of a named attribute (`None` when missing or `nil`, like
+    /// Ruby's `attributes[name]`).
     pub fn get(&self, name: &str) -> Option<&str> {
         self.entries.iter().find_map(|(key, value)| match key {
-            AttrKey::Named(key) if key == name => Some(value.as_str()),
+            AttrKey::Named(key) if key == name => value.as_deref(),
             _ => None,
         })
     }
 
-    /// The value of a positional attribute (1-based, like Ruby).
+    /// The value of a positional attribute (1-based, like Ruby; `None` when
+    /// missing or `nil`).
     pub fn positional(&self, index: usize) -> Option<&str> {
         self.entries.iter().find_map(|(key, value)| match key {
-            AttrKey::Positional(key) if *key == index => Some(value.as_str()),
+            AttrKey::Positional(key) if *key == index => value.as_deref(),
             _ => None,
         })
     }
 
+    /// Whether the named attribute has a value (a `nil` value counts as
+    /// missing, like Ruby's `attributes[name]` truthiness).
     pub fn contains(&self, name: &str) -> bool {
         self.get(name).is_some()
     }
@@ -178,6 +184,12 @@ impl ExtensionAttributes {
 
     /// Set any key; an existing key keeps its position.
     pub fn set_key(&mut self, key: AttrKey, value: String) {
+        self.set_value(key, Some(value));
+    }
+
+    /// Set any key to a value or to Ruby's `nil`; an existing key keeps its
+    /// position.
+    pub fn set_value(&mut self, key: AttrKey, value: Option<String>) {
         match self.entries.iter_mut().find(|(k, _)| *k == key) {
             Some((_, slot)) => *slot = value,
             None => self.entries.push((key, value)),
@@ -190,7 +202,7 @@ impl ExtensionAttributes {
             .entries
             .iter()
             .position(|(key, _)| matches!(key, AttrKey::Named(key) if key == name))?;
-        Some(self.entries.remove(index).1)
+        self.entries.remove(index).1
     }
 
     /// Whether the block has the option (`name-option`).
@@ -198,10 +210,12 @@ impl ExtensionAttributes {
         self.contains(&format!("{name}-option"))
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&AttrKey, &str)> {
+    /// The keys with their values in insertion order (`None` is Ruby's
+    /// `nil`).
+    pub fn iter(&self) -> impl Iterator<Item = (&AttrKey, Option<&str>)> {
         self.entries
             .iter()
-            .map(|(key, value)| (key, value.as_str()))
+            .map(|(key, value)| (key, value.as_deref()))
     }
 
     pub fn len(&self) -> usize {

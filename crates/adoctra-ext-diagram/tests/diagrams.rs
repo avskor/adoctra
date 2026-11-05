@@ -750,3 +750,31 @@ fn inline_macros_become_inline_images_or_error_code() {
     assert!(host.file("/doc/g.svg").is_some());
     assert!(host.file("/doc/.asciidoctor/diagram/g.svg.cache").is_some());
 }
+
+#[test]
+fn empty_positional_values_enter_the_checksum_as_rubys_nil_keys() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    host.put("/doc/g.dot", b"digraph { x }\n");
+    let result = parse(
+        &host,
+        "[graphviz,,svg]\n....\ndigraph { a -> b }\n....\n\n\
+         [graphviz,format=png,]\n....\ndigraph { a -> b }\n....\n\n\
+         A graphviz:g.dot[,] B\n",
+    );
+    // Ruby's names: `2=nil` (and `3=nil`) add their keys to the MD5 without
+    // a value; an empty positional is not a `<value>=true` key.
+    let out = html(&result);
+    for name in [
+        "diag-graphviz-md5-977f928ff602470e5857712e01052479.svg",
+        "diag-graphviz-md5-829bdcce65cf2e9cc46e8392f243929b.png",
+        "g.png",
+    ] {
+        assert!(out.contains(&format!("src=\"{name}\"")), "{name}: {out}");
+    }
+    let cache =
+        String::from_utf8(host.file("/doc/.asciidoctor/diagram/g.png.cache").unwrap()).unwrap();
+    assert!(
+        cache.starts_with("{\"checksum\":\"graphviz-md5-30ba37dad309f17166bd206973b6f08c\","),
+        "{cache}"
+    );
+}

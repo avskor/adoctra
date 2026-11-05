@@ -85,8 +85,11 @@ fn metadata_attributes(pending: &PendingMeta) -> ExtensionAttributes {
                 },
             },
         };
-        if let Some(value) = value {
-            attributes.set_key(key.clone(), value);
+        match (key, value) {
+            (_, Some(value)) => attributes.set_key(key.clone(), value),
+            // An empty positional value is Ruby's `nil` under its index.
+            (AttrKey::Positional(_), None) => attributes.set_value(key.clone(), None),
+            (AttrKey::Named(_), None) => {}
         }
     }
     attributes
@@ -173,7 +176,7 @@ pub(crate) fn run(
                         includes,
                     );
                     for (key, value) in metadata_attributes(&list).iter() {
-                        attributes.set_key(key.clone(), value.to_owned());
+                        attributes.set_value(key.clone(), value.map(str::to_owned));
                     }
                     // The macro's own metadata replaces the preceding lines'.
                     if list.title.is_some() {
@@ -231,7 +234,11 @@ fn new_block(new: NewBlock, span: Span, metadata: &mut PendingMeta) -> Block {
     let previous = std::mem::take(metadata);
     let mut attrs = crate::ast::BlockAttrs::default();
     for (key, value) in new.attributes.iter() {
-        let AttrKey::Named(name) = key else { continue };
+        // Ruby's converter reads named values; positional keys and `nil`
+        // values do not reach the output.
+        let (AttrKey::Named(name), Some(value)) = (key, value) else {
+            continue;
+        };
         match name.as_str() {
             "title" => {
                 metadata.title = Some(match &previous.title {

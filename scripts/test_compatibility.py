@@ -13,6 +13,18 @@ from compatibility import (inputs_digest, case_commands, check, classify, html_c
 
 
 class ProjectionTests(unittest.TestCase):
+    def test_lenient_projection_builds_a_browsers_tree(self):
+        raw = "<p>A <code>Error: <stdin>: bad\nx</code> here.</p>"
+        with self.assertRaises(ValueError):
+            projection(raw)
+        tree = projection(raw, lenient=True)
+        self.assertEqual(tree, projection('<p>A <code>Error: <stdin>: bad x</stdin></code> here.</p>'))
+        # A stray end tag is ignored, open elements close at the end; the
+        # raw text still differs from escaped text.
+        self.assertEqual(projection("<p>a</b>b<em>c", lenient=True), projection("<p>ab<em>c</em></p>"))
+        self.assertNotEqual(tree, projection("<p>A <code>Error: &lt;stdin&gt;: bad x</code> here.</p>",
+                                             lenient=True))
+
     def test_all_paragraphs_are_compared(self):
         self.assertNotEqual(projection("<p>one</p><p>two</p>"), projection("<p>one</p><p>wrong</p>"))
 

@@ -94,6 +94,10 @@ struct Origin {
 
 pub(crate) struct Reader<'a> {
     report_cursors: Vec<(usize, crate::DiagnosticCursor)>,
+    /// A nested document's line cursors in its parent's input (Ruby's
+    /// `inner_document` reader starts at the cell's cursor), for
+    /// [`Self::mark_cursor`] only.
+    mark_cursors: Vec<(usize, crate::DiagnosticCursor)>,
     primary_eof: crate::DiagnosticCursor,
     inputs: Vec<Input>,
     /// Offsets of Ruby's list continuation placeholders in a list item's
@@ -163,6 +167,7 @@ impl<'a> Reader<'a> {
     pub fn plain(source: &str) -> Self {
         Self {
             report_cursors: Vec::new(),
+            mark_cursors: Vec::new(),
             primary_eof: crate::DiagnosticCursor {
                 source_id: crate::SourceId::default(),
                 line: 1,
@@ -378,6 +383,43 @@ impl<'a> Reader<'a> {
     /// after its last one (trailing blank lines are already dropped).
     pub fn eof_cursor(&self) -> crate::DiagnosticCursor {
         self.primary_eof
+    }
+
+    /// Ruby's cursor of the line at `offset` for `Reader#mark`: the
+    /// report cursor, or for a nested document the parent's.
+    pub fn mark_cursor(&self, offset: usize) -> Option<crate::DiagnosticCursor> {
+        self.report_cursor(offset).or_else(|| {
+            let index = self
+                .mark_cursors
+                .partition_point(|(start, _)| *start <= offset);
+            index.checked_sub(1).map(|i| self.mark_cursors[i].1)
+        })
+    }
+
+    /// Ruby's `cursor` of a nested document's reader at its end: after its
+    /// last line.
+    pub fn nested_eof_mark(&self) -> Option<crate::DiagnosticCursor> {
+        let (start, _) = self.loaded.last()?;
+        self.mark_cursor(*start).map(|mut cursor| {
+            cursor.line += 1;
+            cursor
+        })
+    }
+
+    /// Give a nested document read from `outer`'s lines their cursors.
+    pub fn inherit_mark_cursors(&mut self, outer: &Reader<'_>) {
+        let (Some((first, _)), Some((last, _))) = (self.loaded.first(), self.loaded.last()) else {
+            return;
+        };
+        let (first, last) = (*first, *last);
+        let from = outer
+            .report_cursors
+            .partition_point(|(start, _)| *start <= first)
+            .saturating_sub(1);
+        let to = outer
+            .report_cursors
+            .partition_point(|(start, _)| *start <= last);
+        self.mark_cursors = outer.report_cursors[from..to.max(from)].to_vec();
     }
 
     pub fn report_cursor(&self, offset: usize) -> Option<crate::DiagnosticCursor> {
