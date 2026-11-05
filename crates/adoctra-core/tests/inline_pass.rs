@@ -186,6 +186,38 @@ fn source_and_host_slot_like_text_cannot_collide_with_private_placeholders() {
 }
 
 #[test]
+fn slot_like_attribute_values_alone_lengthen_the_private_prefix() {
+    let literal = "\u{96}0\u{97}";
+    let mut host = Attributes::new();
+    host.set("v", literal);
+    let entry = format!(":v: {literal}\n\n+protected+ {{v}} after");
+    for (attributes, source) in [
+        (host, "+protected+ {v} after"),
+        (Attributes::new(), entry.as_str()),
+    ] {
+        let result = parse_with_options(
+            source,
+            &ParseOptions {
+                attributes,
+                ..Default::default()
+            },
+        );
+        let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+            panic!()
+        };
+        assert!(
+            inlines.iter().any(
+                |n| matches!(n, Inline::AttributeRef { value: Some(value), .. } if value == literal)
+            ),
+            "{inlines:?}"
+        );
+        assert!(inlines
+            .iter()
+            .any(|n| matches!(n, Inline::Substituted { value, .. } if value == "protected")));
+    }
+}
+
+#[test]
 fn unicode_crlf_and_partial_input_keep_valid_byte_ranges() {
     let source =
         "\u{feff}:role: красный\r\n\r\nЖ(C) link:page[[{role}]+Ж& {v}+]; pass:c[one\\]two]";

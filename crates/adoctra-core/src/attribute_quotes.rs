@@ -133,8 +133,11 @@ fn apply_stage(
     }
     // Index eligible closers once. Repeated unmatched openers ("*a *a …")
     // must not rescan the entire suffix for every marker in an editor buffer.
+    // Every closing marker starts with an ASCII byte, a char boundary; its
+    // overlapping occurrences ("***") are kept by searching that byte.
+    let close_first = char::from(stage.close.as_bytes()[0]);
     let closings: Vec<_> = src
-        .char_indices()
+        .match_indices(close_first)
         .filter_map(|(at, _)| {
             if !src[at..].starts_with(stage.close) {
                 return None;
@@ -163,7 +166,15 @@ fn apply_stage(
     let mut copied = 0;
     let mut at = 0;
     let brackets: Vec<_> = src.match_indices(']').map(|(i, _)| i).collect();
+    // A match starts with an escape, `[attributes]` or the opening marker
+    // (ASCII) at `at`; any other offset fails the `open` test below.
+    let open_first = stage.open.as_bytes()[0];
+    let candidate = |b: u8| b == b'\\' || b == b'[' || b == open_first;
     while at < src.len() {
+        at = crate::candidates::next(src.as_bytes(), at, candidate);
+        if at == src.len() {
+            break;
+        }
         let escaped = src.as_bytes()[at] == b'\\';
         let prefix = at + usize::from(escaped);
         let attr_end = if src[prefix..].starts_with('[') {
@@ -340,6 +351,39 @@ pub(crate) fn parse_attributes(
 mod tests {
     use super::*;
     use crate::substitution_text::tests::{assert_reused, marked_text};
+
+    #[test]
+    fn skipped_offsets_match_a_scan_of_every_offset() {
+        use crate::candidates::tests::{every_offset, inputs, text_snapshot};
+        let tokens = [
+            "*", "**", "_", "`", "``", "'", "\"", "#", "^", "~", "+", "[r]", "[", "]", "\\", "a",
+            " ", "\u{416}",
+        ];
+        let attrs = crate::Attributes::new();
+        for input in inputs(&tokens, 3) {
+            for compat in [false, true] {
+                let run = || {
+                    let mut evaluation = Evaluation::read_only(&attrs);
+                    let mut quotes = Vec::new();
+                    let mut diagnostics = Vec::new();
+                    let text = apply_text(
+                        marked_text(&input),
+                        compat,
+                        &mut evaluation,
+                        &mut quotes,
+                        true,
+                        &mut diagnostics,
+                    );
+                    let quotes: Vec<_> = quotes
+                        .iter()
+                        .map(|q| (q.span, format!("{:?}", q.format), q.decorated))
+                        .collect();
+                    (text_snapshot(&text), quotes, diagnostics.len())
+                };
+                assert_eq!(run(), every_offset(run), "{input:?} {compat}");
+            }
+        }
+    }
 
     #[test]
     fn unmatched_quote_stages_reuse_buffers_and_preserve_metadata() {

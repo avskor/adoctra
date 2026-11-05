@@ -10,8 +10,10 @@ project uses [Semantic Versioning](https://semver.org/).
 
 - Inline substitutions are faster: replacements jump between their trigger
   characters, and the passthrough pass indexes markers by byte search and
-  skips text without them. Parsing a 405 KiB document takes about 37% less
-  time; output is unchanged.
+  skips text without them. Quote and passthrough scans skip offsets that
+  cannot start a match, and inline passes no longer scan every document
+  attribute per paragraph. Parsing a 405 KiB document takes about half the
+  time it did in 0.0.3; output is unchanged.
 
 ## [0.0.3] - 2026-11-05
 

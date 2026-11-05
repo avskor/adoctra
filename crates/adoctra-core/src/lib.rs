@@ -14,6 +14,7 @@ mod blockquote_credit;
 mod body_subs;
 mod builtin_attributes;
 mod callouts;
+mod candidates;
 mod comments;
 mod conditional_expression;
 mod context;

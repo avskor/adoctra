@@ -118,6 +118,11 @@ fn description_with(line: &str, sibling: Option<&str>) -> Option<ItemMatch> {
     let first = line[start..].chars().next()?.len_utf8();
     let mut at = start + first;
     while at < line.len() {
+        // Delimiters start with `:` or `;`.
+        at = crate::candidates::next(bytes, at, |b| matches!(b, b':' | b';'));
+        if at == line.len() {
+            break;
+        }
         if !line.is_char_boundary(at) {
             at += 1;
             continue;
@@ -376,6 +381,21 @@ pub(crate) fn attribute_entry(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn description_delimiter_skipping_matches_a_scan_of_every_offset() {
+        use crate::candidates::tests::{every_offset, inputs};
+        let tokens = ["a", ":", "::", ";", ";;", " ", "\t", "\u{416}", "//", "/"];
+        for input in inputs(&tokens, 5) {
+            for sibling in [None, Some("::"), Some(":::"), Some("::::"), Some(";;")] {
+                assert_eq!(
+                    description_with(&input, sibling),
+                    every_offset(|| description_with(&input, sibling)),
+                    "{input:?} {sibling:?}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn markers_follow_ruby_expressions() {

@@ -895,6 +895,10 @@ pub struct Attributes {
     // the transient flag above outside the shared storage.
     map: Arc<BTreeMap<String, String>>,
     parts: Arc<BTreeMap<String, Vec<AttributePart>>>,
+    // Entries whose name, value or reference text contains the passthrough
+    // slot marker U+0096 (`slot_marked`), a function of the tables above.
+    // While zero, no attribute can collide with a slot prefix.
+    slot_marked: usize,
 }
 
 impl Attributes {
@@ -913,10 +917,16 @@ impl Attributes {
 
     pub fn set(&mut self, key: impl Into<String>, value: impl Into<String>) {
         let key = key.into().to_lowercase();
+        self.tracked(&key.clone(), |attributes| {
+            attributes.set_folded(key, value.into())
+        });
+    }
+
+    fn set_folded(&mut self, key: String, value: String) {
         if self.parts.contains_key(&key) {
             Arc::make_mut(&mut self.parts).remove(&key);
         }
-        Arc::make_mut(&mut self.map).insert(key, value.into());
+        Arc::make_mut(&mut self.map).insert(key, value);
     }
 
     /// Preserve literal/raw parts and formatting through attribute substitutions.
@@ -926,15 +936,47 @@ impl Attributes {
         for part in parts {
             push_value(&mut merged, part);
         }
-        self.set(&key, parts_text(&merged));
-        if merged.iter().any(AttributePart::is_special) {
-            Arc::make_mut(&mut self.parts).insert(key, merged);
-        }
+        self.tracked(&key.clone(), |attributes| {
+            attributes.set_folded(key.clone(), parts_text(&merged));
+            if merged.iter().any(AttributePart::is_special) {
+                Arc::make_mut(&mut attributes.parts).insert(key, merged);
+            }
+        });
+    }
+
+    /// Apply one entry's change and keep `slot_marked` in step with it.
+    fn tracked<R>(&mut self, key: &str, change: impl FnOnce(&mut Self) -> R) -> R {
+        let before = self.entry_slot_marked(key);
+        let result = change(self);
+        let after = self.entry_slot_marked(key);
+        self.slot_marked = self.slot_marked + usize::from(after) - usize::from(before);
+        result
+    }
+
+    // Exact keys: parts belong to the same key as their value (a counter's
+    // verbatim name included), so entries never depend on each other.
+    fn entry_slot_marked(&self, key: &str) -> bool {
+        const MARKER: char = '\u{96}';
+        self.map.get(key).is_some_and(|value| {
+            key.contains(MARKER)
+                || value.contains(MARKER)
+                || self
+                    .parts
+                    .get(key)
+                    .is_some_and(|parts| reference_text(parts).contains(MARKER))
+        })
+    }
+
+    /// Whether some attribute name, value or reference text contains U+0096,
+    /// the first character of every passthrough slot prefix. When false, no
+    /// attribute can contain a prefix and the collision scan can be skipped.
+    pub(crate) fn may_contain_slot_prefix(&self) -> bool {
+        self.slot_marked > 0
     }
 
     /// Raw/formatting boundaries; absent means the entire value is literal text.
     pub fn raw_parts(&self, key: &str) -> Option<&[AttributePart]> {
-        self.raw_parts_exact(&key.to_lowercase())
+        self.raw_parts_exact(&fold_key(key))
     }
 
     // Serialization follows exact iter keys, including case-sensitive counters.
@@ -959,24 +1001,29 @@ impl Attributes {
         })
     }
     pub(crate) fn set_counter(&mut self, key: &str, value: &str) {
-        Arc::make_mut(&mut self.parts).insert(key.into(), vec![AttributePart::Raw(value.into())]);
-        Arc::make_mut(&mut self.map).insert(key.into(), value.into());
+        self.tracked(key, |attributes| {
+            Arc::make_mut(&mut attributes.parts)
+                .insert(key.into(), vec![AttributePart::Raw(value.into())]);
+            Arc::make_mut(&mut attributes.map).insert(key.into(), value.into());
+        });
     }
 
     pub fn get(&self, key: &str) -> Option<&str> {
-        self.map.get(&key.to_lowercase()).map(String::as_str)
+        self.map.get(fold_key(key).as_ref()).map(String::as_str)
     }
 
     pub fn remove(&mut self, key: &str) -> Option<String> {
         let key = key.to_lowercase();
-        if self.parts.contains_key(&key) {
-            Arc::make_mut(&mut self.parts).remove(&key);
-        }
-        if self.map.contains_key(&key) {
-            Arc::make_mut(&mut self.map).remove(&key)
-        } else {
-            None
-        }
+        self.tracked(&key, |attributes| {
+            if attributes.parts.contains_key(&key) {
+                Arc::make_mut(&mut attributes.parts).remove(&key);
+            }
+            if attributes.map.contains_key(&key) {
+                Arc::make_mut(&mut attributes.map).remove(&key)
+            } else {
+                None
+            }
+        })
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&str, &str)> {
@@ -985,6 +1032,16 @@ impl Attributes {
 
     pub fn is_empty(&self) -> bool {
         self.map.is_empty()
+    }
+}
+
+/// Attribute names are case-insensitive; lookups fold the key like `set`,
+/// without copying a key that is already lowercase ASCII.
+fn fold_key(key: &str) -> std::borrow::Cow<'_, str> {
+    if key.bytes().all(|b| b.is_ascii() && !b.is_ascii_uppercase()) {
+        std::borrow::Cow::Borrowed(key)
+    } else {
+        std::borrow::Cow::Owned(key.to_lowercase())
     }
 }
 
@@ -1015,6 +1072,62 @@ pub(crate) fn reference_text(parts: &[AttributePart]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The collision scan `slot_marked` stands in for, over every entry.
+    fn scanned_slot_marker(attributes: &Attributes) -> bool {
+        attributes.iter().any(|(name, value)| {
+            name.contains('\u{96}')
+                || value.contains('\u{96}')
+                || attributes
+                    .raw_parts(name)
+                    .is_some_and(|p| reference_text(p).contains('\u{96}'))
+        })
+    }
+
+    #[test]
+    fn slot_marker_count_follows_every_kind_of_write() {
+        use AttributePart::{Raw, Text};
+        fn check(attributes: &Attributes, expected: bool) {
+            assert_eq!(
+                attributes.may_contain_slot_prefix(),
+                expected,
+                "{attributes:?}"
+            );
+            assert_eq!(scanned_slot_marker(attributes), expected);
+        }
+        let marked = "a\u{96}b";
+        let mut attributes = Attributes::new();
+        check(&attributes, false);
+        attributes.set("plain", "x");
+        check(&attributes, false);
+        attributes.set("Value", marked);
+        check(&attributes, true);
+        attributes.set("value", "x");
+        check(&attributes, false);
+        attributes.set(marked, "x");
+        check(&attributes, true);
+        attributes.remove(marked);
+        check(&attributes, false);
+        attributes.set_parts("parts", vec![Raw(marked.into()), Text("t".into())]);
+        check(&attributes, true);
+        attributes.set_parts("parts", vec![Raw("r".into())]);
+        check(&attributes, false);
+        attributes.set_counter("Count", marked);
+        check(&attributes, true);
+        attributes.set_counter("Count", "1");
+        check(&attributes, false);
+        attributes.set("value", marked);
+        attributes.set_parts("parts", vec![Raw(marked.into())]);
+        let snapshot = attributes.clone();
+        check(&snapshot, true);
+        attributes.remove("VALUE");
+        check(&attributes, true);
+        attributes.remove("parts");
+        check(&attributes, false);
+        check(&snapshot, true);
+        attributes.remove("missing");
+        check(&attributes, false);
+    }
 
     #[test]
     fn owned_parts_reuse_strings_and_merge_only_adjacent_equal_kinds() {

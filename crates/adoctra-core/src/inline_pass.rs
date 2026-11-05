@@ -63,13 +63,14 @@ impl Passes {
     ) -> (Text, Self) {
         let mut prefix = "\u{96}".to_owned();
         while src.contains(&prefix)
-            || attrs.iter().any(|(name, value)| {
-                name.contains(&prefix)
-                    || value.contains(&prefix)
-                    || attrs
-                        .raw_parts(name)
-                        .is_some_and(|p| reference_text(p).contains(&prefix))
-            })
+            || attrs.may_contain_slot_prefix()
+                && attrs.iter().any(|(name, value)| {
+                    name.contains(&prefix)
+                        || value.contains(&prefix)
+                        || attrs
+                            .raw_parts(name)
+                            .is_some_and(|p| reference_text(p).contains(&prefix))
+                })
         {
             prefix.push('\u{96}');
         }
@@ -112,7 +113,16 @@ impl Passes {
         let mut copied = 0;
         let mut at = 0;
         let index = Index::new(src, compat);
+        // `Index::find` matches only from escaped or bracketed metadata or
+        // an opening marker at `at`; every other offset is skipped.
+        let pass_macro = src.contains("pass:");
+        let candidate =
+            |b: u8| matches!(b, b'[' | b'\\' | b'+' | b'$' | b'`') || pass_macro && b == b'p';
         while at < src.len() {
+            at = crate::candidates::next(src.as_bytes(), at, candidate);
+            if at == src.len() {
+                break;
+            }
             let Some(m) = index.find(src, at, copied, compat, constrained) else {
                 at += src[at..].chars().next().unwrap().len_utf8();
                 continue;
@@ -550,12 +560,13 @@ impl Passes {
         // extracting anything unless macros is one of the requested stages.
         let mut prefix = "\u{96}".to_owned();
         while body.contains(&prefix)
-            || attrs.iter().any(|(k, v)| {
-                v.contains(&prefix)
-                    || attrs
-                        .raw_parts(k)
-                        .is_some_and(|p| reference_text(p).contains(&prefix))
-            })
+            || attrs.may_contain_slot_prefix()
+                && attrs.iter().any(|(k, v)| {
+                    v.contains(&prefix)
+                        || attrs
+                            .raw_parts(k)
+                            .is_some_and(|p| reference_text(p).contains(&prefix))
+                })
         {
             prefix.push('\u{96}');
         }
@@ -1027,6 +1038,44 @@ mod tests {
             positions("$$"),
             positions("`"),
         ]
+    }
+
+    #[test]
+    fn skipped_offsets_match_a_scan_of_every_offset() {
+        use crate::candidates::tests::{every_offset, inputs, text_snapshot};
+        let tokens = [
+            "+", "++", "`", "$$", "$", "[x]", "[", "]", "\\", "pass:[", "pass:q[", "p", "a", " ",
+            "\u{416}",
+        ];
+        let attrs = crate::Attributes::new();
+        for input in inputs(&tokens, 3) {
+            for compat in [false, true] {
+                for constrained in [false, true] {
+                    let run = || {
+                        let mut evaluation = Evaluation::read_only(&attrs);
+                        let (_, mut passes) = Passes::extract("", 0, &mut evaluation, compat);
+                        let text =
+                            passes.stage(marked_text(&input), &mut evaluation, compat, constrained);
+                        let slots: Vec<_> = passes
+                            .slots
+                            .iter()
+                            .map(|slot| {
+                                let pending = slot.pending.as_ref();
+                                (
+                                    slot.span,
+                                    slot.mono,
+                                    pending.map(|p| p.0.clone()),
+                                    pending.map(|p| p.1.len()),
+                                    pending.and_then(|p| p.2.clone()),
+                                )
+                            })
+                            .collect();
+                        (text_snapshot(&text), slots, passes.diagnostics.len())
+                    };
+                    assert_eq!(run(), every_offset(run), "{input:?} {compat} {constrained}");
+                }
+            }
+        }
     }
 
     #[test]

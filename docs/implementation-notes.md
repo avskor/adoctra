@@ -309,6 +309,17 @@ Parse of `docs/implementation-plan.adoc` fell from ~92 to ~58 ms; see
 `docs/performance.adoc`. Under WSL, gprofng clock profiling loses ~99% of
 ticks (the "timer period was changed" warning); profile with `-p off -h
 cycles,on` instead.
+**Candidate skipping** (2026-11-05): `candidates::next` jumps a scanner to the
+next byte that can start a match (`Passes::stage`: `[`, `\`, `+`, `$`, a backtick and
+`p` when `pass:` occurs; `attribute_quotes::apply_stage`: `\`, `[`, the
+opener's first byte; `lists::description_with`: `:`/`;`). A new skip set
+must be a necessary condition of the scanner's match at that offset; the
+`every_offset` test switch compares with the full scan. `Attributes` counts
+entries (`slot_marked`) whose name, value or parts' reference text contain
+U+0096; while zero, slot-prefix extraction skips scanning all attributes.
+Keep every table write going through `tracked` so the count stays exact;
+parts are tracked under their own exact key (counters are verbatim).
+`get`/`raw_parts` fold keys without allocating when already lowercase ASCII.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports
