@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [0.0.2] - 2026-11-05
+
+### Fixed
+
+- Windows: absolute paths with a drive letter or backslashes
+  (`-o c:\tmp\out.docx`, `-D`, `-B`, includes and images) are resolved
+  as absolute paths, like Asciidoctor on Windows, instead of being joined
+  to the document's directory (which failed with an invalid file name
+  error `@ dir_s_mkdir - …/C:`).
+
 ## [0.0.1] - 2026-11-05
 
 First public release. An early version: the processor converts real-world
@@ -31,4 +41,5 @@ documents, but the API and output may still change between releases.
   diagnostics and highlighting tokens, a virtual file system for includes,
   and diagrams through Kroki.
 
+[0.0.2]: https://github.com/avskor/adoctra/releases/tag/v0.0.2
 [0.0.1]: https://github.com/avskor/adoctra/releases/tag/v0.0.1
