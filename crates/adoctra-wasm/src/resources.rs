@@ -1,4 +1,5 @@
 //! An editor-owned virtual filesystem and immutable source snapshots.
+use crate::diagrams::DiagramSession;
 use adoctra_core::{
     MemoryResources, ResourceError, ResourceErrorKind, ResourceResult, SourceFile, SourceId,
     SourceMap,
@@ -10,8 +11,9 @@ use adoctra_core::{
 /// ids of the immutable snapshots it actually read.
 #[derive(Default)]
 pub struct ResourceWorkspace {
-    resources: MemoryResources,
+    resources: std::sync::Arc<MemoryResources>,
     sources: SourceMap,
+    diagrams: Option<DiagramSession>,
 }
 
 impl ResourceWorkspace {
@@ -20,25 +22,26 @@ impl ResourceWorkspace {
     }
 
     pub fn set(&mut self, name: &str, text: &str) -> ResourceResult<()> {
-        self.resources.insert(name, text)?;
+        std::sync::Arc::make_mut(&mut self.resources).insert(name, text)?;
         Ok(())
     }
 
     /// Original bytes of an image or an encoded include. For includes, source
     /// ids and spans address the decoded UTF-8 snapshot returned by `source`.
     pub fn set_binary(&mut self, name: &str, bytes: &[u8]) -> ResourceResult<()> {
-        self.resources.insert_binary(name, bytes)?;
+        std::sync::Arc::make_mut(&mut self.resources).insert_binary(name, bytes)?;
         Ok(())
     }
 
     pub fn remove(&mut self, name: &str) -> ResourceResult<bool> {
-        let text = self.resources.remove(name)?.is_some();
-        Ok(self.resources.remove_binary(name)?.is_some() || text)
+        let resources = std::sync::Arc::make_mut(&mut self.resources);
+        let text = resources.remove(name)?.is_some();
+        Ok(resources.remove_binary(name)?.is_some() || text)
     }
 
     pub fn load(&mut self, target: &str, relative_to: Option<usize>) -> ResourceResult<usize> {
         self.sources
-            .load(target, relative_to.map(SourceId), &self.resources)
+            .load(target, relative_to.map(SourceId), &*self.resources)
             .map(|id| id.0)
     }
 
@@ -76,14 +79,62 @@ impl ResourceWorkspace {
         Ok(json)
     }
 
+    /// Render diagrams through a diagram server (`kroki_io` or `plantuml`)
+    /// from now on, reading block macro sources from the buffers;
+    /// `parse_json` then adds `diagrams` like
+    /// [`DiagramWorkspace::parse_json`](crate::DiagramWorkspace::parse_json).
+    pub fn enable_diagrams(&mut self, server_url: &str, server_type: &str) {
+        self.diagrams = Some(DiagramSession::new(server_url, server_type));
+    }
+
+    /// The body the diagram server answered for the request `key`.
+    pub fn set_diagram_response(&mut self, key: &str, body: &[u8]) {
+        if let Some(diagrams) = &mut self.diagrams {
+            diagrams.set_response(key, body);
+        }
+    }
+
+    /// The diagram request `key` failed with `message`.
+    pub fn set_diagram_error(&mut self, key: &str, message: &str) {
+        if let Some(diagrams) = &mut self.diagrams {
+            diagrams.set_error(key, message);
+        }
+    }
+
+    /// Forget the fetched diagram responses.
+    pub fn clear_diagram_responses(&mut self) {
+        if let Some(diagrams) = &mut self.diagrams {
+            diagrams.clear();
+        }
+    }
+
     pub fn parse_json(&mut self, source_id: usize) -> ResourceResult<String> {
         self.source(source_id)?;
-        let options = adoctra_core::ParseOptions {
+        let mut options = adoctra_core::ParseOptions {
             source_id: SourceId(source_id),
             ..Default::default()
         };
-        let result = adoctra_core::parse_resource(&mut self.sources, &options, &self.resources)?;
-        Ok(crate::serialize_parse_result(&result))
+        let host = match &self.diagrams {
+            Some(diagrams) => {
+                // Like Ruby's `convert_file`: the base directory and the
+                // output directory are the document's.
+                let name = self.source(source_id)?.name();
+                let dir = match name.rsplit_once('/') {
+                    Some(("", _)) | None => "/".to_owned(),
+                    Some((dir, _)) => dir.to_owned(),
+                };
+                options.base_dir = Some(dir.clone());
+                options.output = Some(adoctra_core::OutputTarget::Directory(dir));
+                Some(diagrams.prepare(Some(self.resources.clone()), &mut options))
+            }
+            None => None,
+        };
+        let result = adoctra_core::parse_resource(&mut self.sources, &options, &*self.resources)?;
+        let json = crate::serialize_parse_result(&result);
+        Ok(match host {
+            Some(host) => crate::diagrams::finish_json(json, &host),
+            None => json,
+        })
     }
 
     pub fn tokens_json(&mut self, source_id: usize) -> ResourceResult<String> {
@@ -92,7 +143,7 @@ impl ResourceWorkspace {
             source_id: SourceId(source_id),
             ..Default::default()
         };
-        let tokens = adoctra_core::tokens_resource(&mut self.sources, &options, &self.resources)?;
+        let tokens = adoctra_core::tokens_resource(&mut self.sources, &options, &*self.resources)?;
         Ok(crate::serialize_tokens(&tokens))
     }
 }
@@ -160,6 +211,22 @@ mod wasm {
 
         pub fn tokens_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.tokens_json(source_id).map_err(js_error)
+        }
+
+        pub fn enable_diagrams(&mut self, server_url: &str, server_type: &str) {
+            self.0.enable_diagrams(server_url, server_type);
+        }
+
+        pub fn set_diagram_response(&mut self, key: &str, body: &[u8]) {
+            self.0.set_diagram_response(key, body);
+        }
+
+        pub fn set_diagram_error(&mut self, key: &str, message: &str) {
+            self.0.set_diagram_error(key, message);
+        }
+
+        pub fn clear_diagram_responses(&mut self) {
+            self.0.clear_diagram_responses();
         }
     }
 

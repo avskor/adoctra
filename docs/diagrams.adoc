@@ -69,10 +69,24 @@ inline-макрос — текстом абзаца, как у Ruby без ascii
 Пока ответа нет, блок — листинг ошибки `Failed to generate image: waiting
 for the diagram server` с диагностикой; хост может не показывать её, пока
 `requests` не пуст. Документ условно лежит в `/index.html`, `imagesdir` и
-имена файлов — как у Ruby. Ограничения браузера:
+имена файлов — как у Ruby.
 
-* файлы block macro (`mermaid::flow.mmd[]`) не читаются — ошибка Ruby
-  `No such file or directory @ rb_sysopen - …`;
+Документ с файлами разбирает `ResourceWorkspace` (с 2026-11-05):
+`enable_diagrams(url, type)` включает тот же режим, ответы передаются через
+`set_diagram_response`/`set_diagram_error` (`clear_diagram_responses`
+сбрасывает кэш), `parse_json` добавляет то же поле `diagrams`. Исходники
+block macro (`mermaid::diagrams/flow.mmd[svg]`) читаются из буферов
+редактора, блоки диаграмм работают и во включённых файлах. Как у
+`convert_file` Ruby, base directory и каталог вывода — каталог документа,
+поэтому jail safe-режима, предупреждения о выходе за него и пути
+изображений (`imagesdir` относительно документа) те же; ключи `images` —
+имена рабочего пространства (`docs/img/flow.svg`). Без `enable_diagrams`
+разбор не меняется. Ограничения браузера:
+
+* у `DiagramWorkspace` файлов нет: block macro даёт ошибку Ruby
+  `No such file or directory @ rb_sysopen - …` (её же даёт отсутствующий
+  буфер в `ResourceWorkspace`, где Ruby прерывает конвертацию — см. XFAIL
+  `missing-macro-file`);
 * PlantUML (и `salt`) и через сервер сначала препроцессирует код локально
   (`preprocess_native`/`preprocess_http` Ruby требуют PlantUML), поэтому
   без `preprocess=false` (или `:plantuml-preprocess: false`) — ошибка

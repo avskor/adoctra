@@ -29,7 +29,8 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
   (`html` default, plus `docx`, `json`, `all-backends`).
 - `adoctra-cli` — the `adoctra` binary (native only).
 - `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`,
-  `DiagramWorkspace` for diagrams through Kroki). Depends on `adoctra-core`
+  `DiagramWorkspace`/`ResourceWorkspace::enable_diagrams` for diagrams
+  through Kroki). Depends on `adoctra-core`
   and `adoctra-ext-diagram` only — never on backends.
 - `adoctra-ext-diagram` — diagram extension (port of asciidoctor-diagram
   3.2.1: all 58 types, their tools or Kroki; barcodes via ports of barby,

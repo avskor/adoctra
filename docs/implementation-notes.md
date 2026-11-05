@@ -2000,9 +2000,19 @@ document's own win; `base_dir` `/`, output `/index.html`. The JSON is
 content_type?}], images: {path: data URI}}` (base64 and media type in the
 module). `set_response`/`set_error`/`clear` fill the cache; the wasm-bindgen
 class is `DiagramWorkspace`. PlantUML keeps Ruby's local preprocessing, so it
-needs `preprocess=false` in the browser. Tests: `adoctra-wasm/tests/
+needs `preprocess=false` in the browser. `DiagramSession` (server, response
+cache, `prepare` → host + options, `finish_json`) is shared with
+`ResourceWorkspace::enable_diagrams`/`set_diagram_response`/
+`set_diagram_error`/`clear_diagram_responses`: the host reads the editor's
+buffers (`Arc<MemoryResources>`, copy-on-write on `set`; buffers report mtime
+0, older than written files) and the parse sets `base_dir` and
+`OutputTarget::Directory` to the document's directory like Ruby's
+`convert_file` (without it the image dir left the jail; checked against Ruby
+on the same tree: one ancestor-of-jail warning for `../`). Without
+`enable_diagrams` the workspace parses as before. Tests: `adoctra-wasm/tests/
 diagram_workspace.rs` (request → response → image, error, document server
-and POST, missing tools/files); requests checked against kroki.io by hand.
+and POST, missing tools/files, buffers and includes in `ResourceWorkspace`);
+requests checked against kroki.io by hand.
 
 **DOCX backend** (user decision 2026-11-04; contract and status in
 `docs/docx.adoc`, stages in `docs/implementation-plan.adoc` «DOCX-бэкенд»).
