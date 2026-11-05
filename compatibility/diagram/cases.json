@@ -920,6 +920,41 @@
   {
    "name": "barcode-png-options",
    "source": "[code128,p1,png,foreground=red,background=white]\n----\nHello\n----\n\n[code128,p2,png,foreground=ff0000,background=00ff0080]\n----\nHello\n----\n\n[code39,p3,png,foreground=gray,background=silver,height=20,xdim=2]\n----\nABC\n----\n\n[code39,p4,png,foreground=#333,background=black @ 0.5]\n----\nABC\n----\n\n[ean13,p5,png,foreground=16711935,margin=0]\n----\n123456789012\n----\n\n[qrcode,p6,png,xdim=9,margin=20]\n----\nLARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE LARGE QR CODE \n----\n\n[qrcode,p7,png,foreground=navy,background=Light Yellow]\n----\nhttps://example.com/path?q=1\n----\n\n[code128,p8,png,foreground=nosuchcolor]\n----\nHello\n----\n\n[code128,p9,png,background=#zz]\n----\nHello\n----\n\n[codabar,p10,png,margin=-2]\n----\nA1B\n----\n\nInline qrcode:Hi[png,xdim=2] end.\n"
+  },
+  {
+   "name": "subs-stages",
+   "fake_tools": [
+    "dot"
+   ],
+   "source": ":who: World\n:url: https://example.org\n\n[graphviz,s1,svg,subs=\"+quotes,+replacements\"]\n----\ndigraph { a -> b; label=\"*bold* _it_ `mono` #mark# ^sup^ ~sub~ {who} -- (C) ... 'quoted' \\\"dq\\\" <x>\" }\n----\n\n[graphviz,s2,svg,subs=normal]\n----\ndigraph { a -> b; label=\"see https://x.org[X] and {url} and <<sec,Sec>> and image:i.png[I] and kbd:[Ctrl] +\nnext line\" }\n----\n\n[graphviz,s3,svg,subs=\"specialchars,callouts\"]\n----\ndigraph { a -> b; } // <1>\n----\n\n[graphviz,s4,svg,subs=\"bogus,attributes,nope\"]\n----\ndigraph { {who} }\n----\n\n[graphviz,s5,svg,subs=\"macros\"]\n----\ndigraph { pass:[<raw>] footnote:[note] }\n----\n\nAfter.footnote:[second]\n"
+  },
+  {
+   "name": "subs-error-listing",
+   "fake_tools": [
+    "dot"
+   ],
+   "source": ":who: World\n\n[graphviz,e1,svg,subs=\"+quotes,+attributes\"]\n----\nFAKE-FAIL *b* {who} <x>\n----\n\n[graphviz,e2,svg,subs=\"quotes\"]\n----\nFAKE-FAIL *b* {who} <x>\n----\n\n[graphviz,e3,svg,subs=\"attributes,callouts\"]\n----\nFAKE-FAIL {who} <1>\n----\n"
+  },
+  {
+   "name": "subs-text-format",
+   "fake_tools": [
+    "svgbob"
+   ],
+   "source": ":who: World\n\n[svgbob,t1,txt,subs=\"+quotes,+attributes\"]\n----\n*{who}* -->\n----\n\n[svgbob,t2,txt,subs=\"none\"]\n----\n*x* -->\n----\n"
+  },
+  {
+   "name": "subs-inline-and-xml",
+   "fake_tools": [
+    "dot"
+   ],
+   "args": [
+    "-a",
+    "htmlsyntax=xml"
+   ],
+   "files": {
+    "g.dot": "digraph { a -> b; label=\"*x* +\nnext\" }\n"
+   },
+   "source": "Inline graphviz:g.dot[svg,subs=normal] end.\n\n[graphviz,x1,svg,subs=post_replacements]\n----\nline one +\nline two\n----\n"
   }
  ]
 }

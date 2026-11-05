@@ -500,7 +500,8 @@ fn apply_extensions(
                     host.output.as_ref(),
                     span,
                 )
-                .with_cursor(host.mark.get());
+                .with_cursor(host.mark.get())
+                .with_markup(host.markup.clone());
                 let created = processor.process(request, &mut context);
                 let diagnostics = &mut report.passes.diagnostics;
                 diagnostics.extend(context.into_diagnostics());

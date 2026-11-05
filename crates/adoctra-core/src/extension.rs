@@ -292,7 +292,33 @@ pub struct ProcessContext<'a> {
     /// Where reports are located when it differs from `span` (Ruby's
     /// document reader mark while converting).
     cursor: Option<DiagnosticCursor>,
-    diagnostics: Vec<Diagnostic>,
+    diagnostics: std::cell::RefCell<Vec<Diagnostic>>,
+    /// The converter's markup for [`ProcessContext::apply_subs`].
+    markup: Option<std::sync::Arc<dyn Markup>>,
+    /// The document's substitution state while reading (counters, footnotes),
+    /// else substitutions read the attributes only.
+    host: std::cell::RefCell<Option<&'a mut dyn SubstitutionHost>>,
+}
+
+/// The document converter's markup for substituted text: Ruby's
+/// `apply_subs` returns what the converter makes of quotes, macros, line
+/// breaks and callouts (`<strong>…</strong>` for HTML). A processor that
+/// feeds substituted text to a tool sees this markup
+/// ([`ProcessContext::apply_subs`]).
+pub trait Markup: Send + Sync + std::fmt::Debug {
+    /// The parts as the converter writes them, with the document's
+    /// attributes (`htmlsyntax`, …).
+    fn markup(&self, parts: &[crate::AttributePart], attributes: &Attributes) -> String;
+}
+
+/// Runs substitution stages with the reading document's state.
+pub(crate) trait SubstitutionHost {
+    fn substitute(
+        &mut self,
+        text: &str,
+        stages: &[crate::pass_subs::Stage],
+        span: Span,
+    ) -> Vec<crate::AttributePart>;
 }
 
 impl<'a> ProcessContext<'a> {
@@ -310,8 +336,59 @@ impl<'a> ProcessContext<'a> {
             output,
             span,
             cursor: None,
-            diagnostics: Vec::new(),
+            diagnostics: Default::default(),
+            markup: None,
+            host: Default::default(),
         }
+    }
+
+    /// Substituted text in the converter's markup (see [`Markup`]).
+    pub(crate) fn with_markup(mut self, markup: Option<std::sync::Arc<dyn Markup>>) -> Self {
+        self.markup = markup;
+        self
+    }
+
+    /// Substitutions with the reading document's state.
+    pub(crate) fn with_host(self, host: &'a mut dyn SubstitutionHost) -> Self {
+        *self.host.borrow_mut() = Some(host);
+        self
+    }
+
+    /// Ruby's `parent.apply_subs(lines, parent.resolve_block_subs(subs, nil,
+    /// subject))`: the substitutions a block's `subs` attribute names
+    /// (without defaults; unknown names warn like Ruby), applied to the
+    /// lines joined with line feeds, in the converter's markup (plain text
+    /// without a [`Markup`]). Ruby runs them while reading, so attribute
+    /// counters advance and footnotes register in the document.
+    pub fn apply_subs(&self, lines: &[String], subs: &str, subject: &str) -> Vec<String> {
+        let mut warnings = Vec::new();
+        let stages = crate::pass_subs::resolve_block(
+            subs,
+            crate::pass_subs::Defaults::None,
+            subject,
+            self.span,
+            &mut warnings,
+        );
+        self.diagnostics.borrow_mut().extend(warnings);
+        let text = lines.join("\n");
+        if stages.is_empty() || text.is_empty() {
+            return lines.to_vec();
+        }
+        let parts = match self.host.borrow_mut().as_mut() {
+            Some(host) => host.substitute(&text, &stages, self.span),
+            None => {
+                let mut diagnostics = Vec::new();
+                let parts =
+                    crate::docinfo::substitute(&text, &stages, self.attributes, &mut diagnostics);
+                self.diagnostics.borrow_mut().extend(diagnostics);
+                parts
+            }
+        };
+        let text = match &self.markup {
+            Some(markup) => markup.markup(&parts, self.attributes),
+            None => crate::attributes::parts_text(&parts),
+        };
+        text.split('\n').map(str::to_owned).collect()
     }
 
     /// Reports located at this reader cursor instead of the span.
@@ -367,13 +444,13 @@ impl<'a> ProcessContext<'a> {
     /// without `source_location`, e.g. the path resolver's).
     pub fn warning_unlocated(&mut self, message: impl Into<String>) {
         self.report(Severity::Warning, message.into());
-        if let Some(last) = self.diagnostics.last_mut() {
+        if let Some(last) = self.diagnostics.get_mut().last_mut() {
             last.report.location = crate::diagnostic::DiagnosticLocation::Unlocated;
         }
     }
 
     fn report(&mut self, severity: Severity, message: String) {
-        self.diagnostics.push(Diagnostic {
+        self.diagnostics.get_mut().push(Diagnostic {
             omitted_span: None,
             report: crate::DiagnosticReport {
                 location: self
@@ -388,7 +465,7 @@ impl<'a> ProcessContext<'a> {
     }
 
     pub(crate) fn into_diagnostics(self) -> Vec<Diagnostic> {
-        self.diagnostics
+        self.diagnostics.into_inner()
     }
 }
 

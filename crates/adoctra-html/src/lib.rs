@@ -3027,6 +3027,25 @@ fn render_footnotes(
     out.push_str("</div>\n");
 }
 
+/// Ruby's html5 converter output for substituted text while parsing (what
+/// `apply_subs` returns to an extension, e.g. a diagram's code with `subs`):
+/// the parts as HTML, `<br/>` with `htmlsyntax=xml`.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct HtmlMarkup;
+
+impl adoctra_core::Markup for HtmlMarkup {
+    fn markup(
+        &self,
+        parts: &[adoctra_core::AttributePart],
+        attributes: &adoctra_core::Attributes,
+    ) -> String {
+        let _xml = XmlMode::enter(attributes.get("htmlsyntax") == Some("xml"));
+        let mut out = String::new();
+        render_parts(parts, &mut out);
+        out
+    }
+}
+
 fn render_parts(parts: &[adoctra_core::AttributePart], out: &mut String) {
     render_parts_as(parts, out, escape_text);
 }
@@ -3131,6 +3150,28 @@ fn render_parts_as(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn markup_is_rubys_html5_for_substituted_text() {
+        use adoctra_core::{AttributeFormat, AttributePart, Markup};
+        let parts = [
+            AttributePart::Open(AttributeFormat::Strong),
+            AttributePart::Text("a<b".into()),
+            AttributePart::Close(AttributeFormat::Strong),
+            AttributePart::LineBreak,
+            AttributePart::Raw("&#8212;".into()),
+        ];
+        let mut attributes = adoctra_core::Attributes::new();
+        assert_eq!(
+            HtmlMarkup.markup(&parts, &attributes),
+            "<strong>a&lt;b</strong><br>&#8212;"
+        );
+        attributes.set("htmlsyntax", "xml");
+        assert_eq!(
+            HtmlMarkup.markup(&parts, &attributes),
+            "<strong>a&lt;b</strong><br/>&#8212;"
+        );
+    }
+
     use super::*;
 
     /// Embedded output, the body content Ruby's `-s` writes.

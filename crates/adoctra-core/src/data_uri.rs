@@ -32,6 +32,8 @@ pub(crate) struct InlineMacros {
     /// Ruby's document reader mark once reading is done (diagram
     /// processors log at `cursor_at_mark`).
     pub mark: std::cell::Cell<Option<crate::DiagnosticCursor>>,
+    /// The converter's markup for processors' substitutions.
+    pub markup: Option<std::sync::Arc<dyn crate::extension::Markup>>,
 }
 
 impl<'a> Images<'a> {

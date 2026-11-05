@@ -88,8 +88,8 @@ pub use error::{Error, Result};
 pub use extension::{
     AttrKey, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor, BlockRequest,
     ContentModel, ExtensionAttributes, InlineMacroFormat, InlineMacroProcessor, InlineMacroRequest,
-    MacroContent, NewBlock, NewBlockKind, NewInline, NewInlineKind, ProcessContext, Registry,
-    TreeProcessor,
+    MacroContent, Markup, NewBlock, NewBlockKind, NewInline, NewInlineKind, ProcessContext,
+    Registry, TreeProcessor,
 };
 pub use image::{inline_svg, normalize_web_path};
 pub use resource::{

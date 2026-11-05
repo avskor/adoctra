@@ -284,6 +284,10 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
             None => None,
         },
         extensions: args.diagrams.then(diagram_extensions),
+        // Text extensions substitute while reading (a diagram's code with
+        // `subs`) gets Ruby's html5 markup, Ruby's default converter (it
+        // has none for DOCX or JSON).
+        markup: Some(std::sync::Arc::new(adoctra::html::HtmlMarkup)),
         ..Default::default()
     };
     // A standalone HTML document reads its stylesheet where Ruby's converter

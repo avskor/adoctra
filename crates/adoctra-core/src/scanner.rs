@@ -69,6 +69,20 @@ impl FilteredSource {
         result
     }
 
+    /// Text a processor generated for a block: every position maps to the
+    /// block at `at` (`width` source bytes).
+    pub fn generated(text: &str, at: usize, width: usize) -> Self {
+        Self {
+            text: text.to_owned(),
+            removed: Vec::new(),
+            segments: vec![Segment {
+                start: 0,
+                original: at,
+                generated: Some(width),
+            }],
+        }
+    }
+
     pub fn restore_inlines(&self, inlines: &mut [crate::Inline]) {
         struct Restore<'a>(&'a FilteredSource);
         impl crate::visit::VisitorMut for Restore<'_> {

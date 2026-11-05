@@ -130,7 +130,11 @@ pub fn docinfo(
         if !content.is_empty() {
             content.push(AttributePart::Raw("\n".to_owned()));
         }
-        content.extend(substitute(&normalize(&resource.text), &stages, attributes));
+        content.extend(substitute_docinfo(
+            &normalize(&resource.text),
+            &stages,
+            attributes,
+        ));
     }
     content
 }
@@ -146,7 +150,7 @@ fn normalize(text: &str) -> String {
         .join("\n")
 }
 
-fn substitute(text: &str, stages: &[Stage], attributes: &Attributes) -> Vec<AttributePart> {
+fn substitute_docinfo(text: &str, stages: &[Stage], attributes: &Attributes) -> Vec<AttributePart> {
     let mut evaluation = crate::substitution_context::Evaluation::read_only(attributes);
     let compat = attributes.get("compat-mode").is_some();
     let (_, mut passes) = crate::inline_pass::Passes::extract("", 0, &mut evaluation, compat);
@@ -163,4 +167,25 @@ fn substitute(text: &str, stages: &[Stage], attributes: &Attributes) -> Vec<Attr
         );
     }
     parts
+}
+
+/// Ruby's `apply_subs(text, stages)` reading the attributes only (passthroughs
+/// extracted for the macros stage).
+pub(crate) fn substitute(
+    text: &str,
+    stages: &[Stage],
+    attributes: &Attributes,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+) -> Vec<AttributePart> {
+    let mut evaluation = crate::substitution_context::Evaluation::read_only(attributes);
+    let compat = attributes.get("compat-mode").is_some();
+    crate::inline_pass::Passes::selected_stages(
+        text,
+        stages,
+        Default::default(),
+        &mut evaluation,
+        compat,
+        Span::new(0, 0),
+        diagnostics,
+    )
 }

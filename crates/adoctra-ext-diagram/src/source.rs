@@ -141,26 +141,27 @@ impl<'c, 'a> Source<'c, 'a> {
     }
 
     /// The diagram code (`load_code`), read once, with the block's `subs`
-    /// (`resolve_block_subs` from no defaults): `attributes` and
-    /// `specialcharacters` are applied; other substitutions are not
-    /// supported and leave the code unchanged.
+    /// (`resolve_block_subs` from no defaults) applied by the document like
+    /// Ruby's `apply_subs`: in the converter's markup (`<strong>`, `&#8212;`
+    /// …), counters advance and footnotes register.
     pub fn code(&mut self, host: &dyn crate::DiagramHost) -> Result<&str, String> {
         if self.code.is_none() {
-            let code = match &self.origin {
-                Origin::Lines(lines) => lines.join("\n"),
-                Origin::File(None) | Origin::Meme(_) | Origin::Barcode { .. } => String::new(),
+            let lines = match &self.origin {
+                Origin::Lines(lines) => lines.clone(),
+                Origin::File(None) | Origin::Meme(_) | Origin::Barcode { .. } => Vec::new(),
                 Origin::File(Some(path)) => {
                     let data = host
                         .read(path)
                         .map_err(|e| format!("{} @ rb_sysopen - {path}", errno_message(&e)))?;
-                    prepare_source_array(&data).join("\n")
+                    prepare_source_array(&data)
                 }
             };
-            let code = match self.attributes.get("subs") {
-                Some(subs) => apply_subs(&code, &resolve_subs(subs), self.context.attributes()),
-                None => code,
+            // `parent.apply_subs(lines, resolve_block_subs(subs, nil, 'diagram'))`.
+            let lines = match self.attributes.get("subs") {
+                Some(subs) => self.context.apply_subs(&lines, subs, "diagram"),
+                None => lines,
             };
-            self.code = Some(code);
+            self.code = Some(lines.join("\n"));
         }
         Ok(self.code.as_deref().unwrap())
     }
@@ -224,89 +225,6 @@ impl<'c, 'a> Source<'c, 'a> {
         }
         cached_checksum != Some(self.checksum().as_str())
     }
-}
-
-/// Ruby's `resolve_block_subs(subs, nil, 'diagram')`: comma-separated
-/// names and groups, `+`/`-` modifiers relative to the (empty) defaults.
-pub(crate) fn resolve_subs(spec: &str) -> Vec<&'static str> {
-    const NORMAL: [&str; 6] = [
-        "specialcharacters",
-        "quotes",
-        "attributes",
-        "replacements",
-        "macros",
-        "post_replacements",
-    ];
-    let expand = |name: &str| -> Vec<&'static str> {
-        match name {
-            "none" => vec![],
-            "normal" => NORMAL.to_vec(),
-            "verbatim" => vec!["specialcharacters", "callouts"],
-            "a" | "attributes" => vec!["attributes"],
-            "c" | "specialchars" | "specialcharacters" => vec!["specialcharacters"],
-            "q" | "quotes" => vec!["quotes"],
-            "r" | "replacements" => vec!["replacements"],
-            "m" | "macros" => vec!["macros"],
-            "p" | "post_replacements" => vec!["post_replacements"],
-            "callouts" => vec!["callouts"],
-            _ => vec![],
-        }
-    };
-    let mut subs: Vec<&'static str> = Vec::new();
-    for item in spec.split(',').map(str::trim).filter(|i| !i.is_empty()) {
-        if let Some(name) = item.strip_prefix('+') {
-            subs.extend(expand(name));
-        } else if let Some(name) = item.strip_suffix('+') {
-            let mut front = expand(name);
-            front.append(&mut subs);
-            subs = front;
-        } else if let Some(name) = item.strip_prefix('-') {
-            let removed = expand(name);
-            subs.retain(|s| !removed.contains(s));
-        } else {
-            subs.extend(expand(item));
-        }
-    }
-    let mut unique = Vec::new();
-    for sub in subs {
-        if !unique.contains(&sub) {
-            unique.push(sub);
-        }
-    }
-    unique
-}
-
-/// The supported substitutions in order: special characters and Ruby's
-/// `sub_attributes` (escaped references unescaped; a missing attribute per
-/// `attribute-missing`: kept, dropped, or its line dropped).
-pub(crate) fn apply_subs(
-    code: &str,
-    subs: &[&str],
-    attributes: &adoctra_core::Attributes,
-) -> String {
-    let mut text = code.to_owned();
-    for sub in subs {
-        match *sub {
-            "specialcharacters" => {
-                text = text
-                    .replace('&', "&amp;")
-                    .replace('<', "&lt;")
-                    .replace('>', "&gt;")
-            }
-            "attributes" if text.contains('{') => {
-                let missing = attributes.get("attribute-missing").unwrap_or("skip");
-                let lines: Vec<String> = text
-                    .split('\n')
-                    .filter_map(|line| {
-                        sub_attribute_line(line, attributes, missing, &mut Vec::new())
-                    })
-                    .collect();
-                text = lines.join("\n");
-            }
-            _ => {}
-        }
-    }
-    text
 }
 
 /// `sub_attributes(text, attribute_missing: 'warn')`: a missing reference
@@ -488,38 +406,6 @@ mod tests {
         assert_eq!(basename_without_ext("/a/foo.puml"), "foo");
         assert_eq!(basename_without_ext("/a/.hidden"), ".hidden");
         assert_eq!(basename_without_ext("/a/noext"), "noext");
-    }
-
-    #[test]
-    fn block_subs_resolve_and_apply_like_ruby() {
-        assert_eq!(resolve_subs("attributes+"), ["attributes"]);
-        assert_eq!(
-            resolve_subs("+attributes,specialchars"),
-            ["attributes", "specialcharacters"]
-        );
-        assert_eq!(
-            resolve_subs("normal,-quotes,-macros")[..3],
-            ["specialcharacters", "attributes", "replacements"]
-        );
-        let mut attributes = adoctra_core::Attributes::new();
-        attributes.set("node", "start");
-        assert_eq!(
-            apply_subs(
-                "a {node} \\{node} {nope} {x y}",
-                &["attributes"],
-                &attributes
-            ),
-            "a start {node} {nope} {x y}"
-        );
-        attributes.set("attribute-missing", "drop-line");
-        assert_eq!(
-            apply_subs("keep\n{nope} gone", &["attributes"], &attributes),
-            "keep"
-        );
-        assert_eq!(
-            apply_subs("a<b", &["specialcharacters"], &attributes),
-            "a&lt;b"
-        );
     }
 
     #[test]

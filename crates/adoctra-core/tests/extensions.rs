@@ -812,3 +812,117 @@ fn discarded_captions_advance_the_figure_counter_like_ruby() {
         [Some("Figure 2. "), None, Some("Figure 3. "), None]
     );
 }
+
+/// Substitutes its lines like asciidoctor-diagram's sources and returns
+/// them as a listing that keeps the block's attributes.
+struct Subst;
+
+impl BlockProcessor for Subst {
+    fn name(&self) -> &str {
+        "subst"
+    }
+    fn contexts(&self) -> &[BlockContext] {
+        &[BlockContext::Listing]
+    }
+    fn process(&self, request: BlockRequest, context: &mut ProcessContext<'_>) -> Option<NewBlock> {
+        let subs = request.attributes.get("tool-subs").unwrap_or("");
+        let lines = context.apply_subs(&request.lines, subs, "diagram");
+        Some(NewBlock::listing(lines.join("\n"), request.attributes))
+    }
+}
+
+/// The parts as text with `[`…`]` around bold (a stand-in converter).
+#[derive(Debug)]
+struct Brackets;
+
+impl adoctra_core::Markup for Brackets {
+    fn markup(
+        &self,
+        parts: &[adoctra_core::AttributePart],
+        _: &adoctra_core::Attributes,
+    ) -> String {
+        use adoctra_core::{AttributeFormat, AttributePart};
+        parts
+            .iter()
+            .map(|part| match part {
+                AttributePart::Text(t) | AttributePart::Raw(t) => t.clone(),
+                AttributePart::Open(AttributeFormat::Strong) => "[".to_owned(),
+                AttributePart::Close(AttributeFormat::Strong) => "]".to_owned(),
+                AttributePart::Footnote(_) => "^".to_owned(),
+                _ => String::new(),
+            })
+            .collect()
+    }
+}
+
+#[test]
+fn processors_substitute_while_reading_and_their_blocks_commit_subs() {
+    let mut registry = Registry::new();
+    registry.register_block(Subst);
+    let options = ParseOptions {
+        extensions: Some(Arc::new(registry)),
+        markup: Some(Arc::new(Brackets)),
+        ..ParseOptions::default()
+    };
+    let source = ":who: World\n\n\
+                  [subst,tool-subs=\"quotes,attributes,bogus\"]\n----\n*{who}* <x>\n----\n\n\
+                  [subst,tool-subs=macros,subs=+quotes]\n----\nfootnote:[n] *b*\n----\n\n\
+                  Later.footnote:[m]\n";
+    let result = parse_with_options(source, &options);
+    // Ruby's warning for unknown names (no source location).
+    let warning = result
+        .diagnostics
+        .iter()
+        .find(|d| d.message.contains("bogus"))
+        .expect("warning");
+    assert_eq!(
+        warning.message,
+        "invalid substitution type for diagram: bogus"
+    );
+    assert_eq!(
+        warning.report.location,
+        adoctra_core::DiagnosticLocation::Unlocated
+    );
+    let blocks = &result.document.blocks;
+    match &blocks[0].kind {
+        BlockKind::Listing { text, inlines, .. } => {
+            assert_eq!(text, "[World] <x>");
+            assert!(inlines.is_none(), "default subs keep the text");
+        }
+        other => panic!("{other:?}"),
+    }
+    // The footnote in the processor's text registered first; the listing's
+    // own `subs` (verbatim defaults plus quotes) convert its text.
+    match &blocks[1].kind {
+        BlockKind::Listing { text, inlines, .. } => {
+            assert_eq!(text, "^ *b*");
+            assert!(inlines.is_some(), "custom subs give inlines");
+        }
+        other => panic!("{other:?}"),
+    }
+    let footnotes: Vec<_> = result
+        .document
+        .footnotes
+        .iter()
+        .map(|f| {
+            let text: String =
+                f.content
+                    .iter()
+                    .filter_map(|part| match part {
+                        adoctra_core::AttributePart::Text(t)
+                        | adoctra_core::AttributePart::Raw(t) => Some(t.as_str()),
+                        _ => None,
+                    })
+                    .collect();
+            (f.index.as_str(), text)
+        })
+        .collect();
+    // As in Ruby, both are number 1: the reading registered the first
+    // with the `footnote-number` counter, which conversion restores.
+    assert_eq!(
+        footnotes,
+        [("1", "n".to_owned()), ("1", "m".to_owned())],
+        "{:?}",
+        result.document.footnotes
+    );
+}

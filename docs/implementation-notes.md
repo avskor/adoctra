@@ -1744,10 +1744,25 @@ defaults with `||=`) and `cloaked-context`. A macro expands its target first
 names, Ruby's `into: attributes`) over the metadata, or puts the content in
 `text`. The answer replaces the block: its attributes become the metadata
 (`title` reuses the pending title's spans when unchanged, `id`, `role`,
-`style`, `reftext`, `*-option`; `subs` is dropped; other named keys stay),
-then the normal completion runs (media completion, caption counter, title
-deferral, id registration) except `commit_subs`/`apply_callouts`: processor
-text is final. `None` drops the block with its metadata and pending entries
+`style`, `reftext`, `*-option`, `subs`; other named keys stay), then the
+normal completion runs (media completion, caption counter, title deferral,
+id registration); instead of `commit_subs`/`apply_callouts` on the source,
+`commit_processor_subs` applies the block's `subs` (Ruby's `commit_subs`
+from the listing/literal verbatim or passthrough defaults) to the
+processor's text through `FilteredSource::generated` and the deferred
+block substitutions (converted with the document; callouts are not
+cataloged, as Ruby's parser does not catalog a processor's block); default
+substitutions keep the text. `ProcessContext::apply_subs(lines, subs,
+subject)` is Ruby's `apply_subs(lines, resolve_block_subs(subs, nil,
+subject))` while reading: unknown names warn unlocated, the stages run
+through `Passes::selected_stages` with the document's state
+(`ParseContext::reading_subs` via the `SubstitutionHost` `Reading`, like
+`reading_title`: counters, footnotes that register now — Ruby's
+`footnote-number` restores at conversion, so a later footnote is number 1
+too — xrefs, images), or reading the attributes only for inline macros
+(`docinfo::substitute`); the parts become text through
+`ParseOptions::markup` (`Markup`: `adoctra_html::HtmlMarkup` renders Ruby's
+html5 with `htmlsyntax`; the CLI always passes it), else plain text. `None` drops the block with its metadata and pending entries
 (Ruby's `attributes.clear`).
 `InlineMacroProcessor` (2026-11-05; `InlineMacroFormat` long/short,
 positional names, defaults, `MacroContent`) runs first in the macros stage

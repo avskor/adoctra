@@ -250,6 +250,7 @@ pub(crate) fn parse_reader<'a>(
             base_dir: options.base_dir.clone(),
             output: options.output.clone(),
             mark: std::cell::Cell::new(None),
+            markup: options.markup.clone(),
         });
     let images =
         crate::data_uri::Images::new(lines.image_source()).with_inline_macros(inline_macros);
@@ -837,8 +838,11 @@ impl<'s, 'c> Run<'s, 'c> {
             }
             trim_verbatim_edges(&mut block);
             let simple = simple || block.simple;
-            // A processor's block carries its final text.
-            if !synthesized {
+            // A processor's block: Ruby's `commit_subs` on its own text (its
+            // callouts are not cataloged).
+            if synthesized {
+                commit_processor_subs(&mut block, &attributes, context);
+            } else {
                 commit_subs(&mut block, simple, lines, &attributes, context);
                 apply_callouts(&mut block, lines, context);
             }
@@ -2517,6 +2521,57 @@ fn collect_footnotes_after(
 /// passthrough blocks convert theirs into `inlines`. A selection equal to
 /// the defaults changes nothing. With callouts, the source marks register in
 /// the catalog; without any, the callouts stage is dropped.
+/// Ruby's `commit_subs` for a block an extension processor created: its
+/// `subs` (from the verbatim defaults of a listing or literal, none for a
+/// passthrough) over the processor's text, converted when the document is.
+/// Default substitutions keep the text (the backend escapes it).
+fn commit_processor_subs(block: &mut Block, attrs: &Attributes, context: &mut ParseContext) {
+    use crate::pass_subs::Defaults;
+    let (defaults, subject) = match &block.kind {
+        BlockKind::Listing { .. } => (Defaults::Verbatim, "listing"),
+        BlockKind::Literal { .. } => (Defaults::Verbatim, "literal"),
+        BlockKind::Passthrough { .. } => (Defaults::None, "pass"),
+        _ => return,
+    };
+    let Some(custom) = block.attrs.named.get("subs") else {
+        return;
+    };
+    let stages = crate::pass_subs::resolve_block(
+        custom,
+        defaults,
+        subject,
+        block.span,
+        &mut context.diagnostics,
+    );
+    if stages == defaults.stages() {
+        return;
+    }
+    let line_comment = block
+        .attrs
+        .named
+        .get("line-comment")
+        .cloned()
+        .or_else(|| context.attributes.get("line-comment").map(str::to_owned));
+    let subs = crate::body_subs::BlockSubs {
+        stages,
+        line_comment,
+        callout_ids: Vec::new(),
+        trim: true,
+        source_listing: None,
+    };
+    let span = block.span;
+    match &mut block.kind {
+        BlockKind::Listing { text, inlines, .. }
+        | BlockKind::Literal { text, inlines, .. }
+        | BlockKind::Passthrough { text, inlines, .. } => {
+            let source =
+                crate::scanner::FilteredSource::generated(text, span.start, span.end - span.start);
+            *inlines = Some(context.body_subs.defer_block(source, None, attrs, subs));
+        }
+        _ => {}
+    }
+}
+
 fn commit_subs(
     block: &mut Block,
     simple: bool,

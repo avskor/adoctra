@@ -141,7 +141,9 @@ pub(crate) fn run(
                 attributes,
                 span,
             };
-            invoke(context, span, |ctx| processor.process(request, ctx))
+            invoke(context, includes, span, |ctx| {
+                processor.process(request, ctx)
+            })
         }
         Pending::Macro {
             processor,
@@ -202,30 +204,58 @@ pub(crate) fn run(
                 attributes,
                 span,
             };
-            invoke(context, span, |ctx| processor.process(request, ctx))
+            invoke(context, includes, span, |ctx| {
+                processor.process(request, ctx)
+            })
         }
     }?;
     context.discarded_captions = new.discarded_captions.clone();
     Some(new_block(new, span, metadata))
 }
 
+/// The reading document as a processor's substitution host.
+struct Reading<'p, 'c> {
+    context: &'p mut ParseContext<'c>,
+    includes: &'p crate::xref_target::Includes,
+}
+
+impl crate::extension::SubstitutionHost for Reading<'_, '_> {
+    fn substitute(
+        &mut self,
+        text: &str,
+        stages: &[crate::pass_subs::Stage],
+        span: Span,
+    ) -> Vec<crate::AttributePart> {
+        self.context.reading_subs(text, stages, span, self.includes)
+    }
+}
+
 fn invoke(
     context: &mut ParseContext,
+    includes: &crate::xref_target::Includes,
     span: Span,
     process: impl FnOnce(&mut ProcessContext<'_>) -> Option<NewBlock>,
 ) -> Option<NewBlock> {
     let attributes = Arc::clone(&context.attributes);
     let base_dir = context.base_dir.clone();
     let output = context.output_target().cloned();
-    let mut ctx = ProcessContext::new(
-        &attributes,
-        context.safe_mode(),
-        base_dir.as_deref(),
-        output.as_ref(),
-        span,
-    );
-    let new = process(&mut ctx);
-    context.diagnostics.extend(ctx.into_diagnostics());
+    let markup = context.markup.clone();
+    let safe = context.safe_mode();
+    let (new, diagnostics) = {
+        let mut reading = Reading { context, includes };
+        let mut ctx = ProcessContext::new(
+            &attributes,
+            safe,
+            base_dir.as_deref(),
+            output.as_ref(),
+            span,
+        )
+        .with_markup(markup)
+        .with_host(&mut reading);
+        let new = process(&mut ctx);
+        (new, ctx.into_diagnostics())
+    };
+    context.diagnostics.extend(diagnostics);
     new
 }
 
@@ -261,8 +291,10 @@ fn new_block(new: NewBlock, span: Span, metadata: &mut PendingMeta) -> Block {
             }
             "style" => attrs.style = Some(value.to_owned()),
             "reftext" => metadata.reftext = previous.reftext.clone(),
-            // Text the processor created gets no further substitutions.
-            "subs" => {}
+            // Ruby's `commit_subs` applies them to the processor's text.
+            "subs" => {
+                attrs.named.insert(name.to_owned(), value.to_owned());
+            }
             name => match name.strip_suffix("-option") {
                 Some(option) => attrs.options.push(option.to_owned()),
                 None => {

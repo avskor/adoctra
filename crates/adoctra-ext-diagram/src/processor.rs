@@ -485,17 +485,10 @@ fn process(
             // adoctra reports the error like `log`.
             let text = format!("Failed to generate image: {message}");
             context.error(text.clone());
-            let mut source = format!("{text}\n{}", code.unwrap_or_default());
-            // Ruby's listing keeps the block's attributes, so its `subs`
-            // convert the text again (special characters are the backend's);
-            // an inline macro takes the listing's unconverted source.
-            if let Some(subs) = attributes.get("subs").filter(|_| kind == Kind::Block) {
-                let subs: Vec<&str> = crate::source::resolve_subs(subs)
-                    .into_iter()
-                    .filter(|sub| *sub == "attributes")
-                    .collect();
-                source = crate::source::apply_subs(&source, &subs, context.attributes());
-            }
+            // The listing keeps the block's attributes: core applies its
+            // `subs` like Ruby's `commit_subs` (to the substituted code); an
+            // inline macro takes the listing's unconverted source.
+            let source = format!("{text}\n{}", code.unwrap_or_default());
             NewBlock::listing(source, attributes)
         }
     }

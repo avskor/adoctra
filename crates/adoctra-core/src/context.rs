@@ -47,6 +47,10 @@ pub struct ParseOptions {
     /// Extension processors invoked while parsing (see
     /// [`crate::extension`]). `None` (the default) is plain Asciidoctor.
     pub extensions: Option<Arc<crate::extension::Registry>>,
+    /// The target converter's markup for text processors substitute while
+    /// reading ([`crate::ProcessContext::apply_subs`], Ruby's `apply_subs`
+    /// through the document's converter). `None`: plain text.
+    pub markup: Option<Arc<dyn crate::extension::Markup>>,
 }
 
 /// The output location a host resolved before parsing (absolute paths, as
@@ -454,6 +458,7 @@ pub(crate) struct ParseContext<'i> {
     safe: SafeMode,
     /// The host's extension processors and `base_dir` they may consult.
     pub(crate) extensions: Option<Arc<crate::extension::Registry>>,
+    pub(crate) markup: Option<Arc<dyn crate::extension::Markup>>,
     pub(crate) base_dir: Option<String>,
     /// A block read for an extension processor, handed from the block
     /// parser to block completion, which invokes the processor.
@@ -823,6 +828,7 @@ impl ParseContext<'_> {
             output: options.output.clone(),
             safe: options.safe,
             extensions: options.extensions.clone().filter(|r| !r.is_empty()),
+            markup: options.markup.clone(),
             base_dir: options.base_dir.clone(),
             extension: None,
         }
@@ -1321,6 +1327,44 @@ impl ParseContext<'_> {
             self.attributes = Arc::new(attributes);
         }
         inlines
+    }
+
+    /// Ruby's `apply_subs` of a processor's text while reading, with the
+    /// document's state: counters advance, footnotes register.
+    pub(crate) fn reading_subs(
+        &mut self,
+        text: &str,
+        stages: &[crate::pass_subs::Stage],
+        span: crate::Span,
+        includes: &crate::xref_target::Includes,
+    ) -> Vec<crate::AttributePart> {
+        let attributes = Arc::clone(&self.attributes);
+        let compat = attributes.get("compat-mode").is_some();
+        let mut evaluation = crate::substitution_context::Evaluation::definition(
+            &attributes,
+            &self.locked,
+            &mut self.counters,
+            self.quote_compat,
+        )
+        .with_root(root_of(&mut self.root))
+        .with_footnotes(&mut self.footnotes)
+        .with_images(self.images)
+        .with_xrefs(Self::xrefs(&self.outfilesuffix, includes))
+        .with_quote_mode(self.quote_compat);
+        let parts = crate::inline_pass::Passes::selected_stages(
+            text,
+            stages,
+            Default::default(),
+            &mut evaluation,
+            compat,
+            span,
+            &mut self.diagnostics,
+        );
+        if let Some(mut changed) = evaluation.changed_attributes() {
+            changed.local_hardbreaks = false;
+            self.attributes = Arc::new(changed);
+        }
+        parts
     }
 
     /// An admonition's label while reading: its own `caption`, else the
