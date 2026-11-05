@@ -362,7 +362,7 @@ impl Paths {
     ) -> String {
         let (start, jail) = if self.safe == SafeMode::Unsafe {
             let start = match start {
-                Some(start) if start.starts_with('/') => start.to_owned(),
+                Some(start) if adoctra_core::is_root_path(start) => start.to_owned(),
                 Some(start) => format!("{}/{start}", self.base_dir),
                 None => self.base_dir.clone(),
             };

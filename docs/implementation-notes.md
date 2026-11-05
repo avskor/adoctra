@@ -1134,6 +1134,19 @@ unlocated warnings; the provider gets that path relative to the referrer
 (`include file not found: …`, `<docfile>: SVG does not exist …`). A
 single-line ifdef reprocesses `include::` content; stdin registers includes
 relative to the base dir.
+**Windows paths** (2026-11-05, regression `-o c:\tmp\a.docx` →
+`dir_s_mkdir - …/asciidoc/C:`): system_path.rs follows Ruby's PathResolver
+with the host separator (`PathStyle::HOST`, `cfg!(windows)`): on Windows
+`root?` accepts `WindowsRootRx` (`C:/`, `C:\`, `\`), targets/starts/jails are
+posixified, a drive root partitions as `C:/`, and a start on another drive
+than the jail recovers from the jail ("start path for … is outside of jail
+root"). POSIX hosts (and WASM) keep `c:/x` relative, like Ruby. Public
+`is_root_path`/`posixify_path`/`parent_system_dir` replace `starts_with('/')`
+and `rfind('/')` dirname for system paths in the CLI (output plan,
+normalize), core (`docdir` base, referrer dir, `OutputTarget::File` dir),
+HTML stylesheet messages and the diagram extension (`expand_path` keeps a
+drive root). Covered by Windows-style unit tests in system_path.rs; there is
+no Windows CI run of the CLI suite.
 Includes support lines/tag/tags selection before preprocessing, including ordered
 wildcards/exclusions and physical warnings for malformed tag nesting. Preserve
 separate provenance fragments for disjoint retained lines, even within one source

@@ -646,7 +646,10 @@ fn read_stylesheet(
                         .filter(|segment| *segment != ".")
                         .collect::<Vec<_>>()
                         .join("/");
-                    match attributes.get("docdir").filter(|_| !path.starts_with('/')) {
+                    match attributes
+                        .get("docdir")
+                        .filter(|_| !adoctra_core::is_root_path(&path))
+                    {
                         Some(docdir) => format!("{}/{path}", docdir.trim_end_matches('/')),
                         None => path,
                     }

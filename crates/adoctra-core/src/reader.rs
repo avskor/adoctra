@@ -299,7 +299,7 @@ impl<'a> Reader<'a> {
                 .base_dir
                 .as_deref()
                 .or_else(|| options.attributes.get("docdir"))
-                .filter(|dir| dir.starts_with('/'))
+                .filter(|dir| crate::system_path::is_root_path(dir))
                 .map(str::to_owned),
             safe: options.safe,
             primary_path: options.attributes.get("docfile").and_then(|file| {
@@ -329,8 +329,8 @@ impl<'a> Reader<'a> {
         let referrer_dir = resources
             .provider
             .document_path(primary.name())
-            .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
-            .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
+            .filter(|path| path.contains('/'))
+            .map(|path| crate::system_path::parent_system_dir(&path));
         Some(crate::data_uri::ImageSource {
             provider: resources.provider,
             referrer: primary.name().to_owned(),
@@ -1258,8 +1258,8 @@ impl<'a> Reader<'a> {
             .sources
             .get(current)
             .and_then(|source| resources.provider.document_path(source.name()))
-            .and_then(|path| path.rsplit_once('/').map(|(dir, _)| dir.to_owned()))
-            .map(|dir| if dir.is_empty() { "/".to_owned() } else { dir });
+            .filter(|path| path.contains('/'))
+            .map(|path| crate::system_path::parent_system_dir(&path));
         let system_path = match (&resources.base_dir, &uri_target) {
             (Some(base_dir), None) => {
                 let dir = if current == self.inputs[0].source_id {

@@ -81,11 +81,7 @@ impl OutputTarget {
         match self {
             Self::File(file) => OutputPaths {
                 file: file.clone(),
-                dir: match file.rfind('/') {
-                    Some(0) => "/".to_owned(),
-                    Some(slash) => file[..slash].to_owned(),
-                    None => ".".to_owned(),
-                },
+                dir: crate::system_path::parent_system_dir(file),
             },
             Self::Directory(dir) => {
                 let name = format!("{}{}", docname.unwrap_or(""), outfilesuffix.unwrap_or(""));

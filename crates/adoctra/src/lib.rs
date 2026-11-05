@@ -13,16 +13,16 @@
 //! ```
 
 pub use adoctra_core::{
-    parse, parse_resource, parse_resource_with_start, parse_with_options, parse_with_start,
-    resolve_system_path, tokens, tokens_resource, tokens_with_options, Attributes, Author,
-    AuthorDetails, Backend, BinaryResource, Block, BlockKind, ConversionStart, DateTime,
-    Diagnostic, DiagnosticCursor, DiagnosticLocation, DiagnosticReport, DocinfoLocation, Document,
-    DocumentDates, DocumentHeader, Error, IncludeInput, IncludeLimits, IncludeResource, Inline,
-    MemoryResources, OmittedSourceLine, OmittedSourceSpan, OutputPaths, OutputTarget, ParseOptions,
-    ParseResult, Registry, Resource, ResourceError, ResourceErrorKind, ResourceProvider,
-    ResourceRequest, ResourceResult, Result, Revision, SafeMode, Severity, SourceFile, SourceId,
-    SourceMap, SourcePosition, Span, SystemPath, Token, TokenKind, TreeProcessor,
-    COMPATIBILITY_VERSION,
+    is_root_path, parent_system_dir, parse, parse_resource, parse_resource_with_start,
+    parse_with_options, parse_with_start, posixify_path, resolve_system_path, tokens,
+    tokens_resource, tokens_with_options, Attributes, Author, AuthorDetails, Backend,
+    BinaryResource, Block, BlockKind, ConversionStart, DateTime, Diagnostic, DiagnosticCursor,
+    DiagnosticLocation, DiagnosticReport, DocinfoLocation, Document, DocumentDates, DocumentHeader,
+    Error, IncludeInput, IncludeLimits, IncludeResource, Inline, MemoryResources,
+    OmittedSourceLine, OmittedSourceSpan, OutputPaths, OutputTarget, ParseOptions, ParseResult,
+    Registry, Resource, ResourceError, ResourceErrorKind, ResourceProvider, ResourceRequest,
+    ResourceResult, Result, Revision, SafeMode, Severity, SourceFile, SourceId, SourceMap,
+    SourcePosition, Span, SystemPath, Token, TokenKind, TreeProcessor, COMPATIBILITY_VERSION,
 };
 
 /// The extension API (block, block macro and tree processors).

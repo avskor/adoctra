@@ -352,21 +352,33 @@ fn errno_message(error: &std::io::Error) -> &'static str {
 
 pub(crate) fn current_dir() -> String {
     std::env::current_dir()
-        .map(|d| d.to_string_lossy().into_owned())
+        .map(|d| adoctra_core::posixify_path(&d.to_string_lossy()))
         .unwrap_or_else(|_| "/".to_owned())
 }
 
-/// Ruby's `File.expand_path(path, base)` for POSIX paths (no `~`).
+/// Ruby's `File.expand_path(path, base)` (no `~`), posixified: rooted at
+/// `/`, or on Windows at the drive root (`C:/`) of an absolute path or base.
 pub(crate) fn expand_path(path: &str, base: &str) -> String {
-    let joined = if path.starts_with('/') {
-        path.to_owned()
+    let joined = if adoctra_core::is_root_path(path) {
+        adoctra_core::posixify_path(path)
     } else if path.is_empty() {
-        base.to_owned()
+        adoctra_core::posixify_path(base)
     } else {
-        format!("{}/{path}", base.trim_end_matches('/'))
+        format!(
+            "{}/{}",
+            adoctra_core::posixify_path(base).trim_end_matches('/'),
+            adoctra_core::posixify_path(path)
+        )
+    };
+    // A drive root (`C:/`) where the host has drives, else `/`.
+    let (root, rest) = match joined.find('/') {
+        Some(slash) if slash > 0 && adoctra_core::is_root_path(&joined) => {
+            joined.split_at(slash + 1)
+        }
+        _ => ("/", joined.as_str()),
     };
     let mut parts: Vec<&str> = Vec::new();
-    for segment in joined.split('/') {
+    for segment in rest.split('/') {
         match segment {
             "" | "." => {}
             ".." => {
@@ -375,16 +387,12 @@ pub(crate) fn expand_path(path: &str, base: &str) -> String {
             segment => parts.push(segment),
         }
     }
-    format!("/{}", parts.join("/"))
+    format!("{root}{}", parts.join("/"))
 }
 
 /// Ruby's `File.dirname`.
 pub(crate) fn parent_dir(path: &str) -> String {
-    match path.trim_end_matches('/').rfind('/') {
-        Some(0) => "/".to_owned(),
-        Some(at) => path[..at].to_owned(),
-        None => ".".to_owned(),
-    }
+    adoctra_core::parent_system_dir(path)
 }
 
 /// Ruby's `File.basename(path, File.extname(path))`.

@@ -98,7 +98,9 @@ pub use resource::{
     ResourceRequest, ResourceResult,
 };
 pub use source::{SourceFile, SourceId, SourceMap, SourcePosition};
-pub use system_path::{resolve_system_path, SystemPath};
+pub use system_path::{
+    is_root_path, parent_system_dir, posixify_path, resolve_system_path, SystemPath,
+};
 pub use tokenizer::{Token, TokenKind};
 
 /// Parse AsciiDoc source into a [`ParseResult`] (never fails on syntax).

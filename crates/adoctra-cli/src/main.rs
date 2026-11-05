@@ -561,12 +561,7 @@ fn output_plan(args: &Args) -> Result<OutputPlan, Failure> {
             let input = input
                 .as_deref()
                 .expect("a file input writes next to itself");
-            let dir = match input.rfind('/') {
-                Some(0) => "/",
-                Some(slash) => &input[..slash],
-                None => ".",
-            };
-            adoctra::OutputTarget::Directory(dir.to_owned())
+            adoctra::OutputTarget::Directory(adoctra::parent_system_dir(input))
         }
     };
     Ok(OutputPlan { target, input })
@@ -614,7 +609,7 @@ fn normalize_system_path(
 ) -> Result<adoctra::SystemPath, String> {
     let (start, jail) = if safe < adoctra::SafeMode::Safe {
         let start = match start {
-            Some(start) if start.starts_with('/') => start.to_owned(),
+            Some(start) if adoctra::is_root_path(start) => start.to_owned(),
             Some(start) => format!("{base_dir}/{start}"),
             None => base_dir.to_owned(),
         };

@@ -2003,3 +2003,44 @@ fn cli_writes_docx_next_to_the_input_and_prints_its_warnings() {
     assert_eq!(output.stdout, bytes);
     std::fs::remove_dir_all(root).unwrap();
 }
+
+/// Regression: an absolute `-o` in the host's own form (on Windows
+/// `C:\dir\a.docx`, with a drive and backslashes) is absolute, not a name
+/// joined to the document's directory; safe mode reports it outside the
+/// jail, unsafe mode writes there (Ruby's PathResolver).
+#[test]
+fn cli_absolute_output_paths_use_the_host_form() {
+    use std::process::Command;
+    let root = std::env::temp_dir().join(format!("adoctra-cli-abs-out-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&root);
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    std::fs::create_dir_all(root.join("elsewhere")).unwrap();
+    std::fs::write(root.join("docs/a.adoc"), "x").unwrap();
+    let target = root.join("elsewhere").join("a.html");
+    let target_text = target.to_str().unwrap();
+    let run = |safe: &str| {
+        Command::new(env!("CARGO_BIN_EXE_adoctra"))
+            .current_dir(root.join("docs"))
+            .args(["a.adoc", "-s", "-S", safe, "-o", target_text])
+            .output()
+            .unwrap()
+    };
+    let output = run("safe");
+    assert_eq!(output.status.code(), Some(1));
+    let err = String::from_utf8(output.stderr).unwrap();
+    assert!(
+        err.starts_with(&format!(
+            "adoctra: to_dir {target_text} is outside of jail: "
+        )),
+        "{err}"
+    );
+    assert!(!root
+        .join("docs")
+        .read_dir()
+        .unwrap()
+        .any(|entry| { entry.unwrap().file_name() != "a.adoc" }));
+    let output = run("unsafe");
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    assert_eq!(std::fs::read_to_string(&target).unwrap(), "<p>x</p>");
+    std::fs::remove_dir_all(root).unwrap();
+}
