@@ -433,3 +433,173 @@ fn unlocated_warnings_keep_the_block_span_but_no_cursor() {
         adoctra_core::DiagnosticLocation::Unlocated
     );
 }
+
+/// Logs like a Ruby inline macro `warn`ing its target and attributes;
+/// `err` reports an error, `drop` answers `nil`.
+struct Tag {
+    log: Log,
+}
+
+impl adoctra_core::InlineMacroProcessor for Tag {
+    fn name(&self) -> &str {
+        "tag"
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["first", "second"]
+    }
+    fn default_attributes(&self) -> &[(&str, &str)] {
+        &[("d", "v")]
+    }
+    fn process(
+        &self,
+        request: adoctra_core::InlineMacroRequest,
+        context: &mut ProcessContext<'_>,
+    ) -> Option<adoctra_core::NewInline> {
+        self.log.lock().unwrap().push(format!(
+            "{} {} [{}]",
+            request.name,
+            request.target,
+            describe(&request.attributes)
+        ));
+        match request.target.as_str() {
+            "drop" => None,
+            "err" => {
+                context.error("bad tag");
+                None
+            }
+            target => Some(adoctra_core::NewInline::quoted(
+                adoctra_core::AttributeFormat::Monospace,
+                format!("<{target}>"),
+                ExtensionAttributes::new(),
+            )),
+        }
+    }
+}
+
+struct Say {
+    log: Log,
+}
+
+impl adoctra_core::InlineMacroProcessor for Say {
+    fn name(&self) -> &str {
+        "say"
+    }
+    fn format(&self) -> adoctra_core::InlineMacroFormat {
+        adoctra_core::InlineMacroFormat::Short
+    }
+    fn content(&self) -> MacroContent {
+        MacroContent::Text
+    }
+    fn process(
+        &self,
+        request: adoctra_core::InlineMacroRequest,
+        _: &mut ProcessContext<'_>,
+    ) -> Option<adoctra_core::NewInline> {
+        self.log.lock().unwrap().push(format!(
+            "say {:?} [{}]",
+            request.target,
+            describe(&request.attributes)
+        ));
+        None
+    }
+}
+
+fn inline_registry(log: &Log) -> Registry {
+    let mut registry = Registry::new();
+    registry
+        .register_inline_macro(Tag {
+            log: Arc::clone(log),
+        })
+        .register_inline_macro(Say {
+            log: Arc::clone(log),
+        });
+    registry
+}
+
+#[test]
+fn inline_macro_processors_receive_rubys_attributes() {
+    let log = Log::default();
+    let source = "A tag:x&y[one, k=v,two,  three , opts=\"a, b\",role=rr] B xtag:img[] C \\tag:esc[] D tag:drop[] E.\n\n\
+         tag:a[b]c[] and tag:t[x\\]y] and tag:sp ace[] and tag:{nope}[] *tag:in[]* say:[ hi \\] there ] say:[].\n\n\
+         Multi tag:m[a\nb] end. tag:v[,,z]\n";
+    let result = parse_with(source, inline_registry(&log));
+    // Ruby's log, except that an empty positional (Ruby's `nil`) is left out.
+    assert_eq!(
+        *log.lock().unwrap(),
+        [
+            "tag x&amp;y [d=v, first=one, 1=one, k=v, 3=two, 4=three, a-option=, b-option=, role=rr]",
+            "tag img [d=v]",
+            "tag drop [d=v]",
+            "tag a [d=v, first=b, 1=b]",
+            "tag t [d=v, first=x]y, 1=x]y]",
+            "tag {nope} [d=v]",
+            "tag in [d=v]",
+            "say \"hi ] there\" [text=hi ] there]",
+            "say \"\" [text=]",
+            "tag v [d=v, 3=z]",
+        ]
+    );
+    assert!(result.diagnostics.is_empty(), "{:?}", result.diagnostics);
+    // The macro is a monospace part holding the raw text, spanned over the
+    // macro and highlighted as an inline macro.
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("expected a paragraph");
+    };
+    let macro_span = Span::new(2, 53);
+    assert_eq!(
+        &source[macro_span.start..macro_span.end],
+        "tag:x&y[one, k=v,two,  three , opts=\"a, b\",role=rr]"
+    );
+    let found = inlines.iter().any(|inline| match inline {
+        Inline::Substituted { parts, span, .. } => {
+            *span == macro_span
+                && parts.contains(&adoctra_core::AttributePart::Raw("<x&amp;y>".into()))
+        }
+        _ => false,
+    });
+    assert!(found, "{inlines:#?}");
+    assert!(result
+        .tokens
+        .iter()
+        .any(|token| token.span == macro_span && token.kind == TokenKind::InlineMacro));
+}
+
+#[test]
+fn inline_macro_reports_sit_at_rubys_document_reader_mark() {
+    let log = Log::default();
+    // Ruby converts the paragraph after reading: the reader's mark is the
+    // last block's first line (after its title), whatever the macro's line.
+    let result = parse_with(
+        "Para tag:err[] text.\n\n.Title\nlast\n",
+        inline_registry(&log),
+    );
+    let diagnostic = &result.diagnostics[0];
+    assert_eq!(diagnostic.message, "bad tag");
+    assert_eq!(diagnostic.severity, Severity::Error);
+    assert_eq!(diagnostic.span, Span::new(5, 14));
+    assert_eq!(
+        diagnostic.report.location,
+        adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+            source_id: adoctra_core::SourceId::default(),
+            line: 4,
+        })
+    );
+    assert!(diagnostic.report.conversion);
+}
+
+#[test]
+fn inline_macros_need_a_registered_processor() {
+    let log = Log::default();
+    let result = parse_with("tag:a[] say:[x]\n", registry(&log));
+    assert!(log.lock().unwrap().is_empty());
+    let BlockKind::Paragraph { inlines } = &result.document.blocks[0].kind else {
+        panic!("expected a paragraph");
+    };
+    assert_eq!(
+        inlines,
+        &[Inline::Text {
+            value: "tag:a[] say:[x]".into(),
+            span: Span::new(0, 15),
+        }]
+    );
+}

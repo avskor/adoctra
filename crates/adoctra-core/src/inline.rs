@@ -83,6 +83,7 @@ pub(crate) fn scan_inlines_recorded(
         use crate::TokenKind as K;
         for (spans, kind) in [
             (matches.links, K::Link),
+            (matches.extensions, K::InlineMacro),
             (matches.ui, K::InlineMacro),
             (matches.index_terms, K::InlineMacro),
             (matches.images, K::InlineMacro),

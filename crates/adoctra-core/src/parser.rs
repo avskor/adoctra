@@ -208,6 +208,31 @@ pub(crate) fn parse_with_start(
     parse_reader(options, Reader::new(source), Some(start)).0
 }
 
+/// Where Ruby's document reader was last marked: `next_block` marks the
+/// first line of each block it reads from the document's own reader (after
+/// metadata lines), and a callout list marks each item. Blocks inside
+/// delimited blocks, list items and table cells use their own readers;
+/// section titles and the document title are not marked.
+fn reader_mark(blocks: &[Block], has_title: bool) -> Option<usize> {
+    fn last(blocks: &[Block], titled: bool) -> Option<usize> {
+        blocks
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(index, block)| match &block.kind {
+                BlockKind::Section { blocks, .. } => last(blocks, true),
+                BlockKind::Preamble { blocks } => last(blocks, false),
+                BlockKind::Heading { .. } if titled && index == 0 => None,
+                BlockKind::CalloutList { items } => items
+                    .last()
+                    .map(|item| item.item.span.start)
+                    .or(Some(block.span.start)),
+                _ => Some(block.span.start),
+            })
+    }
+    last(blocks, has_title)
+}
+
 pub(crate) fn parse_reader<'a>(
     options: &ParseOptions,
     mut lines: Reader<'a>,
@@ -215,7 +240,19 @@ pub(crate) fn parse_reader<'a>(
 ) -> (ParseResult, Reader<'a>) {
     lines.set_primary_id(options.source_id);
     lines.enable_unread_includes(options);
-    let images = crate::data_uri::Images::new(lines.image_source());
+    let inline_macros = options
+        .extensions
+        .as_ref()
+        .filter(|registry| registry.inline_macros().next().is_some())
+        .map(|registry| crate::data_uri::InlineMacros {
+            registry: Arc::clone(registry),
+            safe: options.safe,
+            base_dir: options.base_dir.clone(),
+            output: options.output.clone(),
+            mark: std::cell::Cell::new(None),
+        });
+    let images =
+        crate::data_uri::Images::new(lines.image_source()).with_inline_macros(inline_macros);
     let mut context = ParseContext::new(options);
     context.images = Some(&images);
     lines.skip_primary_front_matter(&mut context);
@@ -296,6 +333,14 @@ pub(crate) fn parse_reader<'a>(
     // conversion.
     let loaded = context.stamp();
     let registered = references.len();
+    if let Some(inline_macros) = images.inline_macros() {
+        // Ruby's document reader keeps its last mark while converting;
+        // without one, `cursor_at_mark` is the end of the input.
+        let mark = reader_mark(&doc.blocks, doc.has_title)
+            .and_then(|offset| lines.report_cursor(offset))
+            .unwrap_or_else(|| lines.eof_cursor());
+        inline_macros.mark.set(Some(mark));
+    }
     let inline_tokens = context.execute_body(
         &mut doc,
         registry,

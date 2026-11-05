@@ -1748,11 +1748,38 @@ names, Ruby's `into: attributes`) over the metadata, or puts the content in
 then the normal completion runs (media completion, caption counter, title
 deferral, id registration) except `commit_subs`/`apply_callouts`: processor
 text is final. `None` drops the block with its metadata and pending entries
-(Ruby's `attributes.clear`). Tree processors run at the end of
+(Ruby's `attributes.clear`).
+`InlineMacroProcessor` (2026-11-05; `InlineMacroFormat` long/short,
+positional names, defaults, `MacroContent`) runs first in the macros stage
+(`attribute_macros::apply_extensions`, before the UI macros, in
+`flush_inlines` and `apply_inner`), like Ruby's custom inline macros in
+`sub_macros`: each processor in registration order gsubs
+`\\?name:(\S+?)\[(|.*?[^\\])\]` (no multiline flag; `extension_at`/
+`list_end`) over the text the previous one left; an escape drops the
+backslash. The target is the lexical text of that stage; the list is
+`normalize_text`ed and parsed (`extension_request`: defaults first,
+positional name before index, `opts` as `*-option`, empty positional
+`nil` skipped, single-quoted values without `apply_subs`), or kept in
+`text`; a short macro's target is the normalized list. `Registry` keeps
+Ruby's hash order (a re-registered name keeps its place). The answer
+(`NewInline`) becomes parts (`extension_parts`): an image is an
+`InlineImage` built like `image:` (node `imagesdir`, `svg`, `image_uri`;
+alt is lexical, decoded to reference parts), quoted text is
+`Open`/`OpenWithAttributes` (role only, Ruby ignores the attribute id) +
+`Raw` + `Close` (Ruby writes `Inline#text` unescaped). `None` removes the
+macro. Processors are reachable only where fields convert with a parse
+context: `data_uri::Images` carries `InlineMacros` (registry, safe,
+`base_dir`, output, `mark`), so WASM and read-only evaluations never call
+them. Reports use `ProcessContext::with_cursor`: `parse_reader` sets
+`mark` before `execute_body` to Ruby's document reader `cursor_at_mark`
+(`reader_mark`: the first line of the last block `next_block` read from
+the document reader — sections and preamble recursed, section/document
+titles skipped, a callout list's last item — else `eof_cursor`); the
+span stays the macro's. Matches are `InlineMacro` tokens. Tree processors run at the end of
 `parse_reader` on the finished document (physical spans, after conversion-
 time substitutions; Ruby runs them before conversion) and their reports
-follow all others. Inline macro processors, compound content returned by a
-processor and pre/post/include/docinfo processors are not implemented.
+follow all others. Compound content returned by a processor and
+pre/post/include/docinfo processors are not implemented.
 WASM has no registry (a JS host cannot pass Rust processors): diagram blocks
 stay styled listings there. Tests: `adoctra-core/tests/extensions.rs`
 (attribute orders checked against Ruby extensions), `adoctra-html/tests/
@@ -1782,7 +1809,14 @@ warnings are `warning_unlocated`); metadata JSON (`cache.rs`) decides
 regeneration with checksum, options JSON and a macro file's mtime;
 `cache-images` links; HTML width/height (`scale` unless native scaling),
 `alt` (title/target basename/`Diagram`), `svg-type`, `data-uri` absolute
-targets, `autoimagesdir`. `source.rs`: `attr`/`global_attr` inheritance
+targets, `autoimagesdir`. Inline macros (`DiagramInlineMacro`, registered in
+Ruby's require order graphviz/mermaid/plantuml/salt, positional `format`):
+the target gets `sub_attributes_warn` (missing references warn unlocated and
+stay) and `Paths::normalize`, `process` runs with `Kind::Inline` (text
+formats unsupported, class `<X>InlineMacroProcessor`, the error listing's
+source unconverted), the image block becomes `NewInline::image` without
+`target`/`subs`/`title`/`caption`, a listing a monospaced quoted inline of
+its `prepare_source_string` lines. `source.rs`: `attr`/`global_attr` inheritance
 (`<type>-<name>`, `diagram-<name>`), BOM/rstrip of macro files, `subs`
 (`resolve_block_subs` from no defaults; attributes and specialcharacters
 applied). `image.rs`: PNG/GIF sizes, SVG size (`pt` × 1.33, viewBox) and a

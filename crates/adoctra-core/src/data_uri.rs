@@ -16,14 +16,39 @@ pub(crate) struct ImageSource<'a> {
     pub safe: crate::SafeMode,
 }
 
-/// The image source for reads, if any.
+/// The image source for reads, if any, and the inline macro processors:
+/// the host services the macros stage uses while fields convert.
 pub(crate) struct Images<'a> {
     source: Option<ImageSource<'a>>,
+    inline_macros: Option<InlineMacros>,
+}
+
+/// What an inline macro processor's [`crate::ProcessContext`] sees.
+pub(crate) struct InlineMacros {
+    pub registry: std::sync::Arc<crate::Registry>,
+    pub safe: crate::SafeMode,
+    pub base_dir: Option<String>,
+    pub output: Option<crate::OutputTarget>,
+    /// Ruby's document reader mark once reading is done (diagram
+    /// processors log at `cursor_at_mark`).
+    pub mark: std::cell::Cell<Option<crate::DiagnosticCursor>>,
 }
 
 impl<'a> Images<'a> {
     pub fn new(source: Option<ImageSource<'a>>) -> Self {
-        Self { source }
+        Self {
+            source,
+            inline_macros: None,
+        }
+    }
+
+    pub fn with_inline_macros(mut self, inline_macros: Option<InlineMacros>) -> Self {
+        self.inline_macros = inline_macros;
+        self
+    }
+
+    pub fn inline_macros(&self) -> Option<&InlineMacros> {
+        self.inline_macros.as_ref()
     }
 
     /// The path Ruby reads and reports for `target` under `start` (its

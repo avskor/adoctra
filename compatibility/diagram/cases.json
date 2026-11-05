@@ -268,6 +268,97 @@
     }
    },
    "source": ":diagram-on-error: abort\n\n[graphviz, x, jpg]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "inline-graphviz-mixed",
+   "requires": [
+    "dot"
+   ],
+   "files": {
+    "g.dot": "digraph{a->b}\n",
+    "m.mmd": "graph TD; A-->B\n"
+   },
+   "source": "= T\n:mmdc: /nonexistent/mmdc\n\npara one\n\n.Cap\nimage::x.png[]\n\nInline graphviz:g.dot[svg,width=40,role=r,title=Tt] and xgraphviz:g.dot[] also \\graphviz:g.dot[] and mermaid:m.mmd[id=e1,role=q] end.\n\n* item graphviz:g.dot[png,opts=inline]\n\n[graphviz,blk]\n....\ndigraph{x->y}\n....\n\nlast para\n"
+  },
+  {
+   "name": "inline-text-format-and-image-options",
+   "requires": [
+    "dot"
+   ],
+   "files": {
+    "g.dot": "digraph{a->b}\n"
+   },
+   "source": "Inline graphviz:g.dot[title=Tt,alt=Al,svg-type=inline] and graphviz:g.dot[txt] and graphviz:g.dot[format=svg,link=http://x,float=left,width=3x,opts=nofollow].\n\n.Cap\nimage::x.png[]\n"
+  },
+  {
+   "name": "inline-svg-embedded-and-target-attribute",
+   "requires": [
+    "dot"
+   ],
+   "files": {
+    "sub/g.dot": "digraph{a->b}\n"
+   },
+   "source": ":gdir: sub\n:imagesdir: img\n\n== Section graphviz:{gdir}/g.dot[svg]\n\n|===\n|cell graphviz:sub/g.dot[svg,opts=inline]\n|===\n\nlast graphviz:{gdir}/g.dot[png,scale=2]\n"
+  },
+  {
+   "name": "inline-plantuml-and-salt",
+   "requires": [
+    "plantuml",
+    "dot"
+   ],
+   "files": {
+    "seq.puml": "@startuml\nA -> B\n@enduml\n",
+    "ui.salt": "{\n  Login | \"me\"\n}\n"
+   },
+   "source": "A plantuml:seq.puml[svg] and salt:ui.salt[] and plantuml:seq.puml[utxt].\n"
+  },
+  {
+   "name": "inline-kroki",
+   "requires": [
+    "server"
+   ],
+   "files": {
+    "g.dot": "digraph{a->b}\n"
+   },
+   "source": ":diagram-server-url: {server}/\n:diagram-server-type: kroki_io\n\nA graphviz:g.dot[svg] and graphviz:g.dot[] here.\n"
+  },
+  {
+   "name": "inline-missing-file",
+   "requires": [],
+   "xfail": {
+    "reason": "Ruby reads the file outside its error handling and aborts the whole conversion; adoctra's parse never fails, so it reports the error and keeps the monospaced error text",
+    "actual": {
+     "code": 0,
+     "html": [
+      {
+       "tag": "p",
+       "attrs": {},
+       "children": [
+        "A ",
+        {
+         "tag": "code",
+         "attrs": {},
+         "children": [
+          "Failed to generate image: No such file or directory @ rb_sysopen - <root>/nope.dot"
+         ]
+        },
+        " here."
+       ]
+      }
+     ],
+     "diagnostics": [
+      [
+       "error",
+       "d.adoc",
+       1,
+       "Failed to generate image: No such file or directory @ rb_sysopen - <root>/nope.dot"
+      ]
+     ],
+     "files": {},
+     "requests": []
+    }
+   },
+   "source": "A graphviz:nope.dot[] here.\n"
   }
  ]
 }

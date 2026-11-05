@@ -279,6 +279,11 @@ impl<'a> Evaluation<'a> {
         self.images = images;
         self
     }
+    /// The inline macro processors, while fields convert with a parse
+    /// context.
+    pub fn inline_macros(&self) -> Option<&'a crate::data_uri::InlineMacros> {
+        self.images.and_then(|images| images.inline_macros())
+    }
     /// Ruby's `image_uri` with the attributes at this point; without image
     /// reads (no conversion context) the web path.
     pub fn image_uri(

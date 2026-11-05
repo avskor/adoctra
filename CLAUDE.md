@@ -17,8 +17,8 @@ backends, a CLI, and WASM bindings for an editor frontend.
 Cargo workspace (`crates/*`), virtual manifest at the root.
 
 - `adoctra-core` — parser and document model. **Backend-agnostic.** Owns the
-  `Backend` trait and the extension API (`Registry`, block/block macro/tree
-  processors).
+  `Backend` trait and the extension API (`Registry`, block/block macro/
+  inline macro/tree processors).
 - `adoctra-html` — HTML5 backend.
 - `adoctra-docx` — template-based DOCX backend (all 8 planned stages done
   2026-11-04; `docx-template` attribute, roles as template styles). Own OOXML
@@ -232,7 +232,7 @@ xrefs/anchors/footnotes/index terms/UI macros/STEM, TOC, block `subs`,
 source highlighters incl. the Rouge port), HTML backend (standalone and
 embedded, XML syntax, `adoctra.css`), JSON backend, WASM bindings with spans,
 tokens and diagnostics, a CLI matching Ruby's options, and the template-based
-DOCX backend (`docs/docx.adoc`). The own Rust extension API (block, block macro and tree processors,
+DOCX backend (`docs/docx.adoc`). The own Rust extension API (block, block macro, inline macro and tree processors,
 `ParseOptions::extensions`) is invoked while parsing (un-deferred
 2026-11-05; diagrams are its first consumer, see «Extension API и
 диаграммы» in `docs/implementation-plan.adoc`).

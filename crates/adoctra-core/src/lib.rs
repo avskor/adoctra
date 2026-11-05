@@ -87,8 +87,9 @@ pub use entity_references::character_reference_end;
 pub use error::{Error, Result};
 pub use extension::{
     AttrKey, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor, BlockRequest,
-    ContentModel, ExtensionAttributes, MacroContent, NewBlock, NewBlockKind, ProcessContext,
-    Registry, TreeProcessor,
+    ContentModel, ExtensionAttributes, InlineMacroFormat, InlineMacroProcessor, InlineMacroRequest,
+    MacroContent, NewBlock, NewBlockKind, NewInline, NewInlineKind, ProcessContext, Registry,
+    TreeProcessor,
 };
 pub use image::{inline_svg, normalize_web_path};
 pub use resource::{

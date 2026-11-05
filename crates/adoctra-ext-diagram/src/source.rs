@@ -252,7 +252,9 @@ pub(crate) fn apply_subs(
                 let missing = attributes.get("attribute-missing").unwrap_or("skip");
                 let lines: Vec<String> = text
                     .split('\n')
-                    .filter_map(|line| sub_attribute_line(line, attributes, missing))
+                    .filter_map(|line| {
+                        sub_attribute_line(line, attributes, missing, &mut Vec::new())
+                    })
                     .collect();
                 text = lines.join("\n");
             }
@@ -262,10 +264,25 @@ pub(crate) fn apply_subs(
     text
 }
 
+/// `sub_attributes(text, attribute_missing: 'warn')`: a missing reference
+/// stays and logs Ruby's warning.
+pub(crate) fn sub_attributes_warn(
+    text: &str,
+    attributes: &adoctra_core::Attributes,
+    warnings: &mut Vec<String>,
+) -> String {
+    let lines: Vec<String> = text
+        .split('\n')
+        .filter_map(|line| sub_attribute_line(line, attributes, "warn", warnings))
+        .collect();
+    lines.join("\n")
+}
+
 fn sub_attribute_line(
     line: &str,
     attributes: &adoctra_core::Attributes,
     missing: &str,
+    warnings: &mut Vec<String>,
 ) -> Option<String> {
     let mut out = String::new();
     let mut rest = line;
@@ -302,6 +319,10 @@ fn sub_attribute_line(
                 None => match missing {
                     "drop" => {}
                     "drop-line" => dropped = true,
+                    "warn" => {
+                        warnings.push(format!("skipping reference to missing attribute: {bare}"));
+                        out.push_str(&rest[open..=close]);
+                    }
                     _ => out.push_str(&rest[open..=close]),
                 },
             }

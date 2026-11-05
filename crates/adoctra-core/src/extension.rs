@@ -7,6 +7,8 @@
 //!   (Ruby's `registered_for_block?` in `next_block`).
 //! * A [`BlockMacroProcessor`] handles a `name::target[attrlist]` line (Ruby's
 //!   `CustomBlockMacroRx`).
+//! * An [`InlineMacroProcessor`] handles a `name:target[attrlist]` macro in
+//!   text (Ruby's custom inline macros, first in `sub_macros`).
 //! * A [`TreeProcessor`] receives the finished document.
 //!
 //! Processors are registered on a [`Registry`] that a host puts into
@@ -14,12 +16,14 @@
 //! performs no I/O: what a processor reads, runs or writes is its own policy.
 //! A processor answers with a [`NewBlock`], which then goes through the same
 //! completion as a built-in block (title, caption, id, roles, options), or
-//! with `None`, which drops the block like Ruby's `nil`.
+//! with `None`, which drops the block like Ruby's `nil`. An inline macro
+//! processor answers with a [`NewInline`] (an image or quoted text) or with
+//! `None`, which removes the macro.
 
 use crate::ast::{Document, Span};
 use crate::attributes::Attributes;
 use crate::context::{OutputTarget, SafeMode};
-use crate::diagnostic::{Diagnostic, Severity};
+use crate::diagnostic::{Diagnostic, DiagnosticCursor, DiagnosticLocation, Severity};
 use std::sync::Arc;
 
 /// The context of the block a [`BlockProcessor`] replaces: the delimited
@@ -238,6 +242,32 @@ pub struct BlockMacroRequest {
     pub span: Span,
 }
 
+/// How an [`InlineMacroProcessor`] is written (Ruby's `format`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InlineMacroFormat {
+    /// `name:target[attrlist]` (Ruby's `:long`, the default).
+    #[default]
+    Long,
+    /// `name:[attrlist]`; the bracket text is also the target (`:short`).
+    Short,
+}
+
+/// An inline macro handed to an [`InlineMacroProcessor`].
+#[derive(Debug, Clone)]
+pub struct InlineMacroRequest {
+    pub name: String,
+    /// The target as the macros stage sees it (after the earlier
+    /// substitutions: special characters, quotes, attribute references and
+    /// replacements). A short macro's target is its normalized bracket text.
+    pub target: String,
+    /// The default attributes, then the bracket text parsed as an attribute
+    /// list (or in `text`, see [`MacroContent`]) after Ruby's
+    /// `normalize_text` (stripped, line feeds as spaces, `\]` unescaped).
+    pub attributes: ExtensionAttributes,
+    /// The whole macro.
+    pub span: Span,
+}
+
 /// What a processor can see of the document and how it reports problems.
 pub struct ProcessContext<'a> {
     attributes: &'a Attributes,
@@ -245,6 +275,9 @@ pub struct ProcessContext<'a> {
     base_dir: Option<&'a str>,
     output: Option<&'a OutputTarget>,
     span: Span,
+    /// Where reports are located when it differs from `span` (Ruby's
+    /// document reader mark while converting).
+    cursor: Option<DiagnosticCursor>,
     diagnostics: Vec<Diagnostic>,
 }
 
@@ -262,8 +295,15 @@ impl<'a> ProcessContext<'a> {
             base_dir,
             output,
             span,
+            cursor: None,
             diagnostics: Vec::new(),
         }
+    }
+
+    /// Reports located at this reader cursor instead of the span.
+    pub(crate) fn with_cursor(mut self, cursor: Option<DiagnosticCursor>) -> Self {
+        self.cursor = cursor;
+        self
     }
 
     /// A document attribute as the block sees it.
@@ -297,7 +337,9 @@ impl<'a> ProcessContext<'a> {
     }
 
     /// Report an error at the block (Ruby's `logger.error` with the block's
-    /// source location).
+    /// source location). An inline macro converted after reading reports at
+    /// Ruby's document reader mark: the last block read from the document's
+    /// own reader (its span stays the macro's for editors).
     pub fn error(&mut self, message: impl Into<String>) {
         self.report(Severity::Error, message.into());
     }
@@ -319,7 +361,12 @@ impl<'a> ProcessContext<'a> {
     fn report(&mut self, severity: Severity, message: String) {
         self.diagnostics.push(Diagnostic {
             omitted_span: None,
-            report: Default::default(),
+            report: crate::DiagnosticReport {
+                location: self
+                    .cursor
+                    .map_or(DiagnosticLocation::Source, DiagnosticLocation::Cursor),
+                ..Default::default()
+            },
             span: self.span,
             severity,
             message,
@@ -394,6 +441,55 @@ impl NewBlock {
     }
 }
 
+/// What an [`InlineMacroProcessor`] puts in place of the macro.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum NewInlineKind {
+    /// An inline image of `target`, resolved like an `image:` macro's
+    /// (`imagesdir`, `data-uri`, SVG options). The attributes give `alt`,
+    /// `width`, `height`, `title`, `link`, `window`, `role`, `float`,
+    /// `imagesdir` and `*-option` flags.
+    Image { target: String },
+    /// Quoted text (Ruby's `:quoted` inline). Like Ruby's, the text is
+    /// written as is, without substitutions or escaping; the `role`
+    /// attribute becomes the element's class.
+    Quoted {
+        format: crate::AttributeFormat,
+        text: String,
+    },
+}
+
+/// An inline node created by an [`InlineMacroProcessor`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewInline {
+    pub kind: NewInlineKind,
+    pub attributes: ExtensionAttributes,
+}
+
+impl NewInline {
+    pub fn image(target: impl Into<String>, attributes: ExtensionAttributes) -> Self {
+        Self {
+            kind: NewInlineKind::Image {
+                target: target.into(),
+            },
+            attributes,
+        }
+    }
+
+    pub fn quoted(
+        format: crate::AttributeFormat,
+        text: impl Into<String>,
+        attributes: ExtensionAttributes,
+    ) -> Self {
+        Self {
+            kind: NewInlineKind::Quoted {
+                format,
+                text: text.into(),
+            },
+            attributes,
+        }
+    }
+}
+
 /// Handles a block whose style is its [name](BlockProcessor::name).
 pub trait BlockProcessor: Send + Sync {
     /// The style the processor is registered for.
@@ -438,6 +534,36 @@ pub trait BlockMacroProcessor: Send + Sync {
     ) -> Option<NewBlock>;
 }
 
+/// Handles `name:target[attrlist]` macros in text. Ruby runs custom inline
+/// macros first in its macros substitution, each over the text the previous
+/// one left, in registration order: `\\?name:(\S+?)\[(|.*?[^\\])\]` on one
+/// line (`name:[…]` for [`InlineMacroFormat::Short`]); a leading backslash
+/// escapes the macro.
+pub trait InlineMacroProcessor: Send + Sync {
+    fn name(&self) -> &str;
+    fn format(&self) -> InlineMacroFormat {
+        InlineMacroFormat::Long
+    }
+    /// Names for the positional attributes in the brackets.
+    fn positional_attributes(&self) -> &[&str] {
+        &[]
+    }
+    /// Attributes set before the bracket text is parsed (Ruby's
+    /// `default_attrs`).
+    fn default_attributes(&self) -> &[(&str, &str)] {
+        &[]
+    }
+    fn content(&self) -> MacroContent {
+        MacroContent::Attributes
+    }
+    /// Create the replacement, or `None` to remove the macro.
+    fn process(
+        &self,
+        request: InlineMacroRequest,
+        context: &mut ProcessContext<'_>,
+    ) -> Option<NewInline>;
+}
+
 /// Runs on the finished document (after reading and conversion-time
 /// substitutions), before a backend converts it.
 pub trait TreeProcessor: Send + Sync {
@@ -450,6 +576,7 @@ pub trait TreeProcessor: Send + Sync {
 pub struct Registry {
     blocks: Vec<Arc<dyn BlockProcessor>>,
     block_macros: Vec<Arc<dyn BlockMacroProcessor>>,
+    inline_macros: Vec<Arc<dyn InlineMacroProcessor>>,
     tree_processors: Vec<Arc<dyn TreeProcessor>>,
 }
 
@@ -464,6 +591,14 @@ impl std::fmt::Debug for Registry {
                 "block_macros",
                 &self
                     .block_macros
+                    .iter()
+                    .map(|p| p.name())
+                    .collect::<Vec<_>>(),
+            )
+            .field(
+                "inline_macros",
+                &self
+                    .inline_macros
                     .iter()
                     .map(|p| p.name())
                     .collect::<Vec<_>>(),
@@ -498,6 +633,25 @@ impl Registry {
         self
     }
 
+    /// Register an inline macro processor. Like Ruby's hash of inline
+    /// macros, a second registration of a name replaces the first in its
+    /// place.
+    pub fn register_inline_macro(
+        &mut self,
+        processor: impl InlineMacroProcessor + 'static,
+    ) -> &mut Self {
+        let processor: Arc<dyn InlineMacroProcessor> = Arc::new(processor);
+        match self
+            .inline_macros
+            .iter_mut()
+            .find(|p| p.name() == processor.name())
+        {
+            Some(slot) => *slot = processor,
+            None => self.inline_macros.push(processor),
+        }
+        self
+    }
+
     pub fn register_tree_processor(
         &mut self,
         processor: impl TreeProcessor + 'static,
@@ -507,7 +661,10 @@ impl Registry {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.blocks.is_empty() && self.block_macros.is_empty() && self.tree_processors.is_empty()
+        self.blocks.is_empty()
+            && self.block_macros.is_empty()
+            && self.inline_macros.is_empty()
+            && self.tree_processors.is_empty()
     }
 
     /// Ruby's `registered_for_block?`: the last registration wins.
@@ -521,6 +678,11 @@ impl Registry {
     /// Ruby's `registered_for_block_macro?`: the last registration wins.
     pub fn block_macro(&self, name: &str) -> Option<&Arc<dyn BlockMacroProcessor>> {
         self.block_macros.iter().rev().find(|p| p.name() == name)
+    }
+
+    /// The inline macro processors in the order Ruby applies them.
+    pub fn inline_macros(&self) -> impl Iterator<Item = &Arc<dyn InlineMacroProcessor>> {
+        self.inline_macros.iter()
     }
 
     pub fn tree_processors(&self) -> impl Iterator<Item = &Arc<dyn TreeProcessor>> {

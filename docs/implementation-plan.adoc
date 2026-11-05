@@ -189,12 +189,15 @@ Core не запускает процессы и не читает ресурс�
   кэш `.asciidoctor/diagram`, `imagesoutdir`/`outdir`, размеры PNG/SVG,
   `svg-type`, ошибки «Failed to generate image» листингом; конвертеры
   PlantUML, Graphviz, Mermaid (`mmdc`) и HTTP (`plantuml`, `kroki_io`).
-. *Inline-макросы диаграмм* (`plantuml:file[]`) — потребуют
-  `InlineMacroProcessor`.
+. *Inline-макросы диаграмм* — сделано 2026-11-05. `InlineMacroProcessor`
+  в core (первым на этапе макросов, как `sub_macros` Ruby; ответ —
+  inline-изображение или текст в кавычках) и `DiagramInlineMacroProcessor`
+  (`graphviz:g.dot[svg]`); позиция ошибок — метка читателя документа, как
+  у Ruby.
 . *CLI* — сделано 2026-11-05. `-r asciidoctor-diagram` подключает встроенный крейт; jail и safe
   mode для записываемых изображений как в Ruby.
-. *Сравнение с Ruby* — сделано 2026-11-05 (`diagram-v1`: 29 PASS,
-  2 XFAIL; link:diagrams.adoc[]). Закреплённая версия в
+. *Сравнение с Ruby* — сделано 2026-11-05 (`diagram-v1`: 34 PASS,
+  3 XFAIL с inline-макросами; link:diagrams.adoc[]). Закреплённая версия в
   `compatibility/asciidoctor-diagram-version`, golden-случаи, проверка в CI
   (где есть инструменты), визуальный профиль, DOCX.
 

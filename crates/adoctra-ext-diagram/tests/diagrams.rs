@@ -699,3 +699,54 @@ fn scale_multiplies_the_html_size() {
     );
     assert!(!result.document.blocks[0].attrs.named.contains_key("scale"));
 }
+
+#[test]
+fn inline_macros_become_inline_images_or_error_code() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    host.put("/doc/flows/g.dot", b"digraph { x }\n");
+    host.put("/doc/bad.dot", b"FAIL <x>\n");
+    let result = parse(
+        &host,
+        ":dir: flows\n\nA graphviz:{dir}/g.dot[svg,width=40,role=r,title=T] B \\graphviz:g.dot[] \
+         C graphviz:bad.dot[role=q] D graphviz:flows/g.dot[txt] E graphviz:{nope}/g.dot[].\n\n\
+         .Cap\nlast\n",
+    );
+    // Ruby: the image's attributes without the title, the error listing's
+    // source as unescaped monospaced text, no text formats inline.
+    assert_eq!(
+        html(&result),
+        "<p>A <span class=\"image r\"><img src=\"g.svg\" alt=\"Diagram\" width=\"40\" \
+         height=\"26\"></span> B graphviz:g.dot[] C <code class=\"q\">Failed to generate image: \
+         dot failed: Error: syntax error in line 1\nFAIL <x></code> D <code>Failed to generate \
+         image: Asciidoctor::Diagram::GraphvizInlineMacroProcessor does not support output \
+         format txt\ndigraph { x }</code> E <code>Failed to generate image: No such file or \
+         directory @ rb_sysopen - /doc/{nope}/g.dot</code>.</p>\n<div class=\"title\">Cap</div>\n\
+         <p>last</p>\n"
+    );
+    assert_eq!(
+        errors(&result),
+        [
+            "error: Failed to generate image: dot failed: Error: syntax error in line 1",
+            "error: Failed to generate image: Asciidoctor::Diagram::GraphvizInlineMacroProcessor \
+             does not support output format txt",
+            "warning: skipping reference to missing attribute: nope",
+            "error: Failed to generate image: No such file or directory @ rb_sysopen - \
+             /doc/{nope}/g.dot",
+        ]
+    );
+    // Errors sit at Ruby's document reader mark (the last block, line 6);
+    // the target warning has no location.
+    let cursor = |line| {
+        adoctra_core::DiagnosticLocation::Cursor(adoctra_core::DiagnosticCursor {
+            source_id: adoctra_core::SourceId::default(),
+            line,
+        })
+    };
+    assert_eq!(result.diagnostics[0].report.location, cursor(6));
+    assert_eq!(
+        result.diagnostics[2].report.location,
+        adoctra_core::DiagnosticLocation::Unlocated
+    );
+    assert!(host.file("/doc/g.svg").is_some());
+    assert!(host.file("/doc/.asciidoctor/diagram/g.svg.cache").is_some());
+}

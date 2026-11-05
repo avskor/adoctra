@@ -1,14 +1,15 @@
 //! asciidoctor-diagram's `DiagramProcessor#process` and
-//! `create_image_block`/`create_literal_block` for the block and block macro
-//! processors.
+//! `create_image_block`/`create_literal_block` for the block, block macro
+//! and inline macro processors.
 
 use crate::cache::Metadata;
 use crate::converter::{http::Http, options_json, Converter};
 use crate::host::DiagramHost;
 use crate::source::{expand_path, parent_dir, Origin, Source};
 use adoctra_core::{
-    AttrKey, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor, BlockRequest,
-    ExtensionAttributes, NewBlock, OutputTarget, ProcessContext, SafeMode,
+    AttrKey, AttributeFormat, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor,
+    BlockRequest, ExtensionAttributes, InlineMacroProcessor, InlineMacroRequest, NewBlock,
+    NewBlockKind, NewInline, OutputTarget, ProcessContext, SafeMode,
 };
 use std::sync::Arc;
 
@@ -25,6 +26,15 @@ pub(crate) struct Diagram {
 
 pub(crate) struct DiagramBlock(pub Arc<Diagram>);
 pub(crate) struct DiagramBlockMacro(pub Arc<Diagram>);
+pub(crate) struct DiagramInlineMacro(pub Arc<Diagram>);
+
+/// Which processor runs `process`: blocks re-apply the listing's `subs` to an
+/// error, inline macros support no text formats.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Block,
+    Inline,
+}
 
 impl BlockProcessor for DiagramBlock {
     fn name(&self) -> &str {
@@ -49,6 +59,7 @@ impl BlockProcessor for DiagramBlock {
             request.attributes,
             Origin::Lines(request.lines),
             context,
+            Kind::Block,
         ))
     }
 }
@@ -81,7 +92,73 @@ impl BlockMacroProcessor for DiagramBlockMacro {
             request.attributes,
             Origin::File(Some(file)),
             context,
+            Kind::Block,
         ))
+    }
+}
+
+impl InlineMacroProcessor for DiagramInlineMacro {
+    fn name(&self) -> &str {
+        self.0.name
+    }
+    fn positional_attributes(&self) -> &[&str] {
+        &["format"]
+    }
+    /// `DiagramInlineMacroProcessor#process`: the block `generate_block`
+    /// creates becomes an inline image, or (an error listing) monospaced
+    /// text, with the block's attributes minus `target` and `subs`.
+    fn process(
+        &self,
+        request: InlineMacroRequest,
+        context: &mut ProcessContext<'_>,
+    ) -> Option<NewInline> {
+        let class = format!("Asciidoctor::Diagram::{}InlineMacroProcessor", self.0.class);
+        // `apply_target_subs`: the macros stage target goes through
+        // `sub_attributes` again (missing references warn), then becomes a
+        // system path from the document's base directory.
+        let mut warnings = Vec::new();
+        let target = crate::source::sub_attributes_warn(
+            &request.target,
+            context.attributes(),
+            &mut warnings,
+        );
+        let file = Paths::new(context).normalize(&target, None, &mut warnings);
+        for warning in warnings {
+            context.warning_unlocated(warning);
+        }
+        let block = process(
+            &self.0,
+            &class,
+            1,
+            request.attributes,
+            Origin::File(Some(file)),
+            context,
+            Kind::Inline,
+        );
+        let mut attributes = block.attributes;
+        let target = attributes.remove("target");
+        attributes.remove("subs");
+        // Ruby assigns these as the block's title and caption, not as
+        // attributes the inline node receives.
+        attributes.remove("title");
+        attributes.remove("caption");
+        Some(match block.kind {
+            NewBlockKind::Image { target: image } => {
+                NewInline::image(target.unwrap_or(image), attributes)
+            }
+            NewBlockKind::Listing { source }
+            | NewBlockKind::Literal { source }
+            | NewBlockKind::Pass { source } => {
+                // `Block#source`: the lines of `prepare_source_string`.
+                let source: Vec<&str> = source
+                    .split_inclusive('\n')
+                    .map(|line| {
+                        line.trim_end_matches([' ', '\t', '\n', '\r', '\x0b', '\x0c', '\0'])
+                    })
+                    .collect();
+                NewInline::quoted(AttributeFormat::Monospace, source.join("\n"), attributes)
+            }
+        })
     }
 }
 
@@ -167,6 +244,7 @@ fn process(
     attributes: ExtensionAttributes,
     origin: Origin,
     context: &mut ProcessContext<'_>,
+    kind: Kind,
 ) -> NewBlock {
     // Ruby normalises the keys and turns positional values after the named
     // ones into `<value>=true` keys.
@@ -189,7 +267,14 @@ fn process(
         let mut source = Source::new(diagram.name, normalised, origin, context);
         let code = source.code(host.as_ref()).map(str::to_owned);
         let result = match &code {
-            Ok(_) => generate(diagram, class, &mut source, host.as_ref(), &mut warnings),
+            Ok(_) => generate(
+                diagram,
+                class,
+                &mut source,
+                host.as_ref(),
+                &mut warnings,
+                kind,
+            ),
             Err(message) => Err(message.clone()),
         };
         (result, code)
@@ -207,8 +292,9 @@ fn process(
             context.error(text.clone());
             let mut source = format!("{text}\n{}", code.unwrap_or_default());
             // Ruby's listing keeps the block's attributes, so its `subs`
-            // convert the text again (special characters are the backend's).
-            if let Some(subs) = attributes.get("subs") {
+            // convert the text again (special characters are the backend's);
+            // an inline macro takes the listing's unconverted source.
+            if let Some(subs) = attributes.get("subs").filter(|_| kind == Kind::Block) {
                 let subs: Vec<&str> = crate::source::resolve_subs(subs)
                     .into_iter()
                     .filter(|sub| *sub == "attributes")
@@ -226,9 +312,13 @@ fn generate(
     source: &mut Source<'_, '_>,
     host: &dyn DiagramHost,
     warnings: &mut Vec<String>,
+    kind: Kind,
 ) -> Result<NewBlock, String> {
     let converter = diagram.converter.as_ref();
     let mut formats: Vec<&str> = converter.supported_formats().to_vec();
+    if kind == Kind::Inline {
+        formats.retain(|format| !TEXT_FORMATS.contains(format));
+    }
     let html = source
         .context
         .attribute("backend")

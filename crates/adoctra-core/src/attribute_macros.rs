@@ -17,6 +17,7 @@ use std::ops::Range;
 const SCHEMES: [&str; 5] = ["https://", "http://", "file://", "ftp://", "irc://"];
 
 struct Report<'a> {
+    extensions: Vec<Span>,
     ui: Vec<Span>,
     images: Vec<Span>,
     index_terms: Vec<Span>,
@@ -34,6 +35,7 @@ struct Report<'a> {
 impl<'a> Report<'a> {
     fn new(passes: &'a mut Passes) -> Self {
         Self {
+            extensions: Vec::new(),
             ui: Vec::new(),
             images: Vec::new(),
             index_terms: Vec::new(),
@@ -50,6 +52,7 @@ impl<'a> Report<'a> {
 /// Physical ranges of constructs consumed by the macros stage, for highlighting.
 #[derive(Default)]
 pub(crate) struct Matches {
+    pub extensions: Vec<Span>,
     pub ui: Vec<Span>,
     pub images: Vec<Span>,
     pub index_terms: Vec<Span>,
@@ -82,6 +85,7 @@ pub(crate) fn apply_inlines(
     let mut report = Report::new(passes);
     process_inlines(nodes, attributes, true, fold_newlines, &mut report);
     Matches {
+        extensions: report.extensions,
         ui: report.ui,
         images: report.images,
         index_terms: report.index_terms,
@@ -291,6 +295,7 @@ fn flush_inlines(
         }
     }
     text = crate::replacements::apply_text(text, edges.0, edges.1);
+    text = apply_extensions(text, attributes, report);
     text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
     text = apply_index_terms(text, attributes, 0, report);
@@ -438,6 +443,7 @@ fn apply_inner(
     report: &mut Report<'_>,
 ) -> Vec<Part> {
     let mut text = Text::from_parts_at(&parts, span);
+    text = apply_extensions(text, attributes, report);
     text = apply_ui(text, attributes, report);
     text = apply_images(text, attributes, report);
     text = apply_index_terms(text, attributes, depth, report);
@@ -448,6 +454,260 @@ fn apply_inner(
     let text = apply_anchors(text, report);
     let text = apply_xrefs(text, attributes, report);
     apply_footnotes(text, attributes, report).into_parts()
+}
+
+/// Ruby's custom inline macros, first in `sub_macros`: each registered
+/// processor in turn replaces its matches over the text the previous one
+/// left (Ruby's `gsub` per extension). An escaped macro loses its
+/// backslash. Only fields converting with a parse context see processors.
+fn apply_extensions(
+    mut text: Text,
+    attributes: &mut Evaluation<'_>,
+    report: &mut Report<'_>,
+) -> Text {
+    let Some(host) = attributes.inline_macros() else {
+        return text;
+    };
+    for processor in host.registry.inline_macros() {
+        let name = processor.name();
+        let short = processor.format() == crate::InlineMacroFormat::Short;
+        let marker = format!("{name}:");
+        let src = &text.text;
+        if !src.contains('[') || !src.contains(&marker) {
+            continue;
+        }
+        let mut output = Text::default();
+        let mut copied = 0;
+        let mut at = 0;
+        while at < src.len() {
+            let escaped = src.as_bytes()[at] == b'\\';
+            let start = at + usize::from(escaped);
+            let Some(m) = extension_at(src, start, name, short) else {
+                at += src[at..].chars().next().unwrap().len_utf8();
+                continue;
+            };
+            text.copy(copied..at, &mut output);
+            if escaped {
+                text.copy(start..m.end, &mut output);
+            } else {
+                let span = text.match_span(at..m.end);
+                report.extensions.push(span);
+                let request = extension_request(&text, &m, processor.as_ref(), span);
+                let mut context = crate::ProcessContext::new(
+                    attributes,
+                    host.safe,
+                    host.base_dir.as_deref(),
+                    host.output.as_ref(),
+                    span,
+                )
+                .with_cursor(host.mark.get());
+                let created = processor.process(request, &mut context);
+                let diagnostics = &mut report.passes.diagnostics;
+                diagnostics.extend(context.into_diagnostics());
+                let parts = match created {
+                    Some(created) => extension_parts(created, attributes, span, diagnostics),
+                    None => Vec::new(),
+                };
+                text.replace_parts(at..m.end, &parts, &mut output);
+            }
+            copied = m.end;
+            at = m.end;
+        }
+        text.copy(copied..src.len(), &mut output);
+        text = output;
+    }
+    text
+}
+
+struct ExtensionMatch {
+    end: usize,
+    target: Range<usize>,
+    list: Range<usize>,
+}
+
+/// `name:(\S+?)\[(|.*?[^\\])\]` (or `name:(){0}\[…\]` for a short macro)
+/// at `start`, without Ruby's multiline flag: the target is the shortest
+/// run of non-blanks followed by a list, which ends at the first `]` not
+/// preceded by a backslash on the same line (only its last character may be
+/// a line feed).
+fn extension_at(src: &str, start: usize, name: &str, short: bool) -> Option<ExtensionMatch> {
+    let rest = &src[start..];
+    if !rest.starts_with(name) || !rest[name.len()..].starts_with(':') {
+        return None;
+    }
+    let target = start + name.len() + 1;
+    if short {
+        let close = src[target..]
+            .starts_with('[')
+            .then(|| list_end(src, target + 1))??;
+        return Some(ExtensionMatch {
+            end: close + 1,
+            target: target..target,
+            list: target + 1..close,
+        });
+    }
+    let mut end = target;
+    loop {
+        let c = src[end..].chars().next()?;
+        if blank(c) {
+            return None;
+        }
+        end += c.len_utf8();
+        if src[end..].starts_with('[') {
+            if let Some(close) = list_end(src, end + 1) {
+                return Some(ExtensionMatch {
+                    end: close + 1,
+                    target: target..end,
+                    list: end + 1..close,
+                });
+            }
+        }
+    }
+}
+
+/// The closing bracket of `(|.*?[^\\])\]` starting at `open`.
+fn list_end(src: &str, open: usize) -> Option<usize> {
+    let mut previous = None;
+    for (offset, c) in src[open..].char_indices() {
+        if c == ']' && (offset == 0 || previous != Some('\\')) {
+            return Some(open + offset);
+        }
+        // `.` stops at a line feed; only `[^\\]` may match one, last.
+        if previous == Some('\n') {
+            return None;
+        }
+        previous = Some(c);
+    }
+    None
+}
+
+/// Ruby's attributes for a custom inline macro: the default attributes,
+/// then the list after `normalize_text` parsed with the positional names
+/// (`parse_attributes`, values without substitutions) or kept in `text`.
+fn extension_request(
+    text: &Text,
+    m: &ExtensionMatch,
+    processor: &dyn crate::InlineMacroProcessor,
+    span: Span,
+) -> crate::InlineMacroRequest {
+    use crate::ruby_strip::RubyStrip;
+    use crate::{AttrKey, ExtensionAttributes, MacroContent};
+    let mut attributes = ExtensionAttributes::new();
+    for (name, value) in processor.default_attributes() {
+        attributes.set(*name, *value);
+    }
+    let lexical = crate::attributes::reference_text(&slice(text, m.list.clone(), None, true));
+    let content = lexical.ruby_strip().replace('\n', " ");
+    match processor.content() {
+        MacroContent::Text => attributes.set("text", content.clone()),
+        MacroContent::Attributes => {
+            let posattrs = processor.positional_attributes();
+            for field in crate::attribute_list::parse(&content) {
+                let Some(value) = field.text(&content) else {
+                    continue;
+                };
+                match field.name(&content) {
+                    Some("options" | "opts") => {
+                        let value = if value.contains(',') {
+                            value.replace(' ', "")
+                        } else {
+                            value
+                        };
+                        for option in value.split(',').filter(|o| !o.is_empty()) {
+                            attributes.set(format!("{option}-option"), "");
+                        }
+                    }
+                    Some(name) => attributes.set(name, value),
+                    None => {
+                        if let Some(name) = posattrs.get(field.index) {
+                            attributes.set(*name, value.clone());
+                        }
+                        attributes.set_key(AttrKey::Positional(field.index + 1), value);
+                    }
+                }
+            }
+        }
+    }
+    let target = if m.target.is_empty() {
+        content
+    } else {
+        text.text[m.target.clone()].to_owned()
+    };
+    crate::InlineMacroRequest {
+        name: processor.name().to_owned(),
+        target,
+        attributes,
+        span,
+    }
+}
+
+/// A processor's inline as the parts the converter of Ruby's node writes.
+fn extension_parts(
+    created: crate::NewInline,
+    attributes: &Evaluation<'_>,
+    span: Span,
+    diagnostics: &mut Vec<crate::Diagnostic>,
+) -> Vec<Part> {
+    use crate::{AttrKey, NewInlineKind};
+    match created.kind {
+        NewInlineKind::Image { target } => {
+            let mut named = BTreeMap::new();
+            let mut options = Vec::new();
+            let mut alt = None;
+            for (key, value) in created.attributes.iter() {
+                let AttrKey::Named(name) = key else {
+                    continue;
+                };
+                if let Some(option) = name.strip_suffix("-option") {
+                    options.push(option.to_owned());
+                } else if name == "alt" {
+                    alt = Some(value.to_owned());
+                } else {
+                    named.insert(name.clone(), value.to_owned());
+                }
+            }
+            // Ruby's `Inline#alt` is the attribute or nothing; its value is
+            // lexical (special characters already replaced).
+            let alt = crate::entity_references::reference_parts(
+                &crate::attributes::decode_special(&alt.unwrap_or_default()),
+            );
+            // `image_uri` reads the node's `imagesdir`, else the document's.
+            let imagesdir = named
+                .remove("imagesdir")
+                .or_else(|| attributes.get("imagesdir").map(str::to_owned));
+            let svg = attributes.svg(&target, &named, &options, span, diagnostics);
+            let src = if matches!(svg, Some(crate::Svg::Inline(_))) {
+                crate::image::web_path(&target, imagesdir.as_deref())
+            } else {
+                attributes.image_uri(&target, imagesdir.as_deref(), span, diagnostics)
+            };
+            vec![Part::Image(Box::new(InlineImage {
+                icon: false,
+                target,
+                src,
+                alt,
+                icons: None,
+                attributes: named,
+                options,
+                svg,
+            }))]
+        }
+        NewInlineKind::Quoted { format, text } => {
+            let role = created.attributes.get("role").map(str::to_owned);
+            if role.is_none() && format == AttributeFormat::Span {
+                return vec![Part::Raw(text)];
+            }
+            let open = match role {
+                Some(role) => Part::OpenWithAttributes {
+                    format,
+                    id: None,
+                    role: Some(role),
+                },
+                None => Part::Open(format),
+            };
+            vec![open, Part::Raw(text), Part::Close(format)]
+        }
+    }
 }
 
 /// Ruby's experimental UI macros, the first built-in macros of `sub_macros`
