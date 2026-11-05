@@ -1136,7 +1136,7 @@ pub enum Inline {
     /// [`AttributePart::OpenXref`](crate::AttributePart::OpenXref) /
     /// `CloseXref` parts of its reference.
     CrossReference {
-        xref: crate::Xref,
+        xref: Box<crate::Xref>,
         children: Vec<Inline>,
         span: Span,
     },
@@ -1166,7 +1166,7 @@ pub enum Inline {
     /// generated entirely by an attribute value stays an
     /// [`AttributePart::Image`](crate::AttributePart::Image) of its reference.
     Image {
-        image: crate::InlineImage,
+        image: Box<crate::InlineImage>,
         span: Span,
     },
     /// A footnote macro (`footnote:[text]`, `footnote:id[text]`,
@@ -1176,7 +1176,7 @@ pub enum Inline {
     /// A footnote generated entirely by an attribute value stays an
     /// [`AttributePart::Footnote`](crate::AttributePart::Footnote).
     Footnote {
-        footnote: crate::Footnote,
+        footnote: Box<crate::Footnote>,
         span: Span,
     },
     /// A keyboard (`kbd:[Ctrl+T]`), button (`btn:[OK]`) or menu
@@ -1185,14 +1185,17 @@ pub enum Inline {
     /// (before images), over the lexical result of the earlier stages. `span`
     /// covers the macro. One generated entirely by an attribute value stays an
     /// [`AttributePart::Ui`](crate::AttributePart::Ui).
-    Ui { ui: crate::UiMacro, span: Span },
+    Ui { ui: Box<crate::UiMacro>, span: Span },
     /// An index term (`((Tigers))`, `(((Big cats,Tigers)))`,
     /// `indexterm2:[Tigers]`, `indexterm:[Big cats,Tigers]`), recognized like
     /// Ruby's `InlineIndextermMacroRx` in the macros stage after images. A
     /// flow term shows its text, a concealed term nothing. `span` covers the
     /// construct; one generated entirely by an attribute value stays an
     /// [`AttributePart::IndexTerm`](crate::AttributePart::IndexTerm).
-    IndexTerm { term: crate::IndexTerm, span: Span },
+    IndexTerm {
+        term: Box<crate::IndexTerm>,
+        span: Span,
+    },
     /// A protected inline formula (`stem:`, `asciimath:` or `latexmath:`),
     /// extracted before quotes/attributes, restored after the outer subs.
     Stem { stem: crate::Stem, span: Span },
@@ -1244,5 +1247,18 @@ impl Inline {
             | Inline::IndexTerm { span, .. }
             | Inline::Stem { span, .. } => *span,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// Inline nodes and attribute parts are moved through every substitution
+    /// stage, so their size is copied again and again. Rare, large payloads
+    /// (cross-references, links, images, footnotes, UI macros, index terms)
+    /// are boxed to keep plain text nodes small; box a new large variant too.
+    #[test]
+    fn substitution_nodes_stay_small() {
+        assert!(std::mem::size_of::<super::Inline>() <= 112);
+        assert!(std::mem::size_of::<crate::AttributePart>() <= 56);
     }
 }

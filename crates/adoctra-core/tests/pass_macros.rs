@@ -12,10 +12,10 @@ fn parts(source: &str) -> Vec<P> {
         .to_vec()
 }
 fn link(target: &str) -> P {
-    P::OpenLink(AttributeLink {
+    P::OpenLink(Box::new(AttributeLink {
         target: target.into(),
         ..Default::default()
-    })
+    }))
 }
 
 #[test]
@@ -134,14 +134,14 @@ fn named_properties_mail_subjects_and_windows_preserve_reference_semantics() {
     );
     assert_eq!(
         p[0],
-        P::OpenLink(AttributeLink {
+        P::OpenLink(Box::new(AttributeLink {
             target: "page".into(),
             id: Some("anchor".into()),
             role: Some("red".into()),
             title: Some("Title".into()),
             window: Some("_blank".into()),
             rel: Some("nofollow noopener".into())
-        })
+        }))
     );
     let p = parts(":v: pass:m[mailto:a@example.org[Mail,Hello world,Ж&]]");
     assert_eq!(

@@ -770,12 +770,10 @@ pub(crate) fn label_parts(nodes: &[Inline]) -> Vec<crate::AttributePart> {
                 parts.extend(label_parts(children))
             }
             Inline::Anchor { .. } => {}
-            Inline::Image { image, .. } => parts.push(Part::Image(Box::new(image.clone()))),
-            Inline::Footnote { footnote, .. } => {
-                parts.push(Part::Footnote(Box::new(footnote.clone())))
-            }
-            Inline::Ui { ui, .. } => parts.push(Part::Ui(Box::new(ui.clone()))),
-            Inline::IndexTerm { term, .. } => parts.push(Part::IndexTerm(Box::new(term.clone()))),
+            Inline::Image { image, .. } => parts.push(Part::Image(image.clone())),
+            Inline::Footnote { footnote, .. } => parts.push(Part::Footnote(footnote.clone())),
+            Inline::Ui { ui, .. } => parts.push(Part::Ui(ui.clone())),
+            Inline::IndexTerm { term, .. } => parts.push(Part::IndexTerm(term.clone())),
             Inline::Stem { stem, .. } => parts.push(Part::Stem(Box::new(stem.clone()))),
             node => {
                 let format = crate::attribute_macros::format(node).expect("formatting node");
@@ -1398,17 +1396,17 @@ fn push_text(inlines: &[Inline], s: &mut String) {
             Inline::Anchor { .. } | Inline::Image { .. } => s.push_str("<>"),
             // Ruby's footnote markup leaves its `[index]` text.
             Inline::Footnote { footnote, .. } => s.push_str(&crate::attributes::reference_text(&[
-                crate::AttributePart::Footnote(Box::new(footnote.clone())),
+                crate::AttributePart::Footnote(footnote.clone()),
             ])),
             // Ruby's keyboard/button/menu markup leaves its labels (and the
             // caret's entities, which the sanitizer drops).
             Inline::Ui { ui, .. } => s.push_str(&crate::attributes::reference_text(&[
-                crate::AttributePart::Ui(Box::new(ui.clone())),
+                crate::AttributePart::Ui(ui.clone()),
             ])),
             Inline::Stem { stem, .. } => s.push_str(&stem.lexical()),
             // Ruby's flow term leaves its text, a concealed one nothing.
             Inline::IndexTerm { term, .. } => s.push_str(&crate::attributes::reference_text(&[
-                crate::AttributePart::IndexTerm(Box::new(term.clone())),
+                crate::AttributePart::IndexTerm(term.clone()),
             ])),
         }
     }

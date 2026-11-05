@@ -25,7 +25,7 @@ fn macros(nodes: &[Inline]) -> Vec<(UiMacro, Span)> {
     let mut found = Vec::new();
     for node in nodes {
         match node {
-            Inline::Ui { ui, span } => found.push((ui.clone(), *span)),
+            Inline::Ui { ui, span } => found.push(((**ui).clone(), *span)),
             Inline::Strong { children, .. } | Inline::CrossReference { children, .. } => {
                 found.extend(macros(children))
             }

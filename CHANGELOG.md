@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file. The format
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+
+- Parsing is 10–30% faster again: large, rare inline payloads are boxed, so
+  ordinary inline nodes are copied as 112 instead of 392 bytes. Output is
+  unchanged.
+- AST: `AttributePart::OpenXref` and `AttributePart::OpenLink` now hold a
+  `Box`, as do the `xref`, `image`, `footnote`, `ui` and `term` fields of
+  the corresponding `Inline` variants. Field access is unchanged; code that
+  constructs or moves these values needs `Box::new` or `*`.
+
 ## [0.0.4] - 2026-11-05
 
 ### Changed
@@ -63,6 +75,7 @@ documents, but the API and output may still change between releases.
   diagnostics and highlighting tokens, a virtual file system for includes,
   and diagrams through Kroki.
 
+[Unreleased]: https://github.com/avskor/adoctra/compare/v0.0.4...HEAD
 [0.0.4]: https://github.com/avskor/adoctra/releases/tag/v0.0.4
 [0.0.3]: https://github.com/avskor/adoctra/releases/tag/v0.0.3
 [0.0.2]: https://github.com/avskor/adoctra/releases/tag/v0.0.2

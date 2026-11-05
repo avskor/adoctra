@@ -18,7 +18,7 @@ fn footnotes(inlines: &[Inline]) -> Vec<(&Footnote, &str)> {
     inlines
         .iter()
         .filter_map(|inline| match inline {
-            Inline::Footnote { footnote, .. } => Some((footnote, "")),
+            Inline::Footnote { footnote, .. } => Some((footnote.as_ref(), "")),
             _ => None,
         })
         .collect()

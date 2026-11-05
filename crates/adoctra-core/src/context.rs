@@ -1751,7 +1751,7 @@ impl ParseContext<'_> {
                     self.definitions.push(crate::resolve::Definition {
                         span,
                         attributes: Arc::clone(&self.attributes),
-                        xref: xref.clone(),
+                        xref: (**xref).clone(),
                         textless,
                     });
                 }

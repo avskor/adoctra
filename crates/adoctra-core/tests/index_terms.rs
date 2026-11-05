@@ -25,7 +25,7 @@ fn terms(nodes: &[Inline]) -> Vec<(IndexTerm, Span)> {
     nodes
         .iter()
         .filter_map(|node| match node {
-            Inline::IndexTerm { term, span } => Some((term.clone(), *span)),
+            Inline::IndexTerm { term, span } => Some(((**term).clone(), *span)),
             _ => None,
         })
         .collect()

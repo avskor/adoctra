@@ -304,14 +304,16 @@ pub(crate) struct Delimiter {
 
 /// Ruby's `is_delimited_block?` with match data.
 pub(crate) fn delimiter(line: &str) -> Option<Delimiter> {
-    let chars: Vec<char> = line.chars().collect();
-    let len = chars.len();
     const HEADS: [&str; 12] = [
         "--", "..", "==", "**", "__", "++", "|=", ",=", ":=", "!=", "//", "``",
     ];
-    if len < 2 || !HEADS.iter().any(|h| line.starts_with(h)) {
+    // Every head is two ASCII characters, so a matching line has at least two
+    // characters; most lines stop here without collecting their characters.
+    if !HEADS.iter().any(|h| line.starts_with(h)) {
         return None;
     }
+    let chars: Vec<char> = line.chars().collect();
+    let len = chars.len();
     if len == 2 {
         return (line == "--").then(|| Delimiter {
             tip: "--",
@@ -381,6 +383,34 @@ pub(crate) fn attribute_entry(line: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn delimiter_lines_need_a_two_character_head() {
+        for line in [
+            "",
+            "-",
+            "Ж",
+            "Ж-",
+            "-Ж",
+            "a--",
+            " ----",
+            "\u{2014}\u{2014}",
+            "---",
+            "````",
+        ] {
+            assert_eq!(delimited(line), None, "{line:?}");
+        }
+        for (line, terminator) in [
+            ("--", "--"),
+            ("----", "----"),
+            ("====", "===="),
+            ("|===", "|==="),
+            ("```", "```"),
+            ("```ruby", "```"),
+        ] {
+            assert_eq!(delimited(line).as_deref(), Some(terminator), "{line:?}");
+        }
+    }
 
     #[test]
     fn description_delimiter_skipping_matches_a_scan_of_every_offset() {

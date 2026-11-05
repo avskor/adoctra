@@ -24,7 +24,7 @@ fn images(nodes: &[Inline]) -> Vec<(&InlineImage, Span)> {
     let mut found = Vec::new();
     for node in nodes {
         match node {
-            Inline::Image { image, span } => found.push((image, *span)),
+            Inline::Image { image, span } => found.push((image.as_ref(), *span)),
             Inline::Strong { children, .. } | Inline::Link { children, .. } => {
                 found.extend(images(children))
             }

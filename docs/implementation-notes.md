@@ -320,6 +320,14 @@ U+0096; while zero, slot-prefix extraction skips scanning all attributes.
 Keep every table write going through `tracked` so the count stays exact;
 parts are tracked under their own exact key (counters are verbatim).
 `get`/`raw_parts` fold keys without allocating when already lowercase ASCII.
+**Node size** (2026-11-06): `Inline` (112 bytes) and `AttributePart` (56) are
+moved through every substitution stage and stored in each `Text` fragment, so
+large rare payloads are boxed: `AttributePart::OpenXref`/`OpenLink`, and
+`Inline::CrossReference.xref`, `Image.image`, `Footnote.footnote`, `Ui.ui`,
+`IndexTerm.term`. `ast::tests::substitution_nodes_stay_small` guards the
+sizes; box any new large variant. `Span` (40 bytes) is now the limit. The
+user declined mimalloc for the CLI (C dependency) although musl's allocator
+makes the released Linux binary 2–2.4x slower than glibc.
 
 `compatibility/acceptance/positions.json` uses `diagnostic-positions-v1`:
 18 original probes, all PASS. Ruby `--diagnostic-positions` exports

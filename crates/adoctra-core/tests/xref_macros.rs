@@ -138,7 +138,7 @@ fn value_generated_references_stay_parts_and_take_labels_at_conversion() {
             _ => None,
         })
         .collect();
-    let open = P::OpenXref(Xref::to_id("sec"));
+    let open = P::OpenXref(Box::new(Xref::to_id("sec")));
     assert_eq!(
         parts,
         [
@@ -307,7 +307,7 @@ fn closers_and_openers_from_values_complete_references() {
     assert_eq!(xrefs(&nodes), [("sec", None, "Sec Title".into())]);
     assert!(nodes.iter().any(|n| matches!(n,
         Inline::AttributeRef { name, parts, .. } if name == "o"
-            && parts.first() == Some(&P::OpenXref(Xref::to_id("sec"))))));
+            && parts.first() == Some(&P::OpenXref(Box::new(Xref::to_id("sec")))))));
 }
 
 #[test]
@@ -391,7 +391,7 @@ fn passthrough_macros_stage_creates_references_in_substituted_parts() {
             _ => None,
         })
         .collect();
-    let open = P::OpenXref(Xref::to_id("sec"));
+    let open = P::OpenXref(Box::new(Xref::to_id("sec")));
     assert_eq!(
         substituted,
         [
@@ -411,7 +411,7 @@ fn passthrough_macros_stage_creates_references_in_substituted_parts() {
             ),
             (
                 vec![
-                    P::OpenXref(Xref::to_id("nope")),
+                    P::OpenXref(Box::new(Xref::to_id("nope"))),
                     P::Text("[nope]".into()),
                     P::CloseXref
                 ],
@@ -496,7 +496,7 @@ fn definition_references_fix_target_and_label_at_the_definition() {
     let nodes = last(source);
     let link = |id: &str, label: &str| {
         vec![
-            P::OpenXref(Xref::to_id(id)),
+            P::OpenXref(Box::new(Xref::to_id(id))),
             P::Text(label.into()),
             P::CloseXref,
         ]

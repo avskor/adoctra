@@ -45,7 +45,7 @@ fn xrefs(blocks: &[&Block]) -> Vec<(Xref, String, adoctra_core::Span)> {
                 xref,
                 children,
                 span,
-            } => Some((xref.clone(), text(children), *span)),
+            } => Some(((**xref).clone(), text(children), *span)),
             _ => None,
         })
         .collect()
@@ -213,7 +213,7 @@ fn natural_references_in_values_retarget_their_parts() {
     assert_eq!(
         parts,
         [
-            P::OpenXref(Xref::to_id("_section_one")),
+            P::OpenXref(Box::new(Xref::to_id("_section_one"))),
             P::Text("Section One".into()),
             P::CloseXref
         ]
@@ -463,7 +463,7 @@ fn xrefstyle_applies_to_value_generated_references_and_headings() {
     assert_eq!(
         parts,
         [
-            P::OpenXref(short),
+            P::OpenXref(Box::new(short)),
             P::Text("Example 1".into()),
             P::CloseXref
         ]

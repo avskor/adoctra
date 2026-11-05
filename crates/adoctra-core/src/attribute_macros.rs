@@ -331,16 +331,13 @@ fn flush_inlines(
             let Some(Part::Ui(ui)) = parts.into_iter().next() else {
                 unreachable!()
             };
-            Inline::Ui { ui: *ui, span }
+            Inline::Ui { ui, span }
         }
         Inline::Substituted { parts, span, .. } if matches!(parts.as_slice(), [Part::Image(_)]) => {
             let Some(Part::Image(image)) = parts.into_iter().next() else {
                 unreachable!()
             };
-            Inline::Image {
-                image: *image,
-                span,
-            }
+            Inline::Image { image, span }
         }
         Inline::Substituted { parts, span, .. }
             if matches!(parts.as_slice(), [Part::IndexTerm(_)]) =>
@@ -348,7 +345,7 @@ fn flush_inlines(
             let Some(Part::IndexTerm(term)) = parts.into_iter().next() else {
                 unreachable!()
             };
-            Inline::IndexTerm { term: *term, span }
+            Inline::IndexTerm { term, span }
         }
         Inline::Substituted { parts, span, .. }
             if matches!(parts.as_slice(), [Part::Footnote(_)]) =>
@@ -356,10 +353,7 @@ fn flush_inlines(
             let Some(Part::Footnote(footnote)) = parts.into_iter().next() else {
                 unreachable!()
             };
-            Inline::Footnote {
-                footnote: *footnote,
-                span,
-            }
+            Inline::Footnote { footnote, span }
         }
         Inline::Substituted { parts, span, .. } if single_xref(&parts) => {
             let label = report
@@ -2129,7 +2123,7 @@ fn xref_parts(
             .labels
             .insert((span.start, span.end), text.cover_span(range));
     }
-    let mut parts = vec![Part::OpenXref(xref)];
+    let mut parts = vec![Part::OpenXref(Box::new(xref))];
     parts.extend(label);
     parts.push(Part::CloseXref);
     parts
@@ -2245,7 +2239,7 @@ fn apply_stage(
             report.links.push(text.match_span(m.start..m.end));
             let target = &src[m.target.clone()];
             let (link, label) = link_parts(&text, &m, target, attributes, compat, depth, report);
-            let mut parts = vec![Part::OpenLink(link)];
+            let mut parts = vec![Part::OpenLink(Box::new(link))];
             parts.extend(label);
             parts.push(Part::CloseLink);
             text.replace_parts(m.start..m.end, &parts, &mut output);
