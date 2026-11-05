@@ -1,41 +1,277 @@
 = adoctra
 :toc: macro
+:toc-title: Contents
 
-An AsciiDoc processor and publishing toolchain, written in Rust.
+An AsciiDoc processor written in Rust: a command-line tool, a library and
+WASM bindings for editors. It converts AsciiDoc documents to HTML, DOCX and
+JSON, aiming at the behavior of Asciidoctor 2.0.23.
 
 NOTE: AsciiDoc is a registered trademark of the Eclipse Foundation, Inc.
 This project is an independent processor of the AsciiDoc markup language and is
 not affiliated with or endorsed by the Eclipse Foundation or the Asciidoctor
 project.
 
-== Workspace layout
+*Status:* version 0.0.1, an early release. Real-world documents convert
+(the test corpus includes the documentation of Asciidoctor, Spring, Quarkus,
+Gradle, Hibernate ORM, JUnit and others), but the API and the output may still
+change between releases. See <<compatibility>> for what is and is not covered.
 
-* `adoctra-core` — parser and document model (backend-agnostic)
-* `adoctra-html` — HTML5 backend
-* `adoctra-docx` — DOCX backend rendering into Word templates (see
-  link:docs/docx.adoc[DOCX backend])
-* `adoctra-json` — JSON/ASG backend, useful as a TCK adapter
-* `adoctra` — umbrella crate, backends behind feature flags
-* `adoctra-cli` — the `adoctra` command-line tool
+toc::[]
 
-== Build
+== Features
+
+* *Language*: preprocessor directives and includes, document header and
+  attributes, sections and numbering, all delimited blocks, lists and
+  callouts, tables (including AsciiDoc cells), images, audio and video,
+  cross references, footnotes, index terms, STEM, table of contents and the
+  full substitution pipeline, compared with Asciidoctor 2.0.23.
+* *HTML*: modern semantic HTML5 with the bundled `adoctra.css` stylesheet,
+  visually matching Asciidoctor's default output (standalone or embedded,
+  HTML or XHTML syntax).
+* *DOCX*: Word documents rendered into a template; every element gets a
+  named style that your own `.docx`/`.dotx` template can restyle.
+* *JSON*: the document tree, attributes and diagnostics.
+* *Syntax highlighting*: a port of Rouge with all 228 lexers
+  (`source-highlighter=rouge`), no Ruby required.
+* *Diagrams*: all 58 diagram types of asciidoctor-diagram 3.2.1 (PlantUML,
+  Graphviz, Mermaid, D2, ditaa, barcodes and more) through their tools,
+  Kroki or a PlantUML server.
+* *Editors*: error-tolerant parsing (malformed input gives a partial
+  document and diagnostics, never an error), byte spans for every block,
+  a token stream for highlighting, compiled to WASM.
+
+== Installation
+
+Download a binary for Linux (static, x86_64), Windows or macOS (Apple
+Silicon or Intel) from the
+https://github.com/avskor/adoctra/releases[releases page], or install from
+crates.io with Rust 1.94 or newer (https://rustup.rs[rustup]):
 
 [source,sh]
 ----
-cargo build
-cargo test
-cargo run -p adoctra-cli -- README.adoc --to html --stdout
+cargo install adoctra-cli     # installs the `adoctra` command
+adoctra --version
 ----
 
-== Compatibility work
+To build from a checkout: `cargo install --path crates/adoctra-cli`.
 
-The reference version and current limitations are described in
-link:docs/compatibility.adoc[Compatibility]. The accepted implementation steps
-and current progress are tracked in link:docs/implementation-plan.adoc[Implementation plan].
-The source identity and attribute context APIs are described in
-link:docs/parser-api.adoc[Parser API].
-Pinned real documents and diagnostic checks are described in
-link:docs/acceptance.adoc[Acceptance corpus].
+== Command line
 
-Native performance measurements and raw WASM size are described in
-link:docs/performance.adoc[Performance methodology and baseline].
+`adoctra` follows the `asciidoctor` command: the output is written next to
+the input, named after it.
+
+[source,sh]
+----
+adoctra document.adoc                     # document.html
+adoctra -o - document.adoc                # HTML to stdout
+adoctra -e document.adoc                  # embedded HTML (no header/footer)
+adoctra --to docx document.adoc           # document.docx
+adoctra --to json document.adoc           # document.json
+adoctra -D build/ docs/*.adoc             # several files into a directory
+adoctra -a toc -a icons=font -n book.adoc # attributes, section numbers
+adoctra -a source-highlighter=rouge document.adoc
+----
+
+Common options (`adoctra --help` lists all of them):
+
+[cols="1,3",options="header"]
+|===
+|Option |Meaning
+|`-b`, `--backend` |`html5` (default), `xhtml5`, `docx`, `json`
+|`--to FORMAT` |`html`, `docx` or `json`
+|`-d`, `--doctype` |`article` (default), `book`, `manpage` or `inline`
+|`-a NAME[=VALUE]` |set a document attribute (`name@` or `value@`: the document may override it)
+|`-o FILE`, `-D DIR` |output file (`-` for stdout) or directory
+|`-B DIR` |base directory of the document and its resources
+|`-S MODE` |safe mode: `unsafe`, `safe` (default), `server` or `secure`
+|`-e`, `-s` |embedded document, without header and footer
+|`-n` |number sections
+|`--failure-level LEVEL` |exit with status 1 on messages of this level (`WARN`, `ERROR`, …)
+|`-q`, `-v` |no messages, or also informational ones
+|`-r asciidoctor-diagram` |enable diagrams (see <<diagrams>>)
+|===
+
+NOTE: The default safe mode is `safe`, not `unsafe` as in the `asciidoctor`
+command: includes and output files stay inside the base directory unless
+you pass `-S unsafe`.
+
+== DOCX
+
+Without a template, a built-in one is chosen by doctype (`article` or `book`
+with a cover page). To use your corporate look, pass a Word document or
+template whose styles (`Heading 1`, `Code`, `Admonition Note Table`, …)
+restyle the output:
+
+[source,sh]
+----
+adoctra --to docx -a docx-template=corp.dotx report.adoc
+----
+
+The built-in templates can be exported for editing in Word with
+`cargo run -p adoctra-docx --example export_templates -- <dir>`. The style
+contract is described in link:docs/docx.adoc[docs/docx.adoc] (in Russian).
+
+[[diagrams]]
+== Diagrams
+
+Diagrams are enabled with the same option as in Asciidoctor:
+
+[source,sh]
+----
+adoctra -r asciidoctor-diagram document.adoc
+----
+
+[source,asciidoc]
+....
+[graphviz, flow, svg]
+----
+digraph { a -> b }
+----
+
+plantuml::diagrams/sequence.puml[svg]
+....
+
+Each type runs its own tool, which must be installed: `dot` (Graphviz),
+`mmdc` (mermaid-cli), PlantUML (`plantuml` on `PATH` or the JAR files in
+`DIAGRAM_PLANTUML_CLASSPATH`), `d2`, `svgbob` and so on. Barcodes need no
+tools. Without local tools, render every diagram through
+https://kroki.io[Kroki] or your own Kroki server:
+
+[source,sh]
+----
+adoctra -r asciidoctor-diagram \
+  -a diagram-server-url=https://kroki.io -a diagram-server-type=kroki_io \
+  document.adoc
+----
+
+Like Asciidoctor, diagrams run external programs and send the diagram source
+to the server, so they are enabled only on request.
+
+== Library
+
+The `adoctra` crate re-exports the parser and, behind features, the backends
+(`html` by default, `docx`, `json`, `all-backends`):
+
+[source,toml]
+----
+[dependencies]
+adoctra = "0.0.1"   # or features = ["docx", "json"]
+----
+
+[source,rust]
+----
+use adoctra::Backend;
+
+let result = adoctra::parse("= Hello\n\nWorld");
+for diagnostic in &result.diagnostics {
+    eprintln!("{}", diagnostic.message);
+}
+let html = adoctra::html::HtmlBackend::new().convert(&result.document)?;
+----
+
+Parsing never fails: syntax problems are reported as diagnostics. Includes and
+other resources are loaded only through a `ResourceProvider` you pass
+(`MemoryResources` for in-memory files); see
+link:docs/parser-api.adoc[docs/parser-api.adoc]. Own block, block macro,
+inline macro and tree processors are registered in a `Registry`
+(`ParseOptions::extensions`).
+
+== WASM for editors
+
+`adoctra-wasm` exposes the parser (not the converters) to JavaScript:
+
+[source,sh]
+----
+rustup target add wasm32-unknown-unknown
+wasm-pack build crates/adoctra-wasm --target web   # or --target bundler
+----
+
+* `parse_json(text)`: `{ document, diagnostics, tokens }`; diagnostics and
+  tokens carry UTF-8 byte spans (`{ source_id, start, end }`).
+* `tokens_json(text)`: highlighting tokens only.
+* `ResourceWorkspace`: a virtual file system for includes and images
+  (`set`, `set_binary`, `load`, `parse_json`).
+* Diagrams through Kroki: `DiagramWorkspace`, or
+  `ResourceWorkspace.enable_diagrams(url, type)` to read diagram files from
+  the workspace. A parse lists the server requests it still needs; the host
+  fetches them and passes the responses back.
+
+[source,js]
+----
+const ws = new DiagramWorkspace("https://kroki.io/", "kroki_io");
+let result = JSON.parse(ws.parse_json(text, 0));
+for (const r of result.diagrams.requests) {
+  const response = await fetch(r.url, r.body === undefined ? {} :
+    { method: "POST", body: r.body, headers: { "Content-Type": r.content_type } });
+  if (response.ok) ws.set_response(r.key, new Uint8Array(await response.arrayBuffer()));
+  else ws.set_error(r.key, `${response.status} "${response.statusText}"`);
+}
+result = JSON.parse(ws.parse_json(text, 0));   // images in result.diagrams.images
+----
+
+`cargo run --example editor_demo -p adoctra-wasm` prints the JSON an editor
+receives.
+
+[[compatibility]]
+== Compatibility with Asciidoctor
+
+The reference is Asciidoctor 2.0.23. Document content, structure, diagnostics
+and command-line behavior are compared with it on pinned corpora and the
+upstream test suite; HTML is compared visually (screenshots), not byte for
+byte. Known differences:
+
+* HTML uses modern semantic markup, so stylesheets or scripts that depend on
+  Asciidoctor's exact HTML need checking.
+* No DocBook or man page backends; no PDF or EPUB.
+* Ruby extensions, templates (`-T`) and libraries (`-r` other than
+  `asciidoctor-diagram`) are not supported; use the Rust extension API.
+* The default safe mode of the command is `safe`.
+* In the browser, PlantUML diagrams need `preprocess=false`, and diagrams
+  are rendered only through a server.
+
+The full register of verified areas and open differences is in
+link:docs/compatibility.adoc[docs/compatibility.adoc] (in Russian).
+
+== Workspace
+
+[cols="1,3",options="header"]
+|===
+|Crate |Purpose
+|`adoctra-core` |parser, document model, extension API (no backends)
+|`adoctra-html` |HTML5 backend
+|`adoctra-docx` |DOCX backend
+|`adoctra-json` |JSON backend
+|`adoctra-highlight` |Rouge port for server-side highlighting
+|`adoctra-ext-diagram` |diagram extension (asciidoctor-diagram port)
+|`adoctra` |umbrella crate with feature-gated backends
+|`adoctra-cli` |the `adoctra` command
+|`adoctra-wasm` |WASM bindings for editors
+|===
+
+[source,sh]
+----
+cargo build --workspace --all-features
+cargo test --workspace --all-features
+----
+
+Implementation notes, the plan and the compatibility harnesses are in
+link:docs/[docs/]. Changes are listed in link:CHANGELOG.md[CHANGELOG.md].
+
+== License
+
+Licensed under either of
+
+* Apache License, Version 2.0 (link:LICENSE-APACHE[LICENSE-APACHE])
+* MIT license (link:LICENSE-MIT[LICENSE-MIT])
+
+at your option. Copyright (c) 2026 Alexey Skorobogatov.
+
+Ported code keeps its own notices: Rouge
+(link:crates/adoctra-highlight/LICENSE-rouge[LICENSE-rouge], MIT) and the
+libraries ported for diagrams
+(link:crates/adoctra-ext-diagram/LICENSE-third-party[LICENSE-third-party]).
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in the work by you, as defined in the Apache-2.0
+license, shall be dual licensed as above, without any additional terms or
+conditions.

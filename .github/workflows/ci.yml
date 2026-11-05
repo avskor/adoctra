@@ -29,6 +29,11 @@ jobs:
         run: rustup target add wasm32-unknown-unknown
       - name: Check WASM bindings
         run: cargo check --locked -p adoctra-wasm --target wasm32-unknown-unknown
+      - name: Minimum supported Rust version
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          rustup toolchain install "$msrv" --profile minimal
+          cargo "+$msrv" check --locked --workspace --all-features --all-targets
 
   offline:
     runs-on: ubuntu-latest

@@ -77,9 +77,11 @@ The model serves three audiences; keep their needs in mind when changing core:
 
 ## Conventions
 
-- Edition is currently `2021` / `resolver = "2"` to match the local toolchain.
-  Bump to `2024` / `resolver = "3"` / `rust-version = "1.85"` only deliberately,
-  and update `rust-toolchain.toml` and CLAUDE.md together.
+- Edition is currently `2021` / `resolver = "2"`; `rust-version = "1.94"` is
+  the oldest toolchain that builds the workspace (checked 2026-11-05: 1.93
+  fails in `adoctra-core`, dependencies need 1.88). Bump the edition to
+  `2024` / `resolver = "3"` only deliberately, and update
+  `rust-toolchain.toml` and CLAUDE.md together.
 - Use workspace inheritance: `version.workspace = true`, etc. New third-party
   deps go in the root `[workspace.dependencies]` and are referenced with
   `{ workspace = true }`.
