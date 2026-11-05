@@ -1,0 +1,95 @@
+= Диаграммы
+
+Решение пользователя от 2026-11-05: снять отсрочку extension API и
+поддержать диаграммы PlantUML, Mermaid, Graphviz и Kroki. Диаграммы —
+первый потребитель собственного Rust-API расширений
+(link:parser-api.adoc[parser API], `adoctra_core::extension`); Ruby API
+расширений по-прежнему не воспроизводится.
+
+Крейт `adoctra-ext-diagram` переносит asciidoctor-diagram 3.2.1 (версия
+закреплена в `compatibility/asciidoctor-diagram-version`): block и block
+macro процессоры `plantuml`, `salt`, `graphviz` и `mermaid`. Kroki и
+PlantUML-сервер подключаются, как в Ruby, атрибутами
+`diagram-server-url` и `diagram-server-type` (`kroki_io` или `plantuml`).
+
+== Подключение
+
+CLI: `adoctra -r asciidoctor-diagram doc.adoc` (та же опция, что у Ruby).
+Библиотека: `adoctra_ext_diagram::register(&mut registry, host)` и реестр в
+`ParseOptions::extensions`.
+
+Core ничего не запускает и не читает: всё, что делают процессоры (запуск
+`dot`, PlantUML, `mmdc`, чтение файла макроса, запись изображений и кэша
+`.asciidoctor/diagram`, HTTP к серверу), идёт через `DiagramHost`, который
+задаёт хост. `SystemHost` работает с настоящей системой; HTTP — только с
+переданным клиентом (CLI использует `ureq`). Пути изображений и кэша
+разрешаются как в Ruby (`normalize_system_path` с jail в safe-режиме, с
+автоматическим восстановлением внутрь jail и предупреждением без места в
+исходнике). Как и в Ruby, диаграммы запускают внешние программы и сетевые
+запросы по содержимому документа, поэтому включаются только явно.
+
+Редактор (WASM) процессоров не получает: JS-хост не может передать
+Rust-процессоры. Блок диаграммы там остаётся листингом со стилем
+(`plantuml`, `mermaid`, …) и исходным текстом, чтобы фронтенд мог
+отрисовать его сам.
+
+== Инструменты
+
+* Graphviz — `dot` (атрибуты `dot`/`graphvizdot` или `PATH`).
+* PlantUML — как в Ruby, родной `plantuml-full`/`plantuml-headless`
+  (атрибут `plantuml-native`) с `-pipe`; иначе JAR-файлы из
+  `DIAGRAM_PLANTUML_CLASSPATH`. Ruby запускает их через свой Java-сервер,
+  adoctra — через `java -cp … net.sourceforge.plantuml.Run` с теми же
+  аргументами и тем же препроцессором (тема при препроцессинге, как у
+  сервера, не передаётся). Последний вариант adoctra — команда `plantuml`
+  на `PATH`. Без PlantUML — сообщение Ruby `Could not load PlantUML…`.
+* Mermaid — mermaid-cli `mmdc` (атрибут `mmdc` или `PATH`). Устаревший
+  `mermaid` + PhantomJS, к которому Ruby откатывается, не запускается:
+  выводится ошибка `mmdc`.
+
+== Сравнение с Ruby
+
+Профиль `diagram-v1` (`scripts/diagram.py`, случаи в
+`compatibility/diagram/cases.json`, отчёт `compatibility/diagram/report.json`)
+запускает Ruby `asciidoctor -r asciidoctor-diagram` и adoctra в safe-режиме
+с одними и теми же инструментами и сравнивает HTML в проекции body-dom-v1,
+диагностики (серьёзность, файл, строка, текст), все созданные файлы побайтно
+(изображения и метаданные кэша) и запросы к локальному фейковому серверу
+диаграмм (метод, путь, тип, раскодированный код). Случай без нужного
+инструмента — SKIP, а не PASS. Результат 2026-11-05: 29 PASS, 2 XFAIL
+(Graphviz 2.42, PlantUML 1.2026.2 из asciidoctor-diagram-plantuml, mermaid-cli
+11.12 с локальным Chrome).
+
+Совпадают побайтно: имена `diag-<type>-md5-…` (MD5 по коду и атрибутам в
+порядке Ruby, включая позиционные значения после именованных как
+`<значение>=true`), PNG и SVG (SVG переписывается, как REXML 3.3.9:
+одинарные кавычки, атрибуты по локальному имени, пустые элементы
+`<e/>`, пробелы до корня только до DOCTYPE), файлы `.cache`
+(`{checksum, options, width, height}`), размеры в HTML (`pt` × 1,33, `scale`),
+`alt`, `svg-type` (inline/interactive), `data-uri`, `autoimagesdir`,
+`imagesoutdir`, `cachedir`, `cache-images`, `nocache`, регенерация по
+изменению кода, опций или файла, тексты ошибок (`Failed to generate image:
+…`, `<tool> failed: …`, неподдерживаемый формат, отсутствующий инструмент,
+ответы и отказы сервера) и листинг с ошибкой, URL и тела запросов к
+Kroki/PlantUML-серверу (GET до `max-get-size`, иначе POST), `subs` блока
+(подстановка атрибутов, также в листинге с ошибкой).
+
+Намеренные отличия (XFAIL с замороженным результатом adoctra):
+
+* отсутствующий файл block macro: Ruby читает его вне обработки ошибок и
+  прерывает всю конвертацию; разбор adoctra не падает — ошибка и листинг;
+* `on-error=abort`: Ruby прерывает конвертацию; adoctra ведёт себя как `log`.
+
+Ограничения (не реализовано или не проверено):
+
+* inline-макросы диаграмм (`plantuml:file[]`) — нужен `InlineMacroProcessor`;
+* остальные типы asciidoctor-diagram (ditaa, d2, vega, wavedrom и другие)
+  через локальные инструменты; через Kroki они не регистрируются;
+* `subs` кроме `attributes` и `specialcharacters`;
+* сериализация REXML воспроизведена для SVG, которые выдают поддержанные
+  инструменты; внутреннее подмножество DOCTYPE и кодировки, отличные от
+  UTF-8, не переписываются.
+
+В CI диаграммы проверяются Rust-тестами с поддельным хостом
+(`crates/adoctra-ext-diagram/tests/diagrams.rs`) и юнит-тестами харнесса;
+сам `diagram-v1` требует инструментов и Ruby-гема и запускается локально.

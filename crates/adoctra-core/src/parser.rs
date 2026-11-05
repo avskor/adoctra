@@ -372,6 +372,24 @@ pub(crate) fn parse_reader<'a>(
         diagnostic.report.conversion = index >= registered;
         diagnostics.push(diagnostic);
     }
+    // Tree processors see the finished document with physical spans; their
+    // reports follow everything else.
+    if let Some(registry) = context.extensions.clone() {
+        let attributes = Arc::clone(&context.attributes);
+        let base_dir = context.base_dir.clone();
+        let output = context.output_target().cloned();
+        for processor in registry.tree_processors() {
+            let mut ctx = crate::extension::ProcessContext::new(
+                &attributes,
+                context.safe_mode(),
+                base_dir.as_deref(),
+                output.as_ref(),
+                Span::new(0, 0),
+            );
+            processor.process(&mut doc, &mut ctx);
+            diagnostics.extend(ctx.into_diagnostics());
+        }
+    }
     let physical = |spans: &[Span]| {
         spans
             .iter()
@@ -645,10 +663,27 @@ impl<'s, 'c> Run<'s, 'c> {
     fn finish_block(&mut self, env: &mut Env<'_, 's, 'c>, parsed: Option<Block>) {
         let Env { lines, context, .. } = env;
         let (lines, context) = (&mut **lines, &mut **context);
-        let (metadata, entries) = self.parsing.take().expect("a block being parsed");
-        if parsed.is_none() {
-            context.restore_entries(entries);
-        }
+        let (mut metadata, entries) = self.parsing.take().expect("a block being parsed");
+        // A block read for an extension processor: its answer replaces the
+        // block (and its metadata), `None` drops it with its metadata and
+        // pending entries (Ruby's `attributes.clear`).
+        let extension = context.extension.take();
+        let synthesized = extension.is_some() && parsed.is_some();
+        let parsed = match (extension, parsed) {
+            (Some(extension), Some(block)) => crate::extension_point::run(
+                extension,
+                block,
+                &mut metadata,
+                &lines.include_catalog,
+                context,
+            ),
+            (_, parsed) => {
+                if parsed.is_none() {
+                    context.restore_entries(entries);
+                }
+                parsed
+            }
+        };
         let mut carried = None;
         if let Some(mut block) = parsed {
             let pending = metadata;
@@ -755,8 +790,11 @@ impl<'s, 'c> Run<'s, 'c> {
             }
             trim_verbatim_edges(&mut block);
             let simple = simple || block.simple;
-            commit_subs(&mut block, simple, lines, &attributes, context);
-            apply_callouts(&mut block, lines, context);
+            // A processor's block carries its final text.
+            if !synthesized {
+                commit_subs(&mut block, simple, lines, &attributes, context);
+                apply_callouts(&mut block, lines, context);
+            }
             if let Some(value) = reftext {
                 context.attach_reftext(&mut block, value);
             }
@@ -1435,7 +1473,9 @@ pub(crate) fn consume_block_metadata(
         );
         // Ruby assigns the id even when it is nil (`[[]]`).
         pending.id = id.map(str::to_string);
+        pending.list.note_named("id");
         if let Some(rt) = reftext {
+            pending.list.note_named("reftext");
             let value = context.block_reftext(rt, lines[*i].0 + abs_offset(line, rt));
             lines
                 .metadata_references
@@ -1466,6 +1506,7 @@ pub(crate) fn consume_block_metadata(
             None,
             TokenKind::BlockTitle,
         );
+        pending.list.note_named("title");
         pending.title = Some(PendingTitle {
             text: title.into(),
             base: lines[*i].0 + abs_offset(line, title),
@@ -2983,6 +3024,34 @@ fn parse_block_content<'s, 'c>(
             BlockKind::Toc,
         ));
     }
+    // Ruby's `CustomBlockMacroRx` for a registered block macro processor;
+    // completion invokes it and replaces this placeholder.
+    if let Some((name, target, content)) = context
+        .extensions
+        .as_ref()
+        .filter(|_| !verbatim)
+        .and_then(|_| crate::extension_point::custom_block_macro(trimmed))
+    {
+        let processor = context
+            .extensions
+            .as_ref()
+            .and_then(|registry| registry.block_macro(&trimmed[name.clone()]))
+            .cloned();
+        if let Some(processor) = processor {
+            let span = Span::new(off, off + trimmed.len());
+            lines.record_fences(span, None, TokenKind::BlockMacro);
+            context.extension = Some(crate::extension_point::Pending::Macro {
+                processor,
+                line: trimmed.to_owned(),
+                off,
+                name,
+                target,
+                content,
+            });
+            *i += 1;
+            return Some(Block::new(span, BlockKind::ThematicBreak));
+        }
+    }
 
     // Ruby's `is_delimited_block?` on the unindented line: a fence longer than
     // the minimum closes only with the identical line, so blocks of one kind
@@ -2994,6 +3063,65 @@ fn parse_block_content<'s, 'c>(
             .filter(|d| d.tip == tip)
             .map(|d| d.terminator.clone())
     };
+
+    // Ruby's `registered_for_block?(style, context)` for a delimited block
+    // whose style is neither its context nor a masquerade: the processor
+    // takes the block's lines (`build_block` with its content model).
+    if let Some((cloaked, processor)) = delimiter.as_ref().and_then(|d| {
+        let cloaked = crate::extension::BlockContext::of_tip(d.tip)?;
+        let style = pending_style.filter(|style| !cloaked.builtin_style(style))?;
+        Some((cloaked, context.block_extension(Some(style), cloaked)?))
+    }) {
+        let fence = delimiter.as_ref().map(|d| d.terminator.clone()).unwrap();
+        let style = pending_style.unwrap_or_default().to_owned();
+        let opening = Span::new(off, off + line.len());
+        *i += 1;
+        let (body_start, body_end, end, closing, _) =
+            capture_verbatim_body(lines, i, opening, &fence, &style, context);
+        let (delimiter_token, text_token) = match cloaked {
+            crate::extension::BlockContext::Literal => {
+                (TokenKind::LiteralDelimiter, TokenKind::LiteralText)
+            }
+            crate::extension::BlockContext::Pass => {
+                (TokenKind::PassthroughDelimiter, TokenKind::PassthroughText)
+            }
+            crate::extension::BlockContext::Open => {
+                (TokenKind::OpenDelimiter, TokenKind::ListingText)
+            }
+            crate::extension::BlockContext::Example => {
+                (TokenKind::ExampleDelimiter, TokenKind::ListingText)
+            }
+            crate::extension::BlockContext::Sidebar => {
+                (TokenKind::SidebarDelimiter, TokenKind::ListingText)
+            }
+            crate::extension::BlockContext::Quote => {
+                (TokenKind::QuoteDelimiter, TokenKind::ListingText)
+            }
+            _ => (TokenKind::ListingDelimiter, TokenKind::ListingText),
+        };
+        lines.record_verbatim(
+            opening,
+            closing,
+            (body_start, body_end),
+            delimiter_token,
+            text_token,
+        );
+        let mut text = lines.content(body_start, body_end).text;
+        match processor.content_model() {
+            crate::extension::ContentModel::Skip => return None,
+            crate::extension::ContentModel::Verbatim => {
+                text = verbatim_indentation(pending_attrs, context).apply_text(&text);
+            }
+            _ => {}
+        }
+        context.extension = Some(crate::extension_point::Pending::Block {
+            processor,
+            name: style,
+            context: cloaked,
+            lines: crate::extension_point::block_lines(&text, false),
+        });
+        return Some(Block::new(Span::new(off, end), BlockKind::ThematicBreak));
+    }
 
     // A table (`|===`, `,===`, `:===`, `!===`) whatever the style, like Ruby's
     // delimited blocks without masquerades.
@@ -3462,6 +3590,28 @@ fn parse_block_content<'s, 'c>(
     if pending_style == Some("comment") {
         context.comments.push(Span::new(start, end));
         return None;
+    }
+    // Ruby's `registered_for_block?(style, :paragraph)`, checked with the
+    // other paragraph styles before the literal paragraph.
+    if let Some(processor) = context
+        .block_extension(pending_style, crate::extension::BlockContext::Paragraph)
+        .filter(|_| !text_only)
+    {
+        let mut text = lines.content(start, end).text;
+        match processor.content_model() {
+            crate::extension::ContentModel::Skip => return None,
+            crate::extension::ContentModel::Verbatim => {
+                text = verbatim_indentation(pending_attrs, context).apply_text(&text);
+            }
+            _ => {}
+        }
+        context.extension = Some(crate::extension_point::Pending::Block {
+            processor,
+            name: pending_style.unwrap_or_default().to_owned(),
+            context: crate::extension::BlockContext::Paragraph,
+            lines: crate::extension_point::block_lines(&text, true),
+        });
+        return Some(Block::new(Span::new(start, end), BlockKind::ThematicBreak));
     }
     // Ruby's literal paragraph: unstyled lines starting with whitespace, with
     // their common indentation removed (`adjust_indentation!`). A list item's

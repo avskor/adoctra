@@ -283,6 +283,7 @@ fn convert(args: &Args, uri_cache: &resources::UriCache) -> Result<(), Failure> 
             Some(dir) => Some(posix(&expand_path(dir)?)),
             None => None,
         },
+        extensions: args.diagrams.then(diagram_extensions),
         ..Default::default()
     };
     // A standalone HTML document reads its stylesheet where Ruby's converter
@@ -1067,4 +1068,77 @@ fn print_usage(out: &mut dyn Write) {
          \x20 -h, --help                 print this help\n\
          \x20 -V, --version              print the version"
     );
+}
+
+/// The diagram processors for `-r asciidoctor-diagram`: tools run and images
+/// are written on this system; diagram servers are reached over HTTP.
+fn diagram_extensions() -> std::sync::Arc<adoctra::Registry> {
+    let mut registry = adoctra::Registry::new();
+    let host = adoctra_ext_diagram::SystemHost::new().with_http(std::sync::Arc::new(DiagramHttp));
+    adoctra_ext_diagram::register(&mut registry, std::sync::Arc::new(host));
+    std::sync::Arc::new(registry)
+}
+
+/// `Net::HTTP` for asciidoctor-diagram's `HttpConverter` (redirects are
+/// followed; an error status is Ruby's `HTTPResponse#value` message).
+struct DiagramHttp;
+
+impl adoctra_ext_diagram::HttpClient for DiagramHttp {
+    fn send(&self, request: &adoctra_ext_diagram::HttpRequest) -> Result<Vec<u8>, String> {
+        use std::io::Read;
+        let response = match &request.body {
+            None => ureq::get(&request.url).call(),
+            Some(body) => {
+                let mut post = ureq::post(&request.url);
+                if let Some(content_type) = &request.content_type {
+                    post = post.set("Content-Type", content_type);
+                }
+                post.send_bytes(body)
+            }
+        };
+        match response {
+            Ok(response) => {
+                let mut data = Vec::new();
+                response
+                    .into_reader()
+                    .read_to_end(&mut data)
+                    .map_err(|e| e.to_string())?;
+                Ok(data)
+            }
+            Err(ureq::Error::Status(code, response)) => {
+                Err(format!("{code} {:?}", response.status_text()))
+            }
+            Err(ureq::Error::Transport(transport)) => Err(net_http_error(&request.url, &transport)),
+        }
+    }
+}
+
+/// Ruby's `Net::HTTP` messages for the common transport failures.
+fn net_http_error(url: &str, transport: &ureq::Transport) -> String {
+    let io = std::error::Error::source(transport)
+        .and_then(|source| source.downcast_ref::<std::io::Error>());
+    let authority = url
+        .split_once("://")
+        .map(|(scheme, rest)| (scheme, rest.split('/').next().unwrap_or(rest)));
+    match (transport.kind(), io.map(std::io::Error::kind), authority) {
+        (
+            ureq::ErrorKind::ConnectionFailed,
+            Some(std::io::ErrorKind::ConnectionRefused),
+            Some((scheme, authority)),
+        ) => {
+            let (host, port) = match authority.rsplit_once(':') {
+                Some((host, port)) => (host.to_owned(), port.to_owned()),
+                None => (
+                    authority.to_owned(),
+                    if scheme == "https" { "443" } else { "80" }.to_owned(),
+                ),
+            };
+            format!(
+                "Failed to open TCP connection to {host}:{port} (Connection refused - \
+                 connect(2) for \"{host}\" port {port})"
+            )
+        }
+        (_, Some(std::io::ErrorKind::UnexpectedEof), _) => "end of file reached".to_owned(),
+        _ => transport.to_string(),
+    }
 }

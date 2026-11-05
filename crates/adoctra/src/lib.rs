@@ -25,6 +25,13 @@ pub use adoctra_core::{
     COMPATIBILITY_VERSION,
 };
 
+/// The extension API (block, block macro and tree processors).
+pub use adoctra_core::extension;
+pub use adoctra_core::{
+    AttrKey, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor, BlockRequest,
+    ContentModel, ExtensionAttributes, MacroContent, NewBlock, NewBlockKind, ProcessContext,
+};
+
 #[cfg(feature = "html")]
 pub use adoctra_html as html;
 

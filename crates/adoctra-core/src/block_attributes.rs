@@ -44,9 +44,28 @@ pub(crate) struct BlockList {
     /// The named `attribution` and `citetitle` with their rendered value
     /// (normal substitutions when single-quoted), for a quote attribution.
     named_values: BTreeMap<String, AttrValue>,
+    /// Ruby's hash insertion order of every key the metadata set (for
+    /// extensions, which see the attributes as a Ruby `Hash`).
+    pub order: Vec<crate::extension::AttrKey>,
 }
 
 impl BlockList {
+    /// Record a key at its first insertion.
+    pub fn note(&mut self, key: crate::extension::AttrKey) {
+        if !self.order.contains(&key) {
+            self.order.push(key);
+        }
+    }
+
+    pub fn note_named(&mut self, name: &str) {
+        self.note(crate::extension::AttrKey::Named(name.to_owned()));
+    }
+
+    /// A named value from an attribute list (not `id`, `role`, options).
+    pub fn named(&self, name: &str) -> Option<&str> {
+        self.named.get(name).map(String::as_str)
+    }
+
     pub fn value(&self, key: usize) -> Option<&AttrValue> {
         self.positional.get(&key).and_then(Option::as_ref)
     }
@@ -136,6 +155,7 @@ fn merge_fields(
             // Titles and reftext share their keys with `.Title` lines and block
             // anchors (last wins) and never request `sub_result`.
             (Some("title"), Some(text)) => {
+                pending.list.note_named("title");
                 let (text, span, exact) = lexical(text);
                 pending.title = Some(crate::parser::PendingTitle {
                     text,
@@ -145,6 +165,7 @@ fn merge_fields(
                 continue;
             }
             (Some("reftext"), Some(text)) => {
+                pending.list.note_named("reftext");
                 let (text, refs) = renumber(text.text, &refs);
                 pending.reftext = Some(crate::reftext::Read::expanded(text, refs));
                 continue;
@@ -168,11 +189,15 @@ fn merge_fields(
         });
         let Some(name) = name else {
             if let (Some(name), Some(value)) = (posattrs.get(field.index), &value) {
+                pending.list.note_named(name);
                 pending
                     .list
                     .named
                     .insert((*name).to_owned(), value.text.clone());
             }
+            pending
+                .list
+                .note(crate::extension::AttrKey::Positional(field.index + 1));
             pending.list.positional.insert(field.index + 1, value);
             continue;
         };
@@ -200,9 +225,13 @@ fn merge_fields(
                     add_option(pending, &text);
                 }
             }
-            "id" => pending.id = Some(text),
+            "id" => {
+                pending.list.note_named("id");
+                pending.id = Some(text)
+            }
             // The named role replaces earlier roles; shorthand roles append.
             "role" => {
+                pending.list.note_named("role");
                 pending.roles = text
                     .split(crate::ruby_strip::is_ruby_space)
                     .filter(|role| !role.is_empty())
@@ -210,6 +239,7 @@ fn merge_fields(
                     .collect()
             }
             _ => {
+                pending.list.note_named(&name);
                 pending.list.named.insert(name, text);
             }
         }
@@ -422,6 +452,9 @@ fn visible_text(inlines: &[Inline]) -> String {
 }
 
 fn add_option(pending: &mut PendingMeta, option: &str) {
+    if !option.is_empty() {
+        pending.list.note_named(&format!("{option}-option"));
+    }
     if !option.is_empty() && !pending.attrs.options.iter().any(|o| o == option) {
         pending.attrs.options.push(option.to_owned());
     }
@@ -494,7 +527,11 @@ fn parse_style(
         pending.attrs.style = Some(style.clone());
     }
     if id.is_some() {
+        pending.list.note_named("id");
         pending.id = id;
+    }
+    if !roles.is_empty() {
+        pending.list.note_named("role");
     }
     pending.roles.extend(roles);
     for option in options {

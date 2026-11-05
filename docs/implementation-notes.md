@@ -1705,7 +1705,108 @@ fixtures under `golden/quotes/` and `golden/verses/`, open-block fixtures under
 fixtures under `golden/tables/`, break fixtures under `golden/breaks/` and
 manual page fixtures under `golden/manpage/`).
 
-The extension API exists but `parse`/`convert` do not invoke it yet.
+**Extension API** (user decision 2026-11-05: the deferral is lifted, an own
+Rust API, not Ruby API compatibility; first consumer: diagrams).
+`extension.rs` holds the public API: `BlockProcessor` (name, `contexts`
+from `BlockContext` = paragraph/listing/literal/open/example/sidebar/quote/
+pass, `positional_attributes`, `default_attributes`, `ContentModel`
+simple/raw/verbatim/skip), `BlockMacroProcessor` (`MacroContent`
+attributes/text), `TreeProcessor`, `ExtensionAttributes` (a Ruby `Hash`:
+`AttrKey::Positional`/`Named` in insertion order, setting keeps the
+position), `BlockRequest`/`BlockMacroRequest`, `ProcessContext` (document
+attributes, safe mode, `base_dir`, `error`/`warning` at the block span),
+`NewBlock`/`NewBlockKind` (image, listing, literal, pass) and `Registry`
+(last registration wins, like Ruby's hash) in
+`ParseOptions::extensions` (`ParseContext::extensions`, an empty registry
+is `None`). `extension_point.rs` is the parser side, ported from
+`Parser.next_block`/`build_block`:
+- A delimited block whose style is neither its context nor a masquerade
+  (`BlockContext::builtin_style`, Ruby's `DELIMITED_BLOCKS` masq sets and
+  admonition styles) and is registered for the fence's context: the body is
+  read like a verbatim body (`capture_verbatim_body`, preprocessed, the
+  unterminated diagnostic names the style like Ruby's `unterminated shout
+  block`), tokens are the fence's delimiter kind plus listing/literal/pass
+  text, the lines go to completion in `ParseContext::extension`.
+- A styled paragraph registered for `paragraph`, checked after the comment
+  style and before the literal paragraph (Ruby's styled-paragraph branch);
+  `skip_line_comments` drops `//` lines (`block_lines`).
+- `CustomBlockMacroRx` (`custom_block_macro`) after the media and `toc::`
+  macros, outside verbatim styles and text-only list text; the line gets a
+  `BlockMacro` token.
+The parser returns a `ThematicBreak` placeholder; `Run::finish_block` calls
+`extension_point::run` first. The request attributes are the pending
+metadata in Ruby's order (`BlockList::order`, noted at each first insertion:
+`.Title`/anchor lines, positional fields, named fields, `*-option`,
+shorthand id/role/options after the fields; style removed as by
+`build_block`), then `rekey` (positional names from the second field,
+defaults with `||=`) and `cloaked-context`. A macro expands its target first
+(`drop-line` drops it), merges its list (`macro_list` with the positional
+names, Ruby's `into: attributes`) over the metadata, or puts the content in
+`text`. The answer replaces the block: its attributes become the metadata
+(`title` reuses the pending title's spans when unchanged, `id`, `role`,
+`style`, `reftext`, `*-option`; `subs` is dropped; other named keys stay),
+then the normal completion runs (media completion, caption counter, title
+deferral, id registration) except `commit_subs`/`apply_callouts`: processor
+text is final. `None` drops the block with its metadata and pending entries
+(Ruby's `attributes.clear`). Tree processors run at the end of
+`parse_reader` on the finished document (physical spans, after conversion-
+time substitutions; Ruby runs them before conversion) and their reports
+follow all others. Inline macro processors, compound content returned by a
+processor and pre/post/include/docinfo processors are not implemented.
+WASM has no registry (a JS host cannot pass Rust processors): diagram blocks
+stay styled listings there. Tests: `adoctra-core/tests/extensions.rs`
+(attribute orders checked against Ruby extensions), `adoctra-html/tests/
+extensions.rs`, `adoctra-json/tests/extensions.rs`,
+`adoctra-wasm/tests/diagram_blocks.rs`.
+
+**Diagrams** (`adoctra-ext-diagram`, user decision 2026-11-05; contract in
+`docs/diagrams.adoc`, harness `scripts/diagram.py` `diagram-v1`). Ports
+asciidoctor-diagram 3.2.1 `diagram_processor.rb`/`diagram_source.rb`:
+`register` adds block (contexts listing/literal/open, positional `target`,
+`format`) and block macro (positional `format`) processors for `plantuml`
+(`@startuml`), `salt` (`@startsalt`), `graphviz`, `mermaid`, with Ruby's
+class names in the format error (`Asciidoctor::Diagram::<X>BlockProcessor`).
+`processor.rs` mirrors `process`: keys downcased, positional values after
+the named ones become `<value>=true` keys (they enter the MD5), the code is
+read first (a missing macro file: Ruby aborts the conversion, adoctra
+reports and lists it — XFAIL), formats (PDF last for HTML backends),
+`format`/`title`/`caption` removed before naming, errors become a listing
+`Failed to generate image: …` + code with the original attributes (its
+`subs` re-applied for attributes). `create_image_block`: `image_name`
+(`target` or `diag-<type>-md5-<hex>`, a macro's file basename), output dir
+from `outdir` or `ParseOptions::output` (`ProcessContext::output`, Ruby's
+`:to_dir` = the output file's directory), `imagesoutdir` or `imagesdir`
+under it, cache `.asciidoctor/diagram` or `cachedir`, all via
+`resolve_system_path` with the base-dir jail from safe mode up (recovery
+warnings are `warning_unlocated`); metadata JSON (`cache.rs`) decides
+regeneration with checksum, options JSON and a macro file's mtime;
+`cache-images` links; HTML width/height (`scale` unless native scaling),
+`alt` (title/target basename/`Diagram`), `svg-type`, `data-uri` absolute
+targets, `autoimagesdir`. `source.rs`: `attr`/`global_attr` inheritance
+(`<type>-<name>`, `diagram-<name>`), BOM/rstrip of macro files, `subs`
+(`resolve_block_subs` from no defaults; attributes and specialcharacters
+applied). `image.rs`: PNG/GIF sizes, SVG size (`pt` × 1.33, viewBox) and a
+REXML 3.3.9 `Formatters::Default` re-serializer (decl/DOCTYPE quotes,
+attributes sorted by local name in single quotes, `<e/>`, document-level
+whitespace kept only before a DOCTYPE, comments removed when optimising).
+Converters (`converter/`): `find_command` (attributes then `PATH`, Ruby's
+message), `Cli.run`/`generate*` temp-file protocols, Graphviz
+(`-o<tmp> -T<fmt> [-K<layout>]`, chdir base dir), PlantUML (native
+`plantuml-native`/`plantuml-full`/`plantuml-headless` exactly like Ruby's
+native path; JARs from `DIAGRAM_PLANTUML_CLASSPATH` through
+`java -cp … net.sourceforge.plantuml.Run` emulating Ruby's Java server:
+preprocessing without `-theme`, trailing newline trimmed; last resort
+`plantuml` on PATH; `PLANTUML_LIMIT_SIZE`, `-graphvizdot`/`-Playout=smetana`),
+Mermaid (`mmdc` with Ruby's options, `NODE_OPTIONS`; no legacy `mermaid`
+CLI), HTTP (`plantuml`: raw deflate + PlantUML alphabet; `kroki_io`: zlib +
+URL-safe Base64 with padding; POST over `max-get-size` unless plantuml.com).
+`host.rs`: `DiagramHost` (run, which, files, mtime, link, env, optional
+`HttpClient`) and `SystemHost`. The CLI enables it with
+`-r asciidoctor-diagram` (`args.diagrams`), its `DiagramHttp` maps ureq
+errors to Net::HTTP messages (`400 "Bad Request"`, `Failed to open TCP
+connection …`, `end of file reached`). Own MD5 (`md5.rs`). Tests:
+`crates/adoctra-ext-diagram/tests/diagrams.rs` (fake host), unit tests,
+`scripts/test_diagram.py`.
 
 **DOCX backend** (user decision 2026-11-04; contract and status in
 `docs/docx.adoc`, stages in `docs/implementation-plan.adoc` «DOCX-бэкенд»).

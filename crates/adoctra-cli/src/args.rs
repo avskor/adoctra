@@ -54,6 +54,9 @@ pub struct Args {
     /// A `-b` backend adoctra cannot convert: the run fails like Ruby
     /// creating its converter.
     pub unavailable_backend: Option<String>,
+    /// `-r asciidoctor-diagram`: the built-in diagram extension
+    /// (`adoctra-ext-diagram`) instead of the Ruby library.
+    pub diagrams: bool,
     /// The input being converted (set per input by the caller).
     pub input: String,
 }
@@ -209,6 +212,15 @@ fn apply(state: &mut State, spec: &Spec, switch: &str, value: Option<String>) ->
                 }
             }
         }
+        // Ruby's `-r` takes comma-separated libraries; the only one adoctra
+        // knows is asciidoctor-diagram, which loads its own diagram port.
+        "require"
+            if value
+                .split(',')
+                .all(|library| library == "asciidoctor-diagram") =>
+        {
+            args.diagrams = true
+        }
         "template-dir" | "template-engine" | "load-path" | "require" => {
             return Some(Command::Failed(format!(
                 "FAILED: option {switch} is not supported: templates and Ruby libraries are outside adoctra's scope"
@@ -289,6 +301,7 @@ pub fn parse(arguments: impl IntoIterator<Item = String>) -> Command {
             verbosity: Verbosity::Normal,
             timings: false,
             unavailable_backend: None,
+            diagrams: false,
             input: String::new(),
         },
         operands: Vec::new(),
@@ -508,6 +521,10 @@ mod tests {
         assert!(matches!(parse_strs(&["a", "-h"]), Command::Help));
         assert!(matches!(
             parse_strs(&["-r", "x", "a"]),
+            Command::Failed(message) if message.contains("-r is not supported")
+        ));
+        assert!(matches!(
+            parse_strs(&["-r", "asciidoctor-diagram,x", "a"]),
             Command::Failed(message) if message.contains("-r is not supported")
         ));
         assert!(matches!(

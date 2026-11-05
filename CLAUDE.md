@@ -17,7 +17,8 @@ backends, a CLI, and WASM bindings for an editor frontend.
 Cargo workspace (`crates/*`), virtual manifest at the root.
 
 - `adoctra-core` — parser and document model. **Backend-agnostic.** Owns the
-  `Backend` and extension (`TreeProcessor`/`Registry`) traits.
+  `Backend` trait and the extension API (`Registry`, block/block macro/tree
+  processors).
 - `adoctra-html` — HTML5 backend.
 - `adoctra-docx` — template-based DOCX backend (all 8 planned stages done
   2026-11-04; `docx-template` attribute, roles as template styles). Own OOXML
@@ -29,13 +30,19 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-cli` — the `adoctra` binary (native only).
 - `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`).
   Depends on `adoctra-core` **only** — never on backends.
+- `adoctra-ext-diagram` — diagram extension (port of asciidoctor-diagram
+  3.2.1: PlantUML, Graphviz, Mermaid, Kroki) on the extension API; depends
+  on `core` (+ `flate2`); all I/O goes through a host-supplied
+  `DiagramHost`. Contract in `docs/diagrams.adoc`.
 - `adoctra-highlight` — std-only port of Rouge (pinned in
   `compatibility/rouge-version`, MIT, `LICENSE-rouge`) for
   `source-highlighter=rouge`; depends on nothing in the workspace (a backend
   may depend on it, core and WASM never).
 
 Dependency direction is one-way: `cli -> adoctra -> {core, backends}`, each
-backend depends only on `core` (plus `adoctra-highlight`). Keep it that way. `core` must never depend on a
+backend depends only on `core` (plus `adoctra-highlight`); extension crates
+(`adoctra-ext-*`) depend only on `core` and are wired by the CLI. Keep it
+that way. `core` must never depend on a
 backend, and `adoctra-wasm` must never pull in a backend.
 
 ## Three consumers, one parser
@@ -73,7 +80,8 @@ The model serves three audiences; keep their needs in mind when changing core:
   `{ workspace = true }`.
 - Keep the scaffold **dependency-light**. The core/backends are intentionally
   `std`-only right now (the CLI uses `chrono` for the local clock and `ureq`
-  for URIs; `adoctra-docx` uses `zip` with pure-Rust deflate); the
+  for URIs and diagram servers; `adoctra-docx` uses `zip` with pure-Rust
+  deflate, `adoctra-ext-diagram` `flate2` for server URLs); the
   `thiserror`/`clap`/`serde` lines in the
   root manifest are commented placeholders. Add a dependency only when it earns
   its place, and prefer `cargo add` so versions stay current.
@@ -207,6 +215,7 @@ update that file (and `docs/implementation-plan.adoc`/`docs/compatibility.adoc`)
 | `scripts/visual.py` (`visual-v1`) | `compatibility/visual/report.json` | `docs/visual.adoc` |
 | `scripts/audit_uri_cache.py` | `compatibility/uri-cache/report.json` | `docs/implementation-notes.md` |
 | `scripts/audit_include_order.py` | `compatibility/encoding-order/` | `docs/implementation-notes.md` |
+| `scripts/diagram.py` (`diagram-v1`, needs tools + asciidoctor-diagram) | `compatibility/diagram/cases.json`, `report.json` | `docs/diagrams.adoc` |
 | `scripts/performance.py` | `performance/*.json` | `docs/performance.adoc` |
 
 Keep performance claims separate from conformance. The source/context API is
@@ -223,8 +232,10 @@ xrefs/anchors/footnotes/index terms/UI macros/STEM, TOC, block `subs`,
 source highlighters incl. the Rouge port), HTML backend (standalone and
 embedded, XML syntax, `adoctra.css`), JSON backend, WASM bindings with spans,
 tokens and diagnostics, a CLI matching Ruby's options, and the template-based
-DOCX backend (`docs/docx.adoc`). **Scaffold only:** the
-extension API exists but `parse`/`convert` do not invoke it.
+DOCX backend (`docs/docx.adoc`). The own Rust extension API (block, block macro and tree processors,
+`ParseOptions::extensions`) is invoked while parsing (un-deferred
+2026-11-05; diagrams are its first consumer, see «Extension API и
+диаграммы» in `docs/implementation-plan.adoc`).
 **Not yet implemented:** incremental/block reparse, a pull/event API, DocBook/manpage backends, Ruby
 API/extensions. (Admonition labels in list items and list item anchors were
 rechecked against Ruby on 2026-11-01 and match.)

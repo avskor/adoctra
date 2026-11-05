@@ -1,0 +1,273 @@
+{
+ "profile": "diagram-v1",
+ "asciidoctor_diagram": "3.2.1",
+ "cases": [
+  {
+   "name": "plantuml-block-svg-title",
+   "requires": [
+    "plantuml",
+    "dot"
+   ],
+   "source": "= T\n\n.Sequence\n[plantuml, seq, svg]\n----\nA -> B : hello\n----\n"
+  },
+  {
+   "name": "plantuml-png-checksum-name",
+   "requires": [
+    "plantuml",
+    "dot"
+   ],
+   "source": "[plantuml, format=png]\n----\nclass Foo\nclass Bar\nFoo --> Bar\n----\n"
+  },
+  {
+   "name": "plantuml-macro-file",
+   "requires": [
+    "plantuml",
+    "dot"
+   ],
+   "files": {
+    "diagrams/flow.puml": "@startuml\nA -> C\n@enduml\n"
+   },
+   "source": ":dir: diagrams\n\nplantuml::{dir}/flow.puml[format=png]\n\nplantuml::diagrams/flow.puml[svg, target=named]\n"
+  },
+  {
+   "name": "plantuml-text-format",
+   "requires": [
+    "plantuml"
+   ],
+   "source": ".Art\n[plantuml, art, txt]\n----\nA -> B\n----\n"
+  },
+  {
+   "name": "plantuml-theme-smetana",
+   "requires": [
+    "plantuml"
+   ],
+   "source": "[plantuml, th, svg, theme=plain, smetana-option]\n----\nclass A\nA --> B\n----\n"
+  },
+  {
+   "name": "salt-block",
+   "requires": [
+    "plantuml"
+   ],
+   "source": "[salt, login, png]\n----\n{\n  Login | \"user\"\n  [Cancel] | [OK]\n}\n----\n"
+  },
+  {
+   "name": "graphviz-literal-checksum",
+   "requires": [
+    "dot"
+   ],
+   "source": "[graphviz]\n....\ndigraph { a -> b }\n....\n"
+  },
+  {
+   "name": "graphviz-open-block-and-extra-positional",
+   "requires": [
+    "dot"
+   ],
+   "source": "[graphviz, e1, svg, extra, Alt=X]\n----\ndigraph{a->b}\n----\n\n[graphviz, format=svg]\n....\ndigraph{c}\n....\n\n[graphviz]\n--\ndigraph{d}\n--\n"
+  },
+  {
+   "name": "graphviz-layout-and-scale",
+   "requires": [
+    "dot"
+   ],
+   "source": "[graphviz, lay, png, layout=neato, scale=2]\n----\ngraph { a -- b -- c -- a }\n----\n"
+  },
+  {
+   "name": "graphviz-svg-rexml-rewrite",
+   "requires": [
+    "dot"
+   ],
+   "source": "[graphviz, g1, svg]\n----\ndigraph { a -> b [label=\"x & <y> \\\"q'\"] }\n----\n"
+  },
+  {
+   "name": "graphviz-tool-error",
+   "requires": [
+    "dot"
+   ],
+   "source": ".Broken\n[[gid]]\n[graphviz, broken, svg]\n----\ndigraph { a -> }\n----\n"
+  },
+  {
+   "name": "unsupported-format",
+   "requires": [],
+   "source": "[graphviz, a, jpg]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "inline-svg",
+   "requires": [
+    "dot"
+   ],
+   "source": "[graphviz, i1, svg, opts=inline]\n----\ndigraph{a->b}\n----\n"
+  },
+  {
+   "name": "data-uri-png",
+   "requires": [
+    "dot"
+   ],
+   "source": ":data-uri:\n\n[graphviz, du, png]\n----\ndigraph{a->b}\n----\n"
+  },
+  {
+   "name": "imagesdir-autoimagesdir",
+   "requires": [
+    "dot"
+   ],
+   "files": {
+    "g.dot": "digraph { x -> y }\n"
+   },
+   "source": ":imagesdir: imgs\n:diagram-autoimagesdir:\n\n[graphviz]\n----\ndigraph{a->b}\n----\n\ngraphviz::g.dot[svg]\n"
+  },
+  {
+   "name": "imagesoutdir-cachedir-cache-images",
+   "requires": [
+    "dot"
+   ],
+   "source": ":imagesoutdir: out/img\n:diagram-cachedir: cache\n:diagram-cache-images-option:\n\n[graphviz, p, png]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "imagesoutdir-outside-jail",
+   "requires": [
+    "dot"
+   ],
+   "source": ":imagesoutdir: /tmp/adoctra-diagram-outside\n\n[graphviz, q, png]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "nocache",
+   "requires": [
+    "dot"
+   ],
+   "source": ":diagram-nocache-option:\n\n[graphviz, nc, svg]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "list-continuation-and-xref",
+   "requires": [
+    "dot"
+   ],
+   "source": "* item\n+\n.Flow\n[[flow]]\n[graphviz, li, svg]\n----\ndigraph{a->b}\n----\n\nSee <<flow>>.\n"
+  },
+  {
+   "name": "mermaid-svg-png",
+   "requires": [
+    "mmdc"
+   ],
+   "source": ":mmdc: {mmdc}\n\n[mermaid, m1, svg]\n----\ngraph TD; A-->B\n----\n\n[mermaid, m2, png, width=300]\n----\nsequenceDiagram\n  A->>B: hi\n----\n"
+  },
+  {
+   "name": "mermaid-scale-error",
+   "requires": [],
+   "source": "[mermaid, m3, svg, scale=x]\n----\ngraph LR; X-->Y\n----\n"
+  },
+  {
+   "name": "mermaid-without-mmdc",
+   "requires": [],
+   "source": ":mmdc: /nonexistent/mmdc\n\n[mermaid]\n----\ngraph TD; A-->B\n----\n"
+  },
+  {
+   "name": "kroki-get",
+   "requires": [
+    "server",
+    "plantuml"
+   ],
+   "source": ":diagram-server-url: {server}/\n:diagram-server-type: kroki_io\n\n[graphviz, k1, svg]\n----\ndigraph{a->b}\n----\n\n[mermaid, k2, svg]\n----\ngraph TD; A-->B\n----\n\n[plantuml, k3, svg]\n----\nA -> B\n----\n"
+  },
+  {
+   "name": "kroki-post",
+   "requires": [
+    "server",
+    "plantuml"
+   ],
+   "source": ":diagram-server-url: {server}/\n:diagram-server-type: kroki_io\n\n[plantuml, k4, svg]\n----\nA0 -> B0 : message number 0 \nA1 -> B1 : message number 1 x\nA2 -> B2 : message number 2 xx\nA3 -> B3 : message number 3 xxx\nA4 -> B4 : message number 4 xxxx\nA5 -> B5 : message number 5 xxxxx\nA6 -> B6 : message number 6 xxxxxx\nA7 -> B7 : message number 7 xxxxxxx\nA8 -> B8 : message number 8 xxxxxxxx\nA9 -> B9 : message number 9 xxxxxxxxx\nA10 -> B10 : message number 10 xxxxxxxxxx\nA11 -> B11 : message number 11 xxxxxxxxxxx\nA12 -> B12 : message number 12 xxxxxxxxxxxx\nA13 -> B13 : message number 13 xxxxxxxxxxxxx\nA14 -> B14 : message number 14 xxxxxxxxxxxxxx\nA15 -> B15 : message number 15 xxxxxxxxxxxxxxx\nA16 -> B16 : message number 16 xxxxxxxxxxxxxxxx\nA17 -> B17 : message number 17 xxxxxxxxxxxxxxxxx\nA18 -> B18 : message number 18 xxxxxxxxxxxxxxxxxx\nA19 -> B19 : message number 19 xxxxxxxxxxxxxxxxxxx\nA20 -> B20 : message number 20 xxxxxxxxxxxxxxxxxxxx\nA21 -> B21 : message number 21 xxxxxxxxxxxxxxxxxxxxx\nA22 -> B22 : message number 22 xxxxxxxxxxxxxxxxxxxxxx\nA23 -> B23 : message number 23 xxxxxxxxxxxxxxxxxxxxxxx\nA24 -> B24 : message number 24 xxxxxxxxxxxxxxxxxxxxxxxx\nA25 -> B25 : message number 25 xxxxxxxxxxxxxxxxxxxxxxxxx\nA26 -> B26 : message number 26 xxxxxxxxxxxxxxxxxxxxxxxxxx\nA27 -> B27 : message number 27 xxxxxxxxxxxxxxxxxxxxxxxxxxx\nA28 -> B28 : message number 28 xxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA29 -> B29 : message number 29 xxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA30 -> B30 : message number 30 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA31 -> B31 : message number 31 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA32 -> B32 : message number 32 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA33 -> B33 : message number 33 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA34 -> B34 : message number 34 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA35 -> B35 : message number 35 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA36 -> B36 : message number 36 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA37 -> B37 : message number 37 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA38 -> B38 : message number 38 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA39 -> B39 : message number 39 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA40 -> B40 : message number 40 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA41 -> B41 : message number 41 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA42 -> B42 : message number 42 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA43 -> B43 : message number 43 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA44 -> B44 : message number 44 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA45 -> B45 : message number 45 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA46 -> B46 : message number 46 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA47 -> B47 : message number 47 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA48 -> B48 : message number 48 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA49 -> B49 : message number 49 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA50 -> B50 : message number 50 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA51 -> B51 : message number 51 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA52 -> B52 : message number 52 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA53 -> B53 : message number 53 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA54 -> B54 : message number 54 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA55 -> B55 : message number 55 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA56 -> B56 : message number 56 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA57 -> B57 : message number 57 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA58 -> B58 : message number 58 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA59 -> B59 : message number 59 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA60 -> B60 : message number 60 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA61 -> B61 : message number 61 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA62 -> B62 : message number 62 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA63 -> B63 : message number 63 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA64 -> B64 : message number 64 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA65 -> B65 : message number 65 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA66 -> B66 : message number 66 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA67 -> B67 : message number 67 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA68 -> B68 : message number 68 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA69 -> B69 : message number 69 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA70 -> B70 : message number 70 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA71 -> B71 : message number 71 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA72 -> B72 : message number 72 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA73 -> B73 : message number 73 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA74 -> B74 : message number 74 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA75 -> B75 : message number 75 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA76 -> B76 : message number 76 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA77 -> B77 : message number 77 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA78 -> B78 : message number 78 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\nA79 -> B79 : message number 79 xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\n----\n"
+  },
+  {
+   "name": "plantuml-server",
+   "requires": [
+    "server",
+    "plantuml"
+   ],
+   "source": ":diagram-server-url: {server}/puml\n:diagram-server-type: plantuml\n\n[plantuml, p1, svg]\n----\nA -> B\n----\n"
+  },
+  {
+   "name": "server-error",
+   "requires": [
+    "server"
+   ],
+   "source": ":diagram-server-url: {server}/fail\n:diagram-server-type: kroki_io\n\n[graphviz, f1, svg]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "server-refused",
+   "requires": [],
+   "source": ":diagram-server-url: http://127.0.0.1:1/\n:diagram-server-type: kroki_io\n\n[graphviz, f2, svg]\n----\ndigraph{a}\n----\n"
+  },
+  {
+   "name": "attribute-subs",
+   "requires": [
+    "dot"
+   ],
+   "source": ":node: start\n\n[graphviz, s1, svg, subs=attributes+]\n----\ndigraph { {node} -> end; \\{node} }\n----\n"
+  },
+  {
+   "name": "attribute-subs-checksum",
+   "requires": [
+    "dot"
+   ],
+   "source": ":node: start\n:missing-ok: x\n\n[graphviz, subs=attributes+]\n----\ndigraph { {node} -> end; {missing} }\n----\n"
+  },
+  {
+   "name": "missing-macro-file",
+   "requires": [],
+   "xfail": {
+    "reason": "Ruby reads the file outside its error handling and aborts the whole conversion; adoctra's parse never fails, so it reports the error and keeps a listing",
+    "actual": {
+     "code": 0,
+     "html": [
+      {
+       "tag": "listing",
+       "attrs": {},
+       "children": [
+        "Failed to generate image: No such file or directory @ rb_sysopen - <root>/nope.puml"
+       ]
+      }
+     ],
+     "diagnostics": [
+      [
+       "error",
+       "d.adoc",
+       1,
+       "Failed to generate image: No such file or directory @ rb_sysopen - <root>/nope.puml"
+      ]
+     ],
+     "files": {},
+     "requests": []
+    }
+   },
+   "source": "plantuml::nope.puml[]\n"
+  },
+  {
+   "name": "on-error-abort",
+   "requires": [],
+   "xfail": {
+    "reason": "on-error=abort raises in Ruby and ends the conversion; adoctra's parse never fails, so it reports the error like on-error=log",
+    "actual": {
+     "code": 0,
+     "html": [
+      {
+       "tag": "listing",
+       "attrs": {},
+       "children": [
+        "Failed to generate image: Asciidoctor::Diagram::GraphvizBlockProcessor does not support output format jpg\ndigraph{a}"
+       ]
+      }
+     ],
+     "diagnostics": [
+      [
+       "error",
+       "d.adoc",
+       4,
+       "Failed to generate image: Asciidoctor::Diagram::GraphvizBlockProcessor does not support output format jpg"
+      ]
+     ],
+     "files": {},
+     "requests": []
+    }
+   },
+   "source": ":diagram-on-error: abort\n\n[graphviz, x, jpg]\n----\ndigraph{a}\n----\n"
+  }
+ ]
+}

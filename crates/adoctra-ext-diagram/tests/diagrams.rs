@@ -1,0 +1,701 @@
+//! The diagram processors against a fake host: command lines, image names,
+//! the cache, errors and server requests as asciidoctor-diagram 3.2.1 makes
+//! them (names, sizes and messages checked against Ruby with the real
+//! tools; see compatibility/diagram).
+
+use adoctra_core::{
+    parse_with_options, Backend, BlockKind, OutputTarget, ParseOptions, ParseResult, Registry,
+    SafeMode, Severity,
+};
+use adoctra_ext_diagram::{Command, DiagramHost, HttpClient, HttpRequest, Output};
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, SystemTime};
+
+const PNG: &[u8] = &[
+    137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, b'I', b'H', b'D', b'R', 0, 0, 0, 83, 0, 0, 0,
+    155, 8, 6, 0, 0, 0,
+];
+const SVG: &str =
+    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"50pt\" height=\"20pt\"><g/></svg>";
+
+#[derive(Default)]
+struct State {
+    files: BTreeMap<String, (Vec<u8>, SystemTime)>,
+    commands: Vec<Command>,
+    requests: Vec<HttpRequest>,
+    clock: u64,
+}
+
+/// An in-memory system: executables are the paths listed, tools write
+/// `PNG`/`SVG` (or fail when the code contains `FAIL`).
+#[derive(Clone, Default)]
+struct Fake {
+    state: Arc<Mutex<State>>,
+    executables: Vec<String>,
+    env: BTreeMap<String, String>,
+    http: bool,
+}
+
+impl Fake {
+    fn with(executables: &[&str]) -> Self {
+        Self {
+            executables: executables.iter().map(|s| s.to_string()).collect(),
+            ..Self::default()
+        }
+    }
+
+    fn put(&self, path: &str, data: &[u8]) {
+        let mut state = self.state.lock().unwrap();
+        state.clock += 1;
+        let time = SystemTime::UNIX_EPOCH + Duration::from_secs(state.clock);
+        state.files.insert(path.to_owned(), (data.to_vec(), time));
+    }
+
+    fn file(&self, path: &str) -> Option<Vec<u8>> {
+        self.state
+            .lock()
+            .unwrap()
+            .files
+            .get(path)
+            .map(|f| f.0.clone())
+    }
+
+    fn paths(&self) -> Vec<String> {
+        self.state.lock().unwrap().files.keys().cloned().collect()
+    }
+
+    fn commands(&self) -> Vec<Command> {
+        std::mem::take(&mut self.state.lock().unwrap().commands)
+    }
+
+    fn requests(&self) -> Vec<HttpRequest> {
+        std::mem::take(&mut self.state.lock().unwrap().requests)
+    }
+
+    fn output_for(&self, command: &Command) -> Vec<u8> {
+        let format = command
+            .args
+            .iter()
+            .find_map(|a| a.strip_prefix("-T").or_else(|| a.strip_prefix("-t")))
+            .map(str::to_owned)
+            .or_else(|| {
+                command
+                    .args
+                    .iter()
+                    .skip_while(|a| *a != "-o")
+                    .nth(1)
+                    .and_then(|o| o.rsplit('.').next().map(str::to_owned))
+            })
+            .unwrap_or_default();
+        match format.as_str() {
+            "png" => PNG.to_vec(),
+            "svg" => SVG.as_bytes().to_vec(),
+            "utxt" | "txt" => b"ASCII ART  \nline\n".to_vec(),
+            _ => Vec::new(),
+        }
+    }
+}
+
+impl DiagramHost for Fake {
+    fn run(&self, command: &Command) -> Result<Output, String> {
+        self.state.lock().unwrap().commands.push(command.clone());
+        let stdin =
+            String::from_utf8_lossy(command.stdin.as_deref().unwrap_or_default()).into_owned();
+        if stdin.contains("FAIL") {
+            return Ok(Output {
+                status: 1,
+                stdout: Vec::new(),
+                stderr: b"Error: syntax error in line 1".to_vec(),
+            });
+        }
+        if command.args.iter().any(|a| a == "-preproc") {
+            return Ok(Output {
+                status: 0,
+                stdout: format!("{stdin}\n").into_bytes(),
+                stderr: Vec::new(),
+            });
+        }
+        let data = self.output_for(command);
+        // A file target is named by `-o<path>`, `-o <path>`; otherwise stdout.
+        let target = command
+            .args
+            .iter()
+            .find_map(|a| {
+                a.strip_prefix("-o")
+                    .filter(|p| !p.is_empty())
+                    .map(str::to_owned)
+            })
+            .or_else(|| {
+                command
+                    .args
+                    .iter()
+                    .skip_while(|a| *a != "-o")
+                    .nth(1)
+                    .cloned()
+            });
+        match target {
+            Some(target) => {
+                self.put(&target, &data);
+                Ok(Output::default())
+            }
+            None => Ok(Output {
+                status: 0,
+                stdout: data,
+                stderr: Vec::new(),
+            }),
+        }
+    }
+    fn which(&self, name: &str) -> Option<String> {
+        let path = format!("/usr/bin/{name}");
+        self.executables.contains(&path).then_some(path)
+    }
+    fn is_executable(&self, path: &str) -> bool {
+        self.executables.iter().any(|e| e == path)
+    }
+    fn temp_dir(&self) -> PathBuf {
+        PathBuf::from("/tmp")
+    }
+    fn read(&self, path: &str) -> std::io::Result<Vec<u8>> {
+        self.file(path)
+            .ok_or_else(|| std::io::Error::from(std::io::ErrorKind::NotFound))
+    }
+    fn write(&self, path: &str, data: &[u8]) -> std::io::Result<()> {
+        self.put(path, data);
+        Ok(())
+    }
+    fn exists(&self, path: &str) -> bool {
+        self.file(path).is_some()
+    }
+    fn modified(&self, path: &str) -> Option<SystemTime> {
+        self.state.lock().unwrap().files.get(path).map(|f| f.1)
+    }
+    fn remove(&self, path: &str) {
+        self.state.lock().unwrap().files.remove(path);
+    }
+    fn link(&self, from: &str, to: &str) -> std::io::Result<()> {
+        let data = self.read(from)?;
+        self.put(to, &data);
+        Ok(())
+    }
+    fn http(&self) -> Option<&dyn HttpClient> {
+        self.http.then_some(self as &dyn HttpClient)
+    }
+    fn env(&self, name: &str) -> Option<String> {
+        self.env.get(name).cloned()
+    }
+}
+
+impl HttpClient for Fake {
+    fn send(&self, request: &HttpRequest) -> Result<Vec<u8>, String> {
+        self.state.lock().unwrap().requests.push(request.clone());
+        if request.url.contains("/fail/") {
+            return Err("400 \"Bad Request\"".to_owned());
+        }
+        Ok(SVG.as_bytes().to_vec())
+    }
+}
+
+fn options(host: &Fake, safe: SafeMode) -> ParseOptions {
+    let mut registry = Registry::new();
+    adoctra_ext_diagram::register(&mut registry, Arc::new(host.clone()));
+    let mut attributes = adoctra_core::Attributes::new();
+    attributes.set("docdir", "/doc");
+    ParseOptions {
+        extensions: Some(Arc::new(registry)),
+        attributes,
+        safe,
+        base_dir: Some("/doc".to_owned()),
+        output: Some(OutputTarget::File("/doc/d.html".to_owned())),
+        embedded: true,
+        ..ParseOptions::default()
+    }
+}
+
+fn parse(host: &Fake, source: &str) -> ParseResult {
+    parse_with_options(source, &options(host, SafeMode::Safe))
+}
+
+fn html(result: &ParseResult) -> String {
+    String::from_utf8(
+        adoctra_html::HtmlBackend::embedded()
+            .convert(&result.document)
+            .unwrap(),
+    )
+    .unwrap()
+}
+
+fn errors(result: &ParseResult) -> Vec<String> {
+    result
+        .diagnostics
+        .iter()
+        .map(|d| {
+            format!(
+                "{}: {}",
+                match d.severity {
+                    Severity::Error => "error",
+                    Severity::Warning => "warning",
+                    _ => "other",
+                },
+                d.message
+            )
+        })
+        .collect()
+}
+
+#[test]
+fn graphviz_block_names_and_sizes_the_image_like_ruby() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    // Ruby names this exact block `diag-graphviz-md5-1332…` (its code and
+    // attributes `1=graphviz`, `cloaked-context=literal`).
+    let result = parse(&host, "[graphviz]\n....\ndigraph { a -> b }\n....\n");
+    let name = "diag-graphviz-md5-13328802c64df661e756f74bef55deb8.png";
+    assert_eq!(
+        html(&result),
+        format!(
+            "<figure class=\"imageblock\">\n<img src=\"{name}\" alt=\"Diagram\" width=\"83\" \
+             height=\"155\">\n</figure>\n"
+        )
+    );
+    let commands = host.commands();
+    assert_eq!(commands.len(), 1);
+    let dot = &commands[0];
+    assert_eq!(dot.program, "/usr/bin/dot");
+    assert!(dot.args[0].starts_with("-o/tmp/dot"), "{:?}", dot.args);
+    assert!(dot.args[0].ends_with(".png"));
+    assert_eq!(dot.args[1], "-Tpng");
+    assert_eq!(dot.chdir.as_deref(), Some("/doc"));
+    assert_eq!(dot.stdin.as_deref(), Some(&b"digraph { a -> b }"[..]));
+    assert_eq!(host.file(&format!("/doc/{name}")).as_deref(), Some(PNG));
+    assert_eq!(
+        String::from_utf8(
+            host.file(&format!("/doc/.asciidoctor/diagram/{name}.cache"))
+                .unwrap()
+        )
+        .unwrap(),
+        "{\"checksum\":\"graphviz-md5-13328802c64df661e756f74bef55deb8\",\
+         \"options\":{\"layout\":null},\"width\":83,\"height\":155}"
+    );
+    // The temporary output file is removed.
+    assert!(host.paths().iter().all(|p| !p.starts_with("/tmp/")));
+}
+
+#[test]
+fn cached_images_are_reused_until_the_code_or_options_change() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    let source = "[graphviz, g, svg]\n----\ndigraph { a }\n----\n";
+    parse(&host, source);
+    assert_eq!(host.commands().len(), 1);
+    let again = parse(&host, source);
+    assert!(host.commands().is_empty(), "the cache is used");
+    // The size comes from the cache metadata (50pt × 1.33).
+    assert!(
+        html(&again).contains("width=\"66\" height=\"26\""),
+        "{}",
+        html(&again)
+    );
+    parse(
+        &host,
+        "[graphviz, g, svg, layout=neato]\n----\ndigraph { a }\n----\n",
+    );
+    let commands = host.commands();
+    assert_eq!(commands.len(), 1, "changed options regenerate");
+    assert_eq!(commands[0].args[2], "-Kneato");
+    parse(
+        &host,
+        "[graphviz, g, svg, nocache-option]\n----\ndigraph { a }\n----\n",
+    );
+    assert_eq!(host.commands().len(), 1);
+    assert!(!host.exists("/doc/.asciidoctor/diagram/g.svg.cache"));
+}
+
+#[test]
+fn errors_become_listings_with_rubys_message() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    let result = parse(
+        &host,
+        ".T\n[[gid]]\n[graphviz, t, svg]\n----\nFAIL\n----\n\n[mermaid]\n----\ngraph TD\n----\n\n\
+         [graphviz, x, jpg]\n----\na\n----\n",
+    );
+    assert_eq!(
+        errors(&result),
+        [
+            "error: Failed to generate image: dot failed: Error: syntax error in line 1",
+            "error: Failed to generate image: Could not find the 'mmdc' executable in PATH; add it \
+             to the PATH or specify its location using the 'mmdc' document attribute",
+            "error: Failed to generate image: Asciidoctor::Diagram::GraphvizBlockProcessor does \
+             not support output format jpg",
+        ]
+    );
+    // The listing keeps the block's metadata and shows the code.
+    let listing = &result.document.blocks[0];
+    assert_eq!(listing.id.as_deref(), Some("gid"));
+    match &listing.kind {
+        BlockKind::Listing { text, .. } => assert_eq!(
+            text,
+            "Failed to generate image: dot failed: Error: syntax error in line 1\nFAIL"
+        ),
+        other => panic!("expected a listing, got {other:?}"),
+    }
+    assert!(html(&result).contains("<div class=\"title\">T</div>"));
+    // The error is reported at the block's fence.
+    assert_eq!(
+        result.diagnostics[0].span.start,
+        ".T\n[[gid]]\n[graphviz, t, svg]\n".len()
+    );
+}
+
+#[test]
+fn block_macros_read_their_file_and_regenerate_when_it_changes() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    host.put("/doc/flows/a_b.dot", b"\xef\xbb\xbfdigraph { x }  \r\n");
+    let result = parse(&host, ":dir: flows\n\ngraphviz::{dir}/a_b.dot[svg]\n");
+    assert!(
+        html(&result).contains("<img src=\"a_b.svg\" alt=\"Diagram\""),
+        "{}",
+        html(&result)
+    );
+    let commands = host.commands();
+    assert_eq!(commands[0].stdin.as_deref(), Some(&b"digraph { x }"[..]));
+    assert_eq!(commands[0].chdir.as_deref(), Some("/doc/flows"));
+    parse(&host, "graphviz::flows/a_b.dot[svg]\n");
+    assert!(host.commands().is_empty());
+    host.put("/doc/flows/a_b.dot", b"digraph { x }\n");
+    parse(&host, "graphviz::flows/a_b.dot[svg]\n");
+    assert_eq!(host.commands().len(), 1, "a newer source regenerates");
+    // A missing file: Ruby aborts the whole conversion; adoctra reports it.
+    let result = parse(&host, "graphviz::nope.dot[]\n");
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: No such file or directory @ rb_sysopen - /doc/nope.dot"]
+    );
+}
+
+#[test]
+fn plantuml_runs_like_rubys_native_path() {
+    let mut host = Fake::with(&["/opt/plantuml-full", "/usr/bin/dot"]);
+    host.env
+        .insert("DIAGRAM_PLANTUML_CLASSPATH".into(), "/jars/a.jar".into());
+    let result = parse(
+        &host,
+        ":plantuml-native: /opt/plantuml-full\n\n[plantuml, seq, svg, theme=sky]\n----\nA -> B\n----\n",
+    );
+    assert!(html(&result).contains("<img src=\"seq.svg\" alt=\"seq\" width=\"66\" height=\"26\">"));
+    let commands = host.commands();
+    let preprocess = &commands[0];
+    assert_eq!(preprocess.program, "/opt/plantuml-full");
+    assert_eq!(
+        preprocess.args,
+        [
+            "-pipe",
+            "-preproc",
+            "-failfast2",
+            "-stdrpt:1",
+            "-filedir",
+            "/doc",
+            "-theme",
+            "sky",
+            "-filedir",
+            "/doc",
+            "-theme",
+            "sky"
+        ]
+    );
+    assert_eq!(
+        preprocess.stdin.as_deref(),
+        Some(&b"@startuml\nA -> B\n@enduml"[..])
+    );
+    let render = &commands[1];
+    assert_eq!(
+        render.args,
+        [
+            "-pipe",
+            "-failfast2",
+            "-stdrpt:1",
+            "-tsvg",
+            "-filedir",
+            "/doc",
+            "-theme",
+            "sky",
+            "-graphvizdot",
+            "/usr/bin/dot"
+        ]
+    );
+    assert_eq!(
+        render.env.get("PLANTUML_LIMIT_SIZE").map(String::as_str),
+        Some("4096")
+    );
+    // The preprocessed code loses the final line break, like Ruby's server.
+    assert_eq!(
+        render.stdin.as_deref(),
+        Some(&b"@startuml\nA -> B\n@enduml"[..])
+    );
+}
+
+#[test]
+fn plantuml_jars_run_through_java_and_salt_wraps_its_tag() {
+    let mut host = Fake::with(&["/usr/bin/java"]);
+    host.env.insert(
+        "DIAGRAM_PLANTUML_CLASSPATH".into(),
+        "/jars/a.jar:/jars/b.jar".into(),
+    );
+    let result = parse(
+        &host,
+        "[salt, s, png, preprocess=false]\n----\n{ Login }\n----\n",
+    );
+    assert!(
+        html(&result).contains("<img src=\"s.png\""),
+        "{}",
+        html(&result)
+    );
+    let commands = host.commands();
+    assert_eq!(commands.len(), 1, "no preprocessing");
+    assert_eq!(commands[0].program, "/usr/bin/java");
+    assert_eq!(
+        commands[0].args,
+        [
+            "-Djava.awt.headless=true",
+            "-cp",
+            "/jars/a.jar:/jars/b.jar",
+            "net.sourceforge.plantuml.Run",
+            "-pipe",
+            "-failfast2",
+            "-stdrpt:1",
+            "-tpng",
+            "-filedir",
+            "/doc",
+            "-Playout=smetana"
+        ]
+    );
+    assert_eq!(
+        commands[0].stdin.as_deref(),
+        Some(&b"@startsalt\n{ Login }\n@endsalt"[..])
+    );
+    // Without any PlantUML: Ruby's message.
+    let result = parse(&Fake::with(&[]), "[plantuml]\n----\nA -> B\n----\n");
+    assert!(errors(&result)[0].starts_with(
+        "error: Failed to generate image: Could not load PlantUML. Either require \
+         'asciidoctor-diagram-plantuml'"
+    ));
+}
+
+#[test]
+fn plantuml_text_formats_become_literal_blocks() {
+    let host = Fake::with(&["/usr/bin/plantuml"]);
+    let result = parse(&host, ".Seq\n[plantuml, t, txt]\n----\nA -> B\n----\n");
+    match &result.document.blocks[0].kind {
+        BlockKind::Literal { text, .. } => assert_eq!(text, "ASCII ART\nline"),
+        other => panic!("expected a literal, got {other:?}"),
+    }
+    assert_eq!(result.document.blocks[0].caption, None);
+    assert!(host.commands()[1].args.contains(&"-tutxt".to_owned()));
+}
+
+#[test]
+fn mermaid_passes_its_options_to_mmdc() {
+    let host = Fake::with(&["/usr/bin/mmdc"]);
+    let result = parse(
+        &host,
+        "[mermaid, m, svg, theme=dark, background=fff, width=300, scale=2]\n----\ngraph TD\n----\n",
+    );
+    // Mermaid scales natively and keeps the explicit width.
+    assert!(
+        html(&result).contains("<img src=\"m.svg\" alt=\"m\" width=\"300\" height=\"26\">"),
+        "{}",
+        html(&result)
+    );
+    let command = &host.commands()[0];
+    assert_eq!(command.program, "/usr/bin/mmdc");
+    assert_eq!(command.args[0], "-i");
+    assert!(command.args[1].ends_with(".mmd"));
+    assert_eq!(
+        &command.args[4..],
+        [
+            "--theme",
+            "dark",
+            "--width",
+            "300",
+            "--scale",
+            "2",
+            "--backgroundColor",
+            "#fff"
+        ]
+    );
+    assert_eq!(
+        command.env.get("NODE_OPTIONS").map(String::as_str),
+        Some("--unhandled-rejections=strict")
+    );
+    let result = parse(
+        &host,
+        "[mermaid, n, svg, scale=1.5]\n----\ngraph TD\n----\n",
+    );
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: Mermaid only supports integer scale factors: 1.5"]
+    );
+}
+
+#[test]
+fn diagram_servers_receive_compressed_code() {
+    let mut host = Fake::with(&[]);
+    host.http = true;
+    let source =
+        ":diagram-server-url: https://kroki.example/base\n:diagram-server-type: kroki_io\n\n\
+                  [graphviz, k, svg]\n----\ndigraph { a }\n----\n";
+    let result = parse(&host, source);
+    assert!(
+        html(&result).contains("<img src=\"k.svg\""),
+        "{}",
+        html(&result)
+    );
+    let request = &host.requests()[0];
+    assert!(request
+        .url
+        .starts_with("https://kroki.example/base/graphviz/svg/eN"));
+    assert_eq!(request.body, None);
+    // Longer than `max-get-size`: a POST of the plain code.
+    let long = (0..400u64)
+        .map(|i| {
+            format!(
+                "n{} -> m{}\n",
+                i * 2_654_435_761 % 100_003,
+                i * 40_503 % 99_991
+            )
+        })
+        .collect::<String>();
+    let result = parse(
+        &host,
+        &format!(
+            ":diagram-server-url: http://127.0.0.1:8000\n:diagram-server-type: kroki_io\n\n\
+             [graphviz, l, svg]\n----\ndigraph {{\n{long}}}\n----\n"
+        ),
+    );
+    assert!(errors(&result).is_empty(), "{:?}", errors(&result));
+    let request = &host.requests()[0];
+    assert_eq!(request.url, "http://127.0.0.1:8000/graphviz/svg");
+    assert_eq!(
+        request.content_type.as_deref(),
+        Some("text/plain; charset=utf-8")
+    );
+    // A PlantUML server gets PlantUML's alphabet; plantuml.com never a POST.
+    parse(
+        &host,
+        ":diagram-server-url: https://www.plantuml.com/plantuml\n:diagram-server-type: plantuml\n\n\
+         [plantuml, p, svg, preprocess=false]\n----\nA -> B\n----\n",
+    );
+    let request = &host.requests()[0];
+    assert!(request
+        .url
+        .starts_with("https://www.plantuml.com/plantuml/svg/"));
+    let data = request.url.rsplit('/').next().unwrap();
+    assert!(data
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '=')));
+    // A server error and a host without HTTP.
+    let result = parse(
+        &host,
+        ":diagram-server-url: http://h/fail/\n:diagram-server-type: kroki_io\n\n[graphviz]\n----\na\n----\n",
+    );
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: 400 \"Bad Request\""]
+    );
+    let result = parse(&Fake::with(&[]), source);
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: HTTP access to diagram servers is not allowed"]
+    );
+}
+
+#[test]
+fn svg_types_data_uri_and_autoimagesdir_set_the_target() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    let result = parse(&host, "[graphviz, i, svg, opts=inline]\n----\na\n----\n");
+    match &result.document.blocks[0].kind {
+        BlockKind::Image { target, .. } => assert_eq!(target, "/doc/i.svg"),
+        other => panic!("expected an image, got {other:?}"),
+    }
+    assert!(result.document.blocks[0]
+        .attrs
+        .options
+        .contains(&"inline".to_owned()));
+    let result = parse(&host, ":data-uri:\n\n[graphviz, d, png]\n----\na\n----\n");
+    match &result.document.blocks[0].kind {
+        BlockKind::Image { target, .. } => assert_eq!(target, "/doc/d.png"),
+        other => panic!("expected an image, got {other:?}"),
+    }
+    let result = parse(
+        &host,
+        ":imagesdir: imgs\n:diagram-autoimagesdir:\n\n[graphviz, a, svg]\n----\na\n----\n",
+    );
+    assert!(
+        html(&result).contains("<img src=\"imgs/a.svg\""),
+        "{}",
+        html(&result)
+    );
+    assert!(host.exists("/doc/imgs/a.svg"));
+    assert_eq!(
+        result.document.blocks[0]
+            .attrs
+            .named
+            .get("imagesdir")
+            .map(String::as_str),
+        Some("imgs")
+    );
+    let result = parse(&host, "[graphviz, b, svg, svg-type=bogus]\n----\na\n----\n");
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: Unsupported SVG type: bogus"]
+    );
+    let result = parse(
+        &host,
+        ":graphviz-svg-type: bogus\n\n[graphviz, c, svg]\n----\na\n----\n",
+    );
+    assert_eq!(
+        errors(&result),
+        ["error: Failed to generate image: Unsupported SVG type: bogus"]
+    );
+}
+
+#[test]
+fn image_paths_follow_imagesoutdir_cachedir_and_the_jail() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    parse(
+        &host,
+        ":imagesoutdir: /doc/out/img\n:diagram-cachedir: /doc/cache\n:diagram-cache-images-option:\n\n\
+         [graphviz, p, png, scale=2]\n----\na\n----\n",
+    );
+    assert!(host.exists("/doc/out/img/p.png"));
+    assert!(host.exists("/doc/cache/p.png"), "{:?}", host.paths());
+    assert!(host.exists("/doc/cache/p.png.cache"));
+    // Outside the base directory in safe mode, Ruby recovers into the jail
+    // root (checked with asciidoctor -S safe).
+    let result = parse(
+        &host,
+        ":imagesoutdir: /elsewhere\n\n[graphviz, q, png]\n----\na\n----\n",
+    );
+    assert!(host.exists("/doc/q.png"), "{:?}", host.paths());
+    assert_eq!(
+        errors(&result),
+        ["warning: path is outside of jail; recovering automatically"]
+    );
+    let unsafe_options = options(&host, SafeMode::Unsafe);
+    parse_with_options(
+        ":imagesoutdir: /elsewhere\n\n[graphviz, r, png]\n----\na\n----\n",
+        &unsafe_options,
+    );
+    assert!(host.exists("/elsewhere/r.png"));
+}
+
+#[test]
+fn scale_multiplies_the_html_size() {
+    let host = Fake::with(&["/usr/bin/dot"]);
+    let result = parse(&host, "[graphviz, s, png, scale=2]\n----\na\n----\n");
+    assert!(
+        html(&result).contains("width=\"166\" height=\"310\""),
+        "{}",
+        html(&result)
+    );
+    assert!(!result.document.blocks[0].attrs.named.contains_key("scale"));
+}

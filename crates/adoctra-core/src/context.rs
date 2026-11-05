@@ -44,6 +44,9 @@ pub struct ParseOptions {
     /// primary document resolve from and the jail from safe mode up. `None`
     /// is the absolute `docdir` (the primary file's directory).
     pub base_dir: Option<String>,
+    /// Extension processors invoked while parsing (see
+    /// [`crate::extension`]). `None` (the default) is plain Asciidoctor.
+    pub extensions: Option<Arc<crate::extension::Registry>>,
 }
 
 /// The output location a host resolved before parsing (absolute paths, as
@@ -437,6 +440,12 @@ pub(crate) struct ParseContext<'i> {
     /// The host's output location and safe mode (see [`ParseOptions::output`]).
     output: Option<OutputTarget>,
     safe: SafeMode,
+    /// The host's extension processors and `base_dir` they may consult.
+    pub(crate) extensions: Option<Arc<crate::extension::Registry>>,
+    pub(crate) base_dir: Option<String>,
+    /// A block read for an extension processor, handed from the block
+    /// parser to block completion, which invokes the processor.
+    pub(crate) extension: Option<crate::extension_point::Pending>,
 }
 
 fn root_of(
@@ -797,6 +806,9 @@ impl ParseContext<'_> {
             max_attribute_value_size,
             output: options.output.clone(),
             safe: options.safe,
+            extensions: options.extensions.clone().filter(|r| !r.is_empty()),
+            base_dir: options.base_dir.clone(),
+            extension: None,
         }
     }
 
@@ -1288,6 +1300,24 @@ impl ParseContext<'_> {
     /// order (Ruby's `assign_caption` with `CAPTION_ATTRIBUTE_NAMES`). Their
     /// counter assignment is replayed when entering the owning block,
     /// independently of source-ordered explicit attribute declarations.
+    pub(crate) fn safe_mode(&self) -> SafeMode {
+        self.safe
+    }
+
+    pub(crate) fn output_target(&self) -> Option<&OutputTarget> {
+        self.output.as_ref()
+    }
+
+    /// The block processor registered for `style` on `context`.
+    pub(crate) fn block_extension(
+        &self,
+        style: Option<&str>,
+        context: crate::extension::BlockContext,
+    ) -> Option<Arc<dyn crate::extension::BlockProcessor>> {
+        let style = style?;
+        self.extensions.as_ref()?.block(style, context).cloned()
+    }
+
     pub fn assign_caption(&mut self, block: &mut crate::Block) {
         let Some(context) = caption_context(&block.kind).filter(|_| block.title.is_some()) else {
             return;

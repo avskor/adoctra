@@ -23,6 +23,7 @@ mod docinfo;
 mod entity_references;
 pub mod error;
 pub mod extension;
+mod extension_point;
 mod header;
 mod highlight_stage;
 mod image;
@@ -84,7 +85,11 @@ pub use diagnostic::{
 pub use docinfo::{docinfo, DocinfoLocation};
 pub use entity_references::character_reference_end;
 pub use error::{Error, Result};
-pub use extension::{Registry, TreeProcessor};
+pub use extension::{
+    AttrKey, BlockContext, BlockMacroProcessor, BlockMacroRequest, BlockProcessor, BlockRequest,
+    ContentModel, ExtensionAttributes, MacroContent, NewBlock, NewBlockKind, ProcessContext,
+    Registry, TreeProcessor,
+};
 pub use image::{inline_svg, normalize_web_path};
 pub use resource::{
     BinaryResource, IncludeInput, IncludeResource, MemoryResources, OmittedSourceLine,
