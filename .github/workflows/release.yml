@@ -89,6 +89,7 @@ jobs:
   publish:
     needs: release
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       - name: Rust toolchain
@@ -98,4 +99,4 @@ jobs:
           CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
         run: |
           test -n "$CARGO_REGISTRY_TOKEN" || { echo "CARGO_REGISTRY_TOKEN is not set"; exit 1; }
-          cargo publish --workspace --locked
+          bash scripts/publish_crates.sh

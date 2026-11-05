@@ -1,0 +1,34 @@
+name: publish
+# Publish (or resume publishing) the crates of a released tag to crates.io
+# by hand: `gh workflow run publish.yml -f tag=v0.0.1`. The sources come
+# from the tag, the publishing script from the branch the run starts on.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The release tag, e.g. v0.0.1'
+        required: true
+permissions:
+  contents: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tools
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          path: src
+      - name: Rust toolchain
+        working-directory: src
+        run: rustup show
+      - name: Publish the crates
+        working-directory: src
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: |
+          test -n "$CARGO_REGISTRY_TOKEN" || { echo "CARGO_REGISTRY_TOKEN is not set"; exit 1; }
+          bash ../tools/scripts/publish_crates.sh
