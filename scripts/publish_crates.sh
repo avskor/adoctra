@@ -6,7 +6,8 @@ set -euo pipefail
 
 version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -1)
 crates=(adoctra-highlight adoctra-core adoctra-html adoctra-docx adoctra-json
-        adoctra-ext-diagram adoctra adoctra-cli adoctra-wasm)
+        adoctra-ext-diagram adoctra adoctra-cli adoctra-wasm
+        adoctra-wasm-preview)
 agent="adoctra-release (https://github.com/avskor/adoctra)"
 
 published() {

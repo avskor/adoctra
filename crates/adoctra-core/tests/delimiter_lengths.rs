@@ -395,3 +395,55 @@ fn long_fences_keep_physical_spans_through_includes() {
         ]
     );
 }
+
+#[test]
+fn blocks_keep_the_span_of_their_metadata_lines() {
+    // Anchor, title and attribute lines, with a comment, a blank line and
+    // an attribute entry between them and the block.
+    let source = "[[a]]\n.T\n// c\n[source,rust]\n\n:k: v\n----\nx\n----\n\nplain\n\n.Only\npara";
+    let blocks = parse(source).document.into_blocks();
+    assert_eq!(blocks.len(), 3);
+    assert_eq!(blocks[0].meta_span, Some(Span::new(0, 27)));
+    assert_eq!(&source[0..27], "[[a]]\n.T\n// c\n[source,rust]");
+    assert_eq!(blocks[0].span.start, 35);
+    assert_eq!(blocks[1].meta_span, None);
+    assert_eq!(blocks[2].meta_span, Some(Span::new(55, 60)));
+
+    // A section's lines are on its heading; nested blocks keep their own.
+    let source = "[#s]\n== S\n\n====\n[.r]\ninner\n====\n";
+    let blocks = parse(source).document.into_blocks();
+    let BlockKind::Section {
+        blocks: section, ..
+    } = &blocks[0].kind
+    else {
+        panic!("{blocks:?}");
+    };
+    assert_eq!(blocks[0].meta_span, None);
+    assert_eq!(section[0].meta_span, Some(Span::new(0, 4)));
+    let BlockKind::Example { blocks: inner } = &section[1].kind else {
+        panic!("{section:?}");
+    };
+    assert_eq!(inner[0].meta_span, Some(Span::new(16, 20)));
+}
+
+#[test]
+fn metadata_lines_of_an_included_block_keep_their_source() {
+    use adoctra_core::{parse_resource, MemoryResources, ParseOptions, SourceMap};
+    let mut resources = MemoryResources::new();
+    resources
+        .insert("/docs/main.adoc", "include::part.adoc[]\n")
+        .unwrap();
+    resources.insert("/docs/part.adoc", ".T\ninner").unwrap();
+    let mut sources = SourceMap::new();
+    let source_id = sources.load("/docs/main.adoc", None, &resources).unwrap();
+    let options = ParseOptions {
+        source_id,
+        ..Default::default()
+    };
+    let result = parse_resource(&mut sources, &options, &resources).unwrap();
+    let blocks = result.document.into_blocks();
+    let meta = blocks[0].meta_span.expect("metadata lines");
+    assert_eq!(meta.source_id, blocks[0].span.source_id);
+    assert_ne!(meta.source_id, source_id);
+    assert_eq!((meta.start, meta.end), (0, 2));
+}

@@ -3268,3 +3268,33 @@ loses its margin (Ruby's table margin, zeroed by `:last-child>:last-child`).
 Fixture `golden/visual/nested_admonitions.adoc` (DOM: minimal corpus
 `admonitions-nested`). Affected cases were found from adoctra's HTML of all
 visual cases (3) and re-recorded; visual-v1 3062 of 3062 (1531 cases).
+
+**Editor** (2026-11-21, user decisions: source editing with a block gutter,
+preview through a separate WASM crate, code in this repository). Contract:
+`docs/editor.adoc`. Core: `Block::meta_span` — `PendingMeta::lines` records
+the anchor/attribute-list/title lines in `consume_block_metadata` and
+`Run::finish_block` puts them on the block; `walk_local` maps it like
+`span` (so include provenance applies). `segments::Out::head_mut` gives the
+text before a node's first nested node. HTML:
+`HtmlBackend::with_source_positions(map)` — `render_block_part` wraps
+`render_block_markup` and inserts `data-source-start/-end` after the tag
+name of the head's first element (a titled block is marked on its title
+element; passthrough and blocks starting with a nested node are skipped; a
+book part's children rendered outside `render_block_part` are not marked).
+Off by default, so golden and visual output are unchanged.
+`adoctra-wasm/src/editor.rs`: `serialize_editor_view` walks blocks on an
+explicit stack (no recursion), converts offsets with `Utf16Offsets` (a
+per-byte table unless the source is ASCII) and leaves out spans of other
+sources; inline anchors come from a `VisitorMut` walk. `ResourceWorkspace::
+parse_with` is the shared parse (diagrams included) behind `parse_json`,
+`editor_json` and the preview. `adoctra-wasm-preview` links the
+`adoctra-wasm` bindings in (a dependency's `#[wasm_bindgen]` exports reach
+the final module — re-exporting a name twice is a link error) and adds
+`preview_json`, `workspace_preview_json(&mut JsResourceWorkspace, id)` and
+`stylesheet`. The preview renders without `HtmlBackend::start`, so Rouge is
+not applied. Frontend: `editor/` npm workspace; `wasm-pack` is not needed
+(`editor/scripts/build-wasm.sh` runs cargo + `wasm-bindgen`). Checks:
+`npm test` (vitest) and `npm run e2e` (playground in Chrome for core, React
+and Vue). Module sizes without `wasm-opt`: 4.4 MB (gzip 1.8 MB) and 7.3 MB
+(gzip 2.6 MB); `docs/performance.adoc` still quotes the older 1.5 MB figure
+for `adoctra-wasm`, which was not re-measured here.

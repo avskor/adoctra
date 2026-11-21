@@ -34,6 +34,17 @@ impl<'a, T> Out<'a, T> {
         self.parts.push(Part::Node(node));
     }
 
+    /// The text written before the first nested node (all of it so far
+    /// without one): where a node's opening markup is. `None` when the node
+    /// starts with a nested node.
+    pub fn head_mut(&mut self) -> Option<&mut String> {
+        match self.parts.first_mut() {
+            Some(Part::Text(text)) => Some(text),
+            Some(Part::Node(_)) => None,
+            None => Some(&mut self.text),
+        }
+    }
+
     fn finish(mut self) -> std::vec::IntoIter<Part<'a, T>> {
         if !self.text.is_empty() {
             self.parts.push(Part::Text(self.text));
@@ -125,6 +136,29 @@ mod tests {
             s.push_str(&format!("</{}>", node.0));
         });
         assert_eq!(out, "<a><b><c></c></b><d></d></a>");
+
+        // The head is the text before the first nested node; a node that
+        // starts with a nested node has none.
+        let mut out = String::new();
+        expand(&tree, &mut out, |node, s| {
+            assert!(s.head_mut().is_some_and(|head| head.is_empty()));
+            s.push_str(node.0);
+            for child in &node.1 {
+                s.node(child);
+            }
+            s.push('.');
+            s.head_mut().expect("text before the nodes").insert(0, '^');
+        });
+        assert_eq!(out, "^a^b^c..^d..");
+        let mut out = String::new();
+        expand(&tree, &mut out, |node, s| {
+            for child in &node.1 {
+                s.node(child);
+            }
+            s.push_str(node.0);
+            assert_eq!(s.head_mut().is_none(), !node.1.is_empty());
+        });
+        assert_eq!(out, "cbda");
 
         // A chain far deeper than a recursive renderer's stack would allow.
         let mut deep = Tree("x", Vec::new());

@@ -30,8 +30,12 @@ Cargo workspace (`crates/*`), virtual manifest at the root.
 - `adoctra-cli` — the `adoctra` binary (native only).
 - `adoctra-wasm` — editor-facing WASM bindings (`parse_json`, `tokens_json`,
   `DiagramWorkspace`/`ResourceWorkspace::enable_diagrams` for diagrams
-  through Kroki). Depends on `adoctra-core`
-  and `adoctra-ext-diagram` only — never on backends.
+  through Kroki; `editor_json` — the compact UTF-16 editor view). Depends
+  on `adoctra-core` and `adoctra-ext-diagram` only — never on backends.
+- `adoctra-wasm-preview` — `adoctra-wasm` plus `adoctra-html` for the
+  editor's live preview (`preview_json`); the only way a backend reaches the
+  browser. The editor itself is the npm workspace `editor/` (CodeMirror 6
+  core, Vue/React bindings, playground); contract in `docs/editor.adoc`.
 - `adoctra-ext-diagram` — diagram extension (port of asciidoctor-diagram
   3.2.1: all 58 types, their tools or Kroki; barcodes via ports of barby,
   rqrcode_core, chunky_png and zlib's deflate, notices in
@@ -48,7 +52,7 @@ backend depends only on `core` (plus `adoctra-highlight`); extension crates
 (`adoctra-ext-*`) depend only on `core` and are wired by the CLI and the
 WASM `DiagramWorkspace`. Keep it that way. `core` must never depend on a
 backend, and `adoctra-wasm` must never pull in a backend (extension crates
-are allowed).
+are allowed); a browser build that converts is `adoctra-wasm-preview`.
 
 ## Three consumers, one parser
 
@@ -243,6 +247,8 @@ DOCX backend (`docs/docx.adoc`). The own Rust extension API (block, block macro,
 `ParseOptions::extensions`) is invoked while parsing (un-deferred
 2026-11-05; diagrams are its first consumer, see «Extension API и
 диаграммы» in `docs/implementation-plan.adoc`).
+The browser editor (`editor/`, 2026-11-21: source editing with a block
+gutter, preview, Vue/React bindings) is in `docs/editor.adoc`.
 **Not yet implemented:** incremental/block reparse, a pull/event API, DocBook/manpage backends, Ruby
 API/extensions. (Admonition labels in list items and list item anchors were
 rechecked against Ruby on 2026-11-01 and match.)

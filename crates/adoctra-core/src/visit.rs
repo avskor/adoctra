@@ -264,6 +264,9 @@ fn put_group(block: &mut Block, k: usize, walked: Vec<Block>) {
 fn walk_local(visitor: &mut (impl VisitorMut + ?Sized), block: &mut Block, k: usize) {
     if k == 0 {
         visitor.visit_span(&mut block.span);
+        if let Some(span) = &mut block.meta_span {
+            visitor.visit_span(span);
+        }
         if let Some(title) = &mut block.title {
             visitor.visit_inlines(title, InlineContext::Title);
         }

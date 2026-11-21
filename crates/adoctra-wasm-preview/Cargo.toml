@@ -1,0 +1,26 @@
+[package]
+name = "adoctra-wasm-preview"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "WASM bindings for an adoctra editor with a live HTML preview"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+adoctra-core = { workspace = true }
+# The editor view and the buffer workspace; this crate adds the converter
+# that `adoctra-wasm` must not depend on.
+adoctra-wasm = { workspace = true }
+adoctra-html = { workspace = true }
+
+# wasm-only glue, as in `adoctra-wasm`.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = "0.2"
+
+[lints]
+workspace = true

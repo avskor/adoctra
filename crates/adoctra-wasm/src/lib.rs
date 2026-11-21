@@ -21,8 +21,15 @@
 //! editor's coordinate system (for example UTF-16 positions).
 
 mod diagrams;
+pub mod editor;
 mod resources;
 pub use diagrams::DiagramWorkspace;
+pub use editor::{
+    editor_json, editor_json_with_source, serialize_editor_view, EDITOR_VIEW_VERSION,
+};
+/// The exported `ResourceWorkspace` class.
+#[cfg(target_arch = "wasm32")]
+pub use resources::wasm::Workspace as JsResourceWorkspace;
 pub use resources::ResourceWorkspace;
 
 use adoctra_core::ast::{Attribution, Block, BlockKind, Inline, Span};
@@ -867,6 +874,11 @@ fn write_block_part<'a>(b: &'a Block, s: &mut Out<'a, Block>) {
             write_inlines(inlines, s);
         }
     }
+    // The `[[id]]`, `[attributes]` and `.Title` lines above the block.
+    if let Some(meta) = &b.meta_span {
+        s.push_str(",\"meta_span\":");
+        write_span(meta, s);
+    }
     s.push('}');
 }
 
@@ -1218,6 +1230,18 @@ mod wasm {
         super::tokens_json(src)
     }
 
+    /// The editor view: tokens, flat blocks, outline, anchors, attributes
+    /// and diagnostics, with UTF-16 offsets.
+    #[wasm_bindgen]
+    pub fn editor_json(src: &str) -> String {
+        super::editor_json(src)
+    }
+
+    #[wasm_bindgen]
+    pub fn editor_json_with_source(src: &str, source_id: usize) -> String {
+        super::editor_json_with_source(src, source_id)
+    }
+
     #[wasm_bindgen]
     pub fn parse_json_with_source(src: &str, source_id: usize) -> String {
         super::parse_json_with_source(src, source_id)
@@ -1232,6 +1256,16 @@ mod wasm {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn metadata_lines_reach_the_editor_as_meta_span() {
+        let json = parse_json("[[a]]\n.T\n[quote]\nq\n\nplain");
+        assert!(
+            json.contains(r#""meta_span":{"source_id":0,"start":0,"end":16}}"#),
+            "{json}"
+        );
+        assert_eq!(json.matches("meta_span").count(), 1, "{json}");
+    }
 
     #[test]
     fn builtin_backend_and_doctype_attributes_resolve() {
@@ -3095,7 +3129,7 @@ mod header_tests {
         let source = "Intro\n\n.T\nimage::a.png[A,link=l]";
         let json = super::parse_json_with_source(source, 3);
         assert!(
-            json.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"name":"image","target":"a.png","src":"a.png","alt":"A","parts":[{"kind":"text","value":"A"}],"id":null,"roles":[],"style":null,"attributes":{"alt":"A","link":"l"},"options":[],"title":[{"span":{"source_id":3,"start":8,"end":9},"name":"text","value":"T"}],"caption":"Figure 1. "}"#),
+            json.contains(r#"{"span":{"source_id":3,"start":10,"end":32},"name":"image","target":"a.png","src":"a.png","alt":"A","parts":[{"kind":"text","value":"A"}],"id":null,"roles":[],"style":null,"attributes":{"alt":"A","link":"l"},"options":[],"title":[{"span":{"source_id":3,"start":8,"end":9},"name":"text","value":"T"}],"caption":"Figure 1. ","meta_span":{"source_id":3,"start":7,"end":9}}"#),
             "{json}"
         );
         let tokens = super::tokens_json_with_source(source, 3);
@@ -3392,7 +3426,7 @@ mod header_tests {
             "{json}"
         );
         assert!(
-            json.contains(r#"{"span":{"source_id":3,"start":24,"end":45},"name":"audio","target":"s.ogg","src":"s.ogg#t=1","id":null,"roles":[],"style":null,"attributes":{"start":"1"},"options":[],"title":[{"span":{"source_id":3,"start":22,"end":23},"name":"text","value":"T"}],"caption":null}"#),
+            json.contains(r#"{"span":{"source_id":3,"start":24,"end":45},"name":"audio","target":"s.ogg","src":"s.ogg#t=1","id":null,"roles":[],"style":null,"attributes":{"start":"1"},"options":[],"title":[{"span":{"source_id":3,"start":22,"end":23},"name":"text","value":"T"}],"caption":null,"meta_span":{"source_id":3,"start":21,"end":23}}"#),
             "{json}"
         );
         let tokens = super::tokens_json_with_source(source, 3);

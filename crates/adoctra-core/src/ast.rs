@@ -304,6 +304,12 @@ pub struct Revision {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Block {
     pub span: Span,
+    /// The metadata lines the block took: from the start of the first
+    /// `[[id]]`, `[attributes]` or `.Title` line above it to the end of the
+    /// last one. [`span`](Block::span) starts at the block itself, so an
+    /// editor joins the two for the block's whole extent. `None` without
+    /// such lines; a section's are on its heading.
+    pub meta_span: Option<Span>,
     /// Immutable snapshot of attributes when this block finished parsing.
     /// A container sees assignments made while parsing its children; an already
     /// completed block keeps its own snapshot. Inline values retain the context
@@ -385,6 +391,7 @@ impl Block {
     pub fn new(span: Span, kind: BlockKind) -> Self {
         Self {
             span,
+            meta_span: None,
             attribute_context: Arc::new(Attributes::new()),
             conversion_context: None,
             id: None,

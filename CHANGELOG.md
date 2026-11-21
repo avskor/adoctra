@@ -6,7 +6,26 @@ project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- A browser editor in `editor/`: `@adoctra/editor-core` (CodeMirror 6, no
+  framework) with highlighting from the parser, a gutter naming each block's
+  type, breadcrumbs, diagnostics, folding, an outline, completion and a live
+  preview, plus `@adoctra/editor-vue` and `@adoctra/editor-react`.
+- `adoctra-wasm`: `editor_json` and `ResourceWorkspace.editor_json`, a
+  compact editor view (tokens, flat block list, outline, anchors,
+  diagnostics) in UTF-16 offsets.
+- New crate `adoctra-wasm-preview`: the `adoctra-wasm` bindings plus
+  `preview_json`, the editor view with the embedded HTML of the same parse.
+- `HtmlBackend::with_source_positions` marks each block's first element with
+  `data-source-start`/`data-source-end`.
+- AST: `Block::meta_span`, the range of the anchor, attribute list and title
+  lines above a block; `parse_json` writes it as `meta_span`.
+
 ### Changed
+
+- AST: `Block` has the new field `meta_span`; code that builds a `Block`
+  with a struct literal must set it (`Block::new` does).
 
 - Parsing is 10–30% faster again: large, rare inline payloads are boxed, so
   ordinary inline nodes are copied as 112 instead of 392 bytes. Output is

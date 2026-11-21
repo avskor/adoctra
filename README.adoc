@@ -212,6 +212,28 @@ result = JSON.parse(ws.parse_json(text, 0));   // images in result.diagrams.imag
 `cargo run --example editor_demo -p adoctra-wasm` prints the JSON an editor
 receives.
 
+=== Editor
+
+`editor/` is a source editor for the browser built on these bindings and
+CodeMirror 6: highlighting from the parser's tokens, a gutter naming the
+type of each block, breadcrumbs, diagnostics, folding, an outline,
+completion and a live preview that scrolls with the source. It ships as
+`@adoctra/editor-core` (no framework) with thin `@adoctra/editor-vue` and
+`@adoctra/editor-react` bindings.
+
+* `editor_json(text)`: the compact view an editor reparses on every edit —
+  tokens, the block tree flattened with depths, outline, anchors and
+  diagnostics, in UTF-16 offsets.
+* `adoctra-wasm-preview` adds `preview_json(text)`: that view plus the
+  embedded HTML of the same parse, each block marked with its source range.
+
+[source,sh]
+----
+cd editor && npm ci && npm run build:wasm && npm run build && npm run dev
+----
+
+See link:docs/editor.adoc[docs/editor.adoc].
+
 [[compatibility]]
 == Compatibility with Asciidoctor
 
@@ -246,6 +268,7 @@ link:docs/compatibility.adoc[docs/compatibility.adoc] (in Russian).
 |`adoctra` |umbrella crate with feature-gated backends
 |`adoctra-cli` |the `adoctra` command
 |`adoctra-wasm` |WASM bindings for editors
+|`adoctra-wasm-preview` |The same with the HTML converter, for a live preview
 |===
 
 [source,sh]

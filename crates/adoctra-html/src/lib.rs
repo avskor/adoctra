@@ -70,7 +70,13 @@ pub const STYLESHEET: &str = include_str!("../assets/adoctra.css");
 pub struct HtmlBackend {
     embedded: bool,
     resources: Option<Resources>,
+    positions: Option<Arc<PositionMap>>,
 }
+
+/// Maps a block's source range to the `data-source-start`/`-end` values an
+/// HTML element carries, or `None` to leave the element unmarked
+/// ([`HtmlBackend::with_source_positions`]).
+pub type PositionMap = dyn Fn(adoctra_core::Span) -> Option<(usize, usize)> + Send + Sync;
 
 #[derive(Clone)]
 struct Resources {
@@ -83,6 +89,7 @@ impl fmt::Debug for HtmlBackend {
         f.debug_struct("HtmlBackend")
             .field("embedded", &self.embedded)
             .field("resources", &self.resources.as_ref().map(|r| &r.referrer))
+            .field("positions", &self.positions.is_some())
             .finish()
     }
 }
@@ -111,8 +118,23 @@ impl HtmlBackend {
     pub fn embedded() -> Self {
         Self {
             embedded: true,
-            resources: None,
+            ..Self::default()
         }
+    }
+
+    /// Mark each block's first element with its source range, for a preview
+    /// that scrolls with an editor: `data-source-start` and `data-source-end`
+    /// hold what `map` returns for the block's span (the host chooses the
+    /// unit, e.g. UTF-16 offsets, and leaves out other sources with `None`).
+    /// A titled block is marked on its title element; a passthrough block
+    /// and a block without an element of its own are not marked. This is an
+    /// adoctra option: Ruby's `sourcemap` does not change its HTML.
+    pub fn with_source_positions(
+        mut self,
+        map: impl Fn(adoctra_core::Span) -> Option<(usize, usize)> + Send + Sync + 'static,
+    ) -> Self {
+        self.positions = Some(Arc::new(map));
+        self
     }
 
     /// Read a custom `stylesheet` and docinfo files through `provider`,
@@ -171,6 +193,7 @@ impl HtmlBackend {
             highlighter: highlight::Highlighter::of(&doc.attributes),
             source_listing: std::cell::Cell::new(false),
             rouge: rouge_state,
+            positions: self.positions.as_deref(),
         };
         let mut out = String::new();
         let mut warnings = Vec::new();
@@ -1047,6 +1070,8 @@ struct Cx<'a> {
     source_listing: std::cell::Cell<bool>,
     /// The rouge adapter's state, shared by nested documents.
     rouge: &'a std::cell::RefCell<rouge::RougeState>,
+    /// [`HtmlBackend::with_source_positions`].
+    positions: Option<&'a PositionMap>,
 }
 
 impl Cx<'_> {
@@ -1064,8 +1089,36 @@ fn render_block(block: &Block, cx: &Cx, out: &mut String) {
     adoctra_core::segments::expand(block, out, |block, out| render_block_part(block, cx, out));
 }
 
-/// One block, marking its nested blocks.
+/// One block, marking its nested blocks, with its source range on its
+/// first element when the backend marks positions.
 fn render_block_part<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
+    render_block_markup(block, cx, out);
+    let Some(map) = cx.positions else {
+        return;
+    };
+    // A passthrough's text is the author's markup, not an element of ours.
+    if matches!(block.kind, BlockKind::Passthrough { .. }) {
+        return;
+    }
+    let (Some((start, end)), Some(head)) = (map(block.span), out.head_mut()) else {
+        return;
+    };
+    let mut chars = head.char_indices();
+    if !matches!(chars.next(), Some((_, '<')))
+        || !matches!(chars.next(), Some((_, c)) if c.is_ascii_alphabetic())
+    {
+        return;
+    }
+    let name_end = head
+        .find(|c: char| c.is_ascii_whitespace() || c == '>' || c == '/')
+        .unwrap_or(head.len());
+    head.insert_str(
+        name_end,
+        &format!(" data-source-start=\"{start}\" data-source-end=\"{end}\""),
+    );
+}
+
+fn render_block_markup<'a>(block: &'a Block, cx: &Cx, out: &mut Out<'a, Block>) {
     // A block's anchor (an explicit `[[id]]`/`[#id]` or a section's auto-generated
     // id) renders as an `id` attribute on the block's element; `None` → none.
     // `[.role]` shorthand roles render as a `class` (appended to any base class
@@ -2179,6 +2232,7 @@ fn render_table(block: &Block, table: &adoctra_core::ast::Table, cx: &Cx, out: &
                                 highlighter: cx.highlighter,
                                 source_listing: std::cell::Cell::new(cx.source_listing.get()),
                                 rouge: cx.rouge,
+                                positions: cx.positions,
                             };
                             // Ruby's `convert_embedded` of the inner document:
                             // its title unless `notitle`, then an automatic TOC.
@@ -3181,6 +3235,60 @@ mod tests {
     fn render(src: &str) -> String {
         let doc = adoctra_core::parse(src).document;
         String::from_utf8(HtmlBackend::embedded().convert(&doc).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn source_positions_mark_each_blocks_first_element() {
+        let src = "= T\n\n== S\n\npara\n\n.Cap\n----\ncode\n----\n\n* a\n+\nin\n\n++++\n<b>raw</b>\n++++\n\n|===\n|c\n|===\n";
+        let doc = adoctra_core::parse(src).document;
+        let plain = HtmlBackend::embedded().render(&doc).html;
+        assert!(!plain.contains("data-source"), "{plain}");
+        let html = HtmlBackend::embedded()
+            .with_source_positions(|span| (span.source_id.0 == 0).then_some((span.start, span.end)))
+            .render(&doc)
+            .html;
+        println!("{html}");
+        // Removing the marks gives the unmarked output.
+        let mut stripped = String::new();
+        let mut rest = html.as_str();
+        while let Some(at) = rest.find(" data-source-start=\"") {
+            stripped.push_str(&rest[..at]);
+            let tail = &rest[at + 1..];
+            let end = tail.find("\" data-source-end=\"").unwrap();
+            let tail = &tail[end + 19..];
+            rest = &tail[tail.find('"').unwrap() + 1..];
+        }
+        stripped.push_str(rest);
+        assert_eq!(stripped, plain);
+        for (text, tag) in [
+            ("== S", "<section"),
+            ("para", "<p"),
+            ("* a", "<ul"),
+            ("in", "<p"),
+            ("|===", "<table"),
+        ] {
+            let start = src.find(text).unwrap();
+            assert!(
+                html.contains(&format!("{tag} data-source-start=\"{start}\"")),
+                "{tag} at {start} in {html}"
+            );
+        }
+        // A titled block is marked on its title; a passthrough is not marked.
+        let listing = src.find("----").unwrap();
+        assert!(
+            html.contains(&format!(
+                "data-source-start=\"{listing}\" data-source-end=\"{}\"",
+                listing + 14
+            )),
+            "{html}"
+        );
+        assert!(html.contains("\n<b>raw</b>\n"), "{html}");
+        // Another source is left out by the map.
+        let none = HtmlBackend::embedded()
+            .with_source_positions(|_| None)
+            .render(&doc)
+            .html;
+        assert_eq!(none, plain);
     }
 
     /// A standalone document.

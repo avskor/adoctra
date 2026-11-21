@@ -28,12 +28,39 @@ jobs:
       - name: Install WASM target
         run: rustup target add wasm32-unknown-unknown
       - name: Check WASM bindings
-        run: cargo check --locked -p adoctra-wasm --target wasm32-unknown-unknown
+        run: cargo check --locked -p adoctra-wasm -p adoctra-wasm-preview --target wasm32-unknown-unknown
       - name: Minimum supported Rust version
         run: |
           msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
           rustup toolchain install "$msrv" --profile minimal
           cargo "+$msrv" check --locked --workspace --all-features --all-targets
+
+  editor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: editor
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rust toolchain
+        run: rustup show && rustup target add wasm32-unknown-unknown
+      - name: Install wasm-bindgen (the version in Cargo.lock)
+        run: |
+          version=$(grep -A1 'name = "wasm-bindgen"' ../Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p')
+          cargo install --locked wasm-bindgen-cli --version "$version"
+      - name: Install packages
+        run: npm ci
+      - name: Build WASM packages
+        run: npm run build:wasm
+      - name: Build editor packages
+        run: npm run build
+      - name: Unit tests
+        run: npm test
+      - name: Browser check (core, React, Vue)
+        run: CHROME=$(which google-chrome) npm run e2e
 
   offline:
     runs-on: ubuntu-latest

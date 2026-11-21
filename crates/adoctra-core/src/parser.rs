@@ -36,6 +36,16 @@ pub(crate) struct PendingMeta {
     pub title: Option<PendingTitle>,
     pub attrs: BlockAttrs,
     pub list: crate::block_attributes::BlockList,
+    /// The anchor, attribute list and title lines read so far: from the
+    /// start of the first to the end of the last ([`Block::meta_span`]).
+    pub lines: Option<(usize, usize)>,
+}
+
+impl PendingMeta {
+    /// Record a metadata line at `start..end`.
+    fn note_line(&mut self, start: usize, end: usize) {
+        self.lines = Some((self.lines.map_or(start, |(first, _)| first), end));
+    }
 }
 
 /// A pending block title from a `.Title` line or a `title=` attribute. Source
@@ -735,6 +745,7 @@ impl<'s, 'c> Run<'s, 'c> {
         let mut carried = None;
         if let Some(mut block) = parsed {
             let pending = metadata;
+            block.meta_span = pending.lines.map(|(start, end)| Span::new(start, end));
             // A section-title anchor supplies the id only without one from
             // metadata, but its reftext replaces a pending reftext.
             block.id = pending.id.or(block.id.take());
@@ -1542,6 +1553,7 @@ pub(crate) fn consume_block_metadata(
             None,
             TokenKind::Anchor,
         );
+        pending.note_line(lines[*i].0, lines[*i].0 + line.len());
         // Ruby assigns the id even when it is nil (`[[]]`).
         pending.id = id.map(str::to_string);
         pending.list.note_named("id");
@@ -1559,6 +1571,7 @@ pub(crate) fn consume_block_metadata(
     if let Some(parsed) = parse_block_attr_list(line, lines[*i].0) {
         let span = Span::new(lines[*i].0, lines[*i].0 + line.len());
         lines.record_fences(span, None, TokenKind::BlockAttributeList);
+        pending.note_line(span.start, span.end);
         let references =
             crate::block_attributes::merge(pending, parsed, span, context, &lines.include_catalog);
         lines.metadata_references.extend(references);
@@ -1578,6 +1591,7 @@ pub(crate) fn consume_block_metadata(
             TokenKind::BlockTitle,
         );
         pending.list.note_named("title");
+        pending.note_line(lines[*i].0, lines[*i].0 + line.len());
         pending.title = Some(PendingTitle {
             text: title.into(),
             base: lines[*i].0 + abs_offset(line, title),

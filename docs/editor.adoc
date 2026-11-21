@@ -1,0 +1,181 @@
+= Редактор
+
+Редактор исходного текста AsciiDoc в браузере: подсветка, поле слева с типом
+блока, «хлебные крошки», диагностики, сворачивание, outline, автодополнение
+и живой предпросмотр. Всё это берётся из одного разбора adoctra; собственной
+JS-грамматики нет. Редактируется текст, AST обратно в разметку не
+сериализуется.
+
+== Слои
+
+[cols="2,5"]
+|===
+|Где |Что
+
+|`crates/adoctra-core`
+|`Block::meta_span` — строки `[[id]]`, `[атрибуты]`, `.Заголовок` над блоком.
+
+|`crates/adoctra-html`
+|`HtmlBackend::with_source_positions` — исходные диапазоны в HTML.
+
+|`crates/adoctra-wasm`
+|`editor_json` — представление для редактора. Бэкендов не знает.
+
+|`crates/adoctra-wasm-preview`
+|Всё из `adoctra-wasm` плюс `preview_json` (HTML того же разбора).
+Единственный путь бэкенда в браузер.
+
+|`editor/packages/wasm`, `wasm-preview`
+|npm-пакеты `@adoctra/wasm` и `@adoctra/wasm-preview` (вывод `wasm-bindgen`).
+
+|`editor/packages/editor-core`
+|`@adoctra/editor-core`: движок разбора, расширения CodeMirror 6, контроллер,
+предпросмотр. Без фреймворков.
+
+|`editor/packages/editor-vue`, `editor-react`
+|Тонкие обёртки: компоненты `AdoctraEditor`, `AdoctraPreview`,
+`AdoctraOutline` и `useAdoctraEditor`.
+
+|`editor/playground`
+|Демо на Vite (три страницы: core, React, Vue) и проверка в браузере.
+|===
+
+Хост загружает *один* из двух WASM-модулей: `@adoctra/wasm` (только разбор)
+или `@adoctra/wasm-preview` (надмножество с конвертером). Документ
+разбирается один раз на правку и для редактора, и для HTML.
+
+== Представление для редактора
+
+`editor_json(text)`, `editor_json_with_source(text, id)` и
+`ResourceWorkspace.editor_json(id)` возвращают JSON (`version` — 1):
+
+[source,json]
+----
+{"version":1,"source_id":0,
+ "tokens":[[6,9,"strong"]],
+ "blocks":[{"start":26,"end":38,"depth":0,"kind":"listing",
+            "meta_start":3,"style":"source","language":"rust"}],
+ "outline":[{"level":1,"start":7,"end":50,"id":"_one","title":"One"}],
+ "anchors":[{"id":"_one","start":7,"end":17}],
+ "attributes":{"doctype":"article"},
+ "diagnostics":[{"source_id":0,"start":11,"end":15,
+                 "severity":"error","message":"…"}]}
+----
+
+* Все смещения — в *кодовых единицах UTF-16* исходного текста (единица
+  строки JavaScript). `parse_json` по-прежнему отдаёт байты UTF-8.
+* `blocks` — дерево блоков в порядке документа с глубиной `depth`; элементы
+  списков (`list-item`, `description`) и ячейки таблиц (`table-cell`) входят
+  в список. Предки узла идут перед ним с меньшей глубиной, поэтому блок под
+  курсором, цепочка вложенности и границы сворачивания находятся одним
+  проходом. `kind` — имена блоков из `parse_json`. Дополнительно: `level`
+  (заголовок, раздел), `ordered` (список), `admonition`, `style`, `language`.
+* `meta_start` — начало строк метаданных блока. `start` указывает на сам
+  блок, как `Block.span`; для раздела метаданные и id берутся у его заголовка.
+* `outline` — заголовок документа (уровень 0) и разделы; `title` — исходный
+  текст заголовка (с разметкой).
+* `anchors` — идентификаторы блоков (включая автоматические id разделов) и
+  inline-якоря.
+* Узлы из включённых файлов не выводятся (директива `include::` остаётся
+  токеном). Диагностика из другого источника сохраняет его `source_id` и
+  байтовый диапазон в нём.
+
+`preview_json(text)` и `workspace_preview_json(workspace, id)` из
+`adoctra-wasm-preview` возвращают `{"html": …, "editor": {…}}`. HTML —
+embedded-вывод; первый элемент каждого блока редактируемого источника несёт
+`data-source-start` и `data-source-end` в тех же единицах UTF-16. Блок с
+заголовком помечается на элементе заголовка, passthrough-блок не помечается.
+`stylesheet()` возвращает `adoctra.css`. Подсветка Rouge в предпросмотре пока
+не включается (нужен `HtmlBackend::start` при разборе).
+
+== `@adoctra/editor-core`
+
+Файл worker-а приложения:
+
+[source,js]
+----
+import init, * as wasm from "@adoctra/wasm-preview"; // или "@adoctra/wasm"
+import { serve } from "@adoctra/editor-core/worker";
+serve(init, wasm);
+----
+
+Основной поток:
+
+[source,js]
+----
+import { createAdoctraEditor, createWorkerEngine, mountPreview } from "@adoctra/editor-core";
+
+const engine = await createWorkerEngine(
+  new Worker(new URL("./adoctra.worker.js", import.meta.url), { type: "module" }));
+const editor = createAdoctraEditor({ parent, engine, value: text });
+mountPreview(previewElement, editor);
+editor.subscribe(() => console.log(editor.getSnapshot().outline));
+----
+
+* *Движок* (`Engine`) разбирает документ: в worker-е (`createWorkerEngine`)
+  или в текущем потоке (`createInlineEngine`). Одновременно выполняется один
+  разбор, в очереди остаётся только последний запрос; результат для
+  устаревшего текста отбрасывается. Инкрементального разбора нет — каждый
+  раз документ разбирается целиком.
+* *Расширения CodeMirror*: `parsedField` (токены как декорации `adoc-<kind>`
+  и список блоков, сдвигаемые правками до следующего разбора), `blockGutter`,
+  `breadcrumbs`, `folding`, `completion` (после `<<`, `xref:` и `{`),
+  `formattingKeymap` (`Mod-b`, `Mod-i`, `Mod-\``). Их можно собрать в свой
+  `EditorView` без контроллера.
+* *Контроллер* (`createAdoctraEditor`): `getValue`, `setValue`, `setFile`
+  (цели `include::`), `revealOffset`, `subscribe`/`getSnapshot`. Снимок
+  неизменяем: `outline`, `diagnostics`, `path` (блоки вокруг курсора), `html`.
+* *Предпросмотр* (`mountPreview`): `iframe` с `sandbox="allow-same-origin"`
+  без `allow-scripts`, поэтому разметка документа (в том числе passthrough)
+  не исполняет скрипты. Прокрутка следует за редактором, щелчок по блоку
+  переводит курсор к его исходнику.
+* Цвета — CSS-переменные `--adoc-*` базовой темы. Подписи поля задаются
+  функцией `label` в опциях `gutter`.
+
+Включения читаются из `files` (путь → текст); на каждый разбор собирается
+новый `ResourceWorkspace`. Диаграммы в редакторе пока не подключены
+(протокол `diagrams.requests` доступен в WASM).
+
+== Обёртки
+
+[source,js]
+----
+// React
+<AdoctraEditor engine={engine} value={text} onChange={setText} onReady={setEditor} />
+<AdoctraPreview editor={editor} />
+<AdoctraOutline editor={editor} />
+----
+
+[source,html]
+----
+<!-- Vue 3 -->
+<AdoctraEditor v-model="text" :engine="engine" @ready="editor = $event" />
+<AdoctraPreview :editor="editor" />
+<AdoctraOutline :editor="editor" />
+----
+
+`useAdoctraEditor(engine, options)` даёт тот же редактор для собственной
+разметки; в React снимок читается через `useAdoctraSnapshot(editor)`.
+
+== Сборка и проверка
+
+[source,sh]
+----
+cd editor
+npm ci
+npm run build:wasm   # cargo + wasm-bindgen (версия из Cargo.lock), wasm-opt при наличии
+npm run build        # tsc: editor-core, editor-vue, editor-react
+npm test             # vitest: запросы по блокам, движок, worker
+npm run e2e          # playground в Chrome (playwright-core): core, React, Vue
+npm run dev          # playground на http://localhost:5173
+----
+
+Размер модулей (2026-11-21, без `wasm-opt`): `@adoctra/wasm` — 4,4 МБ
+(gzip 1,8 МБ), `@adoctra/wasm-preview` — 7,3 МБ (gzip 2,6 МБ); основная
+часть разницы — лексеры Rouge. Время разбора в WASM не измерялось.
+
+== Не сделано
+
+Режим со скрытием разметки вне курсора, инкрементальный разбор, вложенная
+подсветка языков в листингах, диаграммы и Rouge в предпросмотре, меню блока
+в поле, прокрутка редактора вслед за предпросмотром.

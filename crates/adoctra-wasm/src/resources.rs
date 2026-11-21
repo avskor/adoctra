@@ -109,6 +109,25 @@ impl ResourceWorkspace {
     }
 
     pub fn parse_json(&mut self, source_id: usize) -> ResourceResult<String> {
+        self.parse_with(source_id, |result, _| crate::serialize_parse_result(result))
+    }
+
+    /// The [editor view](crate::editor) of a loaded source, with `diagrams`
+    /// like [`parse_json`](Self::parse_json) when they are enabled.
+    pub fn editor_json(&mut self, source_id: usize) -> ResourceResult<String> {
+        self.parse_with(source_id, |result, text| {
+            crate::serialize_editor_view(result, text, SourceId(source_id))
+        })
+    }
+
+    /// Parse a loaded source and write it with `write` (given the result and
+    /// the source text), adding `diagrams` when they are enabled. The
+    /// preview bindings convert the same result.
+    pub fn parse_with(
+        &mut self,
+        source_id: usize,
+        write: impl FnOnce(&mut adoctra_core::ParseResult, &str) -> String,
+    ) -> ResourceResult<String> {
         self.source(source_id)?;
         let mut options = adoctra_core::ParseOptions {
             source_id: SourceId(source_id),
@@ -129,8 +148,9 @@ impl ResourceWorkspace {
             }
             None => None,
         };
-        let result = adoctra_core::parse_resource(&mut self.sources, &options, &*self.resources)?;
-        let json = crate::serialize_parse_result(&result);
+        let mut result =
+            adoctra_core::parse_resource(&mut self.sources, &options, &*self.resources)?;
+        let json = write(&mut result, self.source(source_id)?.text());
         Ok(match host {
             Some(host) => crate::diagrams::finish_json(json, &host),
             None => json,
@@ -149,11 +169,19 @@ impl ResourceWorkspace {
 }
 
 #[cfg(target_arch = "wasm32")]
-mod wasm {
+pub(crate) mod wasm {
     use wasm_bindgen::prelude::*;
 
     #[wasm_bindgen(js_name = ResourceWorkspace)]
     pub struct Workspace(super::ResourceWorkspace);
+
+    impl Workspace {
+        /// The workspace behind the JavaScript class, for bindings built on
+        /// this crate (`adoctra-wasm-preview`).
+        pub fn inner_mut(&mut self) -> &mut super::ResourceWorkspace {
+            &mut self.0
+        }
+    }
 
     #[wasm_bindgen(js_class = ResourceWorkspace)]
     impl Workspace {
@@ -207,6 +235,10 @@ mod wasm {
 
         pub fn parse_json(&mut self, source_id: usize) -> Result<String, JsValue> {
             self.0.parse_json(source_id).map_err(js_error)
+        }
+
+        pub fn editor_json(&mut self, source_id: usize) -> Result<String, JsValue> {
+            self.0.editor_json(source_id).map_err(js_error)
         }
 
         pub fn tokens_json(&mut self, source_id: usize) -> Result<String, JsValue> {
