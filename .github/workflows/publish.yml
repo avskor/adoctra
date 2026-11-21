@@ -1,17 +1,28 @@
 name: publish
 # Publish (or resume publishing) the crates of a released tag to crates.io
-# by hand: `gh workflow run publish.yml -f tag=v0.0.1`. The sources come
-# from the tag, the publishing script from the branch the run starts on.
+# by hand: `gh workflow run publish.yml -f tag=v0.0.1`, or the editor's
+# packages to npm: `gh workflow run publish.yml -f tag=v0.0.5 -f crates=false
+# -f npm=true`. The sources come from the tag, the publishing scripts from
+# the branch the run starts on.
 on:
   workflow_dispatch:
     inputs:
       tag:
         description: 'The release tag, e.g. v0.0.1'
         required: true
+      crates:
+        description: 'Publish the crates to crates.io'
+        type: boolean
+        default: true
+      npm:
+        description: 'Publish the editor packages to npm'
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   publish:
+    if: inputs.crates
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -32,3 +43,38 @@ jobs:
         run: |
           test -n "$CARGO_REGISTRY_TOKEN" || { echo "CARGO_REGISTRY_TOKEN is not set"; exit 1; }
           bash ../tools/scripts/publish_crates.sh
+
+  npm:
+    if: inputs.npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: tools
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          path: src
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Rust toolchain
+        working-directory: src
+        run: rustup show && rustup target add wasm32-unknown-unknown
+      - name: Install wasm-bindgen (the version in Cargo.lock)
+        working-directory: src
+        run: |
+          version=$(grep -A1 'name = "wasm-bindgen"' Cargo.lock | sed -n 's/^version = "\(.*\)"/\1/p')
+          cargo install --locked wasm-bindgen-cli --version "$version"
+      - name: Build the packages
+        working-directory: src/editor
+        run: npm ci && npm run version:check && npm run build:wasm && npm run build && npm test
+      - name: Publish the packages
+        working-directory: src/editor
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN" || { echo "NPM_TOKEN is not set"; exit 1; }
+          bash ../../tools/editor/scripts/publish-npm.sh

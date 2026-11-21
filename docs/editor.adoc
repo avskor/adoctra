@@ -259,9 +259,28 @@ npm run e2e          # playground в Chrome (playwright-core): core, React, Vue
 npm run dev          # playground на http://localhost:5173
 ----
 
-Размер модулей (2026-11-21, без `wasm-opt`): `@adoctra/wasm` — 4,4 МБ
-(gzip 1,8 МБ), `@adoctra/wasm-preview` — 7,3 МБ (gzip 2,6 МБ); основная
+Размер модулей (2026-11-22, после `wasm-opt -Oz`): `@adoctra/wasm` — 4,0 МБ
+(gzip 1,7 МБ), `@adoctra/wasm-preview` — 6,6 МБ (gzip 2,6 МБ); основная
 часть разницы — лексеры Rouge. Время разбора в WASM не измерялось.
+
+== Публикация в npm
+
+Пять пакетов (`@adoctra/wasm`, `@adoctra/wasm-preview`,
+`@adoctra/editor-core`, `@adoctra/editor-vue`, `@adoctra/editor-react`)
+выходят вместе с крейтами под той же версией.
+
+* Версия берётся из `Cargo.toml`: `npm run version:sync` записывает её во все
+  `package.json` и в `package-lock.json`; CI проверяет совпадение
+  (`version:check`) и пробную упаковку (`pack:check`).
+* `prepack` кладёт в пакет тексты лицензий; в WASM-пакеты — ещё уведомления о
+  стороннем коде (`LICENSE-third-party`, для предпросмотра и `LICENSE-rouge`).
+* Тег `v*` запускает `release.yml`: после GitHub-релиза job `npm` собирает
+  пакеты из тега и публикует их `editor/scripts/publish-npm.sh` в порядке
+  зависимостей, пропуская уже опубликованные версии. Нужен секрет
+  `NPM_TOKEN` с правом публикации в организацию `adoctra` на npm; без него
+  job выводит предупреждение и ничего не публикует.
+* Опубликовать пакеты уже выпущенного тега:
+  `gh workflow run publish.yml -f tag=v0.0.5 -f crates=false -f npm=true`.
 
 Каталог команд проверяется настоящим парсером: тест применяет каждую команду
 к пустой строке, после абзаца и к выделению, разбирает результат

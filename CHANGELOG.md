@@ -23,6 +23,9 @@ project uses [Semantic Versioning](https://semver.org/).
   higher (by the length of its marker), Enter continues the list and leaves
   it on an empty item; toolbar buttons and commands do the same, and the
   gutter shows each item's level.
+- The editor's npm packages (`@adoctra/wasm`, `@adoctra/wasm-preview`,
+  `@adoctra/editor-core`, `@adoctra/editor-vue`, `@adoctra/editor-react`)
+  are released with the crates, under the same version.
 - `adoctra-wasm`: `editor_json` and `ResourceWorkspace.editor_json`, a
   compact editor view (tokens, flat block list, outline, anchors,
   diagnostics) in UTF-16 offsets.

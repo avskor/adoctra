@@ -53,6 +53,8 @@ jobs:
           cargo install --locked wasm-bindgen-cli --version "$version"
       - name: Install packages
         run: npm ci
+      - name: Package versions match Cargo.toml
+        run: npm run version:check
       - name: Build WASM packages
         run: npm run build:wasm
       - name: Build editor packages
@@ -61,6 +63,8 @@ jobs:
         run: npm test
       - name: Browser check (core, React, Vue)
         run: CHROME=$(which google-chrome) npm run e2e
+      - name: Pack the npm packages (no publishing)
+        run: npm run pack:check
 
   offline:
     runs-on: ubuntu-latest
