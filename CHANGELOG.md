@@ -12,6 +12,17 @@ project uses [Semantic Versioning](https://semver.org/).
   framework) with highlighting from the parser, a gutter naming each block's
   type, breadcrumbs, diagnostics, folding, an outline, completion and a live
   preview, plus `@adoctra/editor-vue` and `@adoctra/editor-react`.
+- Editor authoring aids, each of which can be switched off (`assist`
+  option, `setAssist`): a slash menu of elements, a toolbar with a table
+  size picker, a block menu on the gutter labels (turn into a note, quote,
+  listing; add a title, id, role; move, duplicate, delete), hover help for
+  markup and completion of block styles, source languages, document
+  attributes and include targets. Labels and help ship in English and
+  Russian.
+- Editor list levels: Tab and Shift+Tab move a list item a level deeper or
+  higher (by the length of its marker), Enter continues the list and leaves
+  it on an empty item; toolbar buttons and commands do the same, and the
+  gutter shows each item's level.
 - `adoctra-wasm`: `editor_json` and `ResourceWorkspace.editor_json`, a
   compact editor view (tokens, flat block list, outline, anchors,
   diagnostics) in UTF-16 offsets.

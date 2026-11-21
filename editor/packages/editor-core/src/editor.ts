@@ -2,18 +2,55 @@
 // a snapshot store the framework bindings subscribe to.
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { setDiagnostics, type Diagnostic as CmDiagnostic } from "@codemirror/lint";
-import { EditorState, type Extension } from "@codemirror/state";
+import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import { drawSelection, EditorView, highlightActiveLine, keymap } from "@codemirror/view";
-import { blockPath } from "./blocks.js";
+import {
+  activeCommands,
+  blockMenu,
+  defaultCommands,
+  defaultToolbar,
+  hoverHelp,
+  resolveMessages,
+  slashSource,
+  toolbar,
+  valueSource,
+  type AssistCommand,
+  type Locale,
+  type ToolbarItem,
+} from "./assist/index.js";
+import { actionBlock, blockPath } from "./blocks.js";
 import { LatestParser } from "./engine.js";
 import { breadcrumbs } from "./extensions/breadcrumbs.js";
-import { formattingKeymap } from "./extensions/commands.js";
+import { formattingKeymap, listKeymap } from "./extensions/commands.js";
 import { completion } from "./extensions/completion.js";
 import { folding } from "./extensions/folding.js";
 import { blockGutter, type BlockGutterOptions } from "./extensions/gutter.js";
 import { parsed, parsedField, setParsed } from "./state.js";
 import { theme } from "./theme.js";
 import type { Block, Diagnostic, Engine, EditorViewData, Files, OutlineEntry } from "./types.js";
+
+/** The authoring aids; each surface can be switched off. */
+export interface AssistOptions {
+  /** `/` on an empty line lists the elements to insert (default true). */
+  slashMenu?: boolean;
+  /** The toolbar above the text; an object chooses its items (default true). */
+  toolbar?: boolean | { items: ToolbarItem[] };
+  /** A click on a gutter label opens the block's actions (default true). */
+  blockMenu?: boolean;
+  /** Help on hovering markup (default true). */
+  hover?: boolean;
+  /** Completion of styles, languages, attributes and include targets (default true). */
+  valueCompletion?: boolean;
+  /**
+   * Tab and Shift-Tab change the level of a list item, Enter continues the
+   * list (default true).
+   */
+  listKeys?: boolean;
+  /** The language of labels and help: `en` (default), `ru` or own messages. */
+  locale?: Locale;
+  /** Change the command set: receives the defaults, returns the set to use. */
+  commands?: (defaults: AssistCommand[]) => AssistCommand[];
+}
 
 export interface AdoctraEditorOptions {
   /** The element the editor is mounted in. */
@@ -27,6 +64,8 @@ export interface AdoctraEditorOptions {
   readOnly?: boolean;
   /** `false` hides the block gutter; an object configures it. */
   gutter?: boolean | BlockGutterOptions;
+  /** `false` switches every authoring aid off; an object chooses. */
+  assist?: false | AssistOptions;
   breadcrumbs?: boolean;
   /** Milliseconds of quiet before a parse (default 60). */
   delay?: number;
@@ -47,6 +86,8 @@ export interface AdoctraSnapshot {
   path: readonly Block[];
   /** The preview, when the engine converts. */
   html: string | null;
+  /** The ids of the commands whose element the cursor is in. */
+  active: readonly string[];
 }
 
 export interface AdoctraEditor {
@@ -60,6 +101,12 @@ export interface AdoctraEditor {
   focus(): void;
   /** Move the cursor to `offset` and scroll it into view. */
   revealOffset(offset: number): void;
+  /** The commands, for a toolbar or menu of the host's own. */
+  readonly commands: readonly AssistCommand[];
+  /** Run a command by id; `false` when unknown or not applicable. */
+  run(id: string): boolean;
+  /** Switch authoring aids on or off; unnamed ones keep their setting. */
+  setAssist(options: false | AssistOptions): void;
   getSnapshot(): AdoctraSnapshot;
   subscribe(listener: () => void): () => void;
   destroy(): void;
@@ -73,6 +120,7 @@ const EMPTY: AdoctraSnapshot = {
   diagnostics: [],
   path: [],
   html: null,
+  active: [],
 };
 
 export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEditor {
@@ -140,6 +188,45 @@ export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEdito
   };
 
   const gutterOptions = typeof options.gutter === "object" ? options.gutter : {};
+
+  // Each aid is a compartment of its own, so it switches without a rebuild.
+  let assist: AssistOptions = options.assist === false ? ALL_OFF : { ...options.assist };
+  const commands = (assist.commands ?? ((defaults) => defaults))(defaultCommands());
+  const compartments = {
+    gutter: new Compartment(),
+    toolbar: new Compartment(),
+    completion: new Compartment(),
+    hover: new Compartment(),
+    listKeys: new Compartment(),
+  };
+  const configured = () => {
+    const messages = resolveMessages(assist.locale);
+    const sources = [];
+    if (assist.slashMenu !== false) sources.push(slashSource(commands, messages));
+    if (assist.valueCompletion !== false) sources.push(valueSource(messages, () => Object.keys(files)));
+    return {
+      gutter:
+        options.gutter === false
+          ? []
+          : blockGutter(
+              assist.blockMenu !== false && !gutterOptions.onClick
+                ? { ...gutterOptions, onClick: blockMenu(commands, messages) }
+                : gutterOptions,
+            ),
+      toolbar:
+        assist.toolbar === false
+          ? []
+          : toolbar(
+              commands,
+              messages,
+              typeof assist.toolbar === "object" ? assist.toolbar.items : defaultToolbar,
+            ),
+      completion: completion(sources),
+      hover: assist.hover === false ? [] : hoverHelp(messages),
+      listKeys: assist.listKeys === false ? [] : listKeymap(),
+    };
+  };
+  const initial = configured();
   const view = new EditorView({
     parent: options.parent,
     state: EditorState.create({
@@ -150,11 +237,15 @@ export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEdito
         drawSelection(),
         highlightActiveLine(),
         EditorView.lineWrapping,
-        options.gutter === false ? [] : blockGutter(gutterOptions),
+        compartments.gutter.of(initial.gutter),
         folding(),
         options.breadcrumbs === false ? [] : breadcrumbs(),
-        completion(),
+        compartments.toolbar.of(initial.toolbar),
+        compartments.completion.of(initial.completion),
+        compartments.hover.of(initial.hover),
         formattingKeymap(),
+        // Before the default keys: Tab and Enter mean something in a list.
+        compartments.listKeys.of(initial.listKeys),
         keymap.of([...defaultKeymap, ...historyKeymap, indentWithTab]),
         EditorState.readOnly.of(options.readOnly ?? false),
         theme,
@@ -167,6 +258,11 @@ export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEdito
             publish({
               path: blockPath(parsed(update.state).blocks, update.state.selection.main.head),
             });
+          }
+          // The pressed state of commands follows the cursor and the parse.
+          if (update.docChanged || update.selectionSet || update.transactions.length > 0) {
+            const active = activeCommands(commands, update.state);
+            if (active.join() !== snapshot.active.join()) publish({ active });
           }
         }),
         options.extensions ?? [],
@@ -200,6 +296,33 @@ export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEdito
       });
       view.focus();
     },
+    commands,
+    run(id) {
+      const command = commands.find((candidate) => candidate.id === id);
+      if (!command) return false;
+      // A block action runs on the block under the cursor.
+      const block =
+        actionBlock(parsed(view.state).blocks, view.state.selection.main.head) ?? undefined;
+      if (command.group === "blockAction" && (!block || command.appliesTo?.(block) === false)) {
+        return false;
+      }
+      const done = command.run(view, block, view);
+      view.focus();
+      return done;
+    },
+    setAssist(next) {
+      assist = next === false ? ALL_OFF : { ...assist, ...next };
+      const now = configured();
+      view.dispatch({
+        effects: [
+          compartments.gutter.reconfigure(now.gutter),
+          compartments.toolbar.reconfigure(now.toolbar),
+          compartments.completion.reconfigure(now.completion),
+          compartments.hover.reconfigure(now.hover),
+          compartments.listKeys.reconfigure(now.listKeys),
+        ],
+      });
+    },
     getSnapshot: () => snapshot,
     subscribe(listener) {
       listeners.add(listener);
@@ -214,6 +337,32 @@ export function createAdoctraEditor(options: AdoctraEditorOptions): AdoctraEdito
     },
   };
 }
+
+/**
+ * Every switch of `options` spelled out, for a declarative host (a
+ * component prop) to pass to `setAssist`: what is not named is on.
+ */
+export function normalizeAssist(options: false | AssistOptions | undefined): AssistOptions {
+  if (options === false) return ALL_OFF;
+  return {
+    slashMenu: options?.slashMenu !== false,
+    toolbar: options?.toolbar ?? true,
+    blockMenu: options?.blockMenu !== false,
+    hover: options?.hover !== false,
+    valueCompletion: options?.valueCompletion !== false,
+    listKeys: options?.listKeys !== false,
+    locale: options?.locale ?? "en",
+  };
+}
+
+const ALL_OFF: AssistOptions = {
+  slashMenu: false,
+  toolbar: false,
+  blockMenu: false,
+  hover: false,
+  valueCompletion: false,
+  listKeys: false,
+};
 
 function asArray<T>(value: T | readonly T[] | undefined): readonly T[] {
   if (value === undefined) return [];

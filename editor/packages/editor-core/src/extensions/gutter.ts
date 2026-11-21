@@ -2,7 +2,7 @@
 // the block under the cursor.
 import type { Extension } from "@codemirror/state";
 import { EditorView, gutter, GutterMarker } from "@codemirror/view";
-import { blockAt, blockClass, blockLabel, blockStart, blockStartingIn } from "../blocks.js";
+import { blockAncestors, blockAt, blockClass, blockLabel, blockStart, blockStartingIn } from "../blocks.js";
 import { parsed, parsedField } from "../state.js";
 import type { Block } from "../types.js";
 
@@ -33,8 +33,8 @@ class BlockMarker extends GutterMarker {
 }
 
 export interface BlockGutterOptions {
-  /** The label of a block (default: [`blockLabel`]). */
-  label?: (block: Block) => string;
+  /** The label of a block, given the blocks it is nested in (default: [`blockLabel`]). */
+  label?: (block: Block, ancestors: readonly Block[]) => string;
   /** Called when a label is clicked. */
   onClick?: (block: Block, view: EditorView) => void;
 }
@@ -53,7 +53,12 @@ export function blockGutter(options: BlockGutterOptions = {}): Extension {
           current !== null && line.to >= blockStart(current) && line.from <= current.end;
         if (!starting && !active) return null;
         return starting
-          ? new BlockMarker(label(starting), blockClass(starting), active, starting.kind)
+          ? new BlockMarker(
+              label(starting, blockAncestors(blocks, starting)),
+              blockClass(starting),
+              active,
+              starting.kind,
+            )
           : new BlockMarker("", "none", active, "");
       },
       lineMarkerChange: (update) =>

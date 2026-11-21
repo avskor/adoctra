@@ -1,10 +1,16 @@
 // Completion from the parse: cross-reference targets after `<<` and
 // `xref:`, attribute names after `{`.
-import { autocompletion, type CompletionContext, type CompletionResult } from "@codemirror/autocomplete";
+import {
+  autocompletion,
+  type CompletionContext,
+  type CompletionResult,
+  type CompletionSource,
+} from "@codemirror/autocomplete";
 import type { Extension } from "@codemirror/state";
 import { parsed, parsedField } from "../state.js";
 
-function complete(context: CompletionContext): CompletionResult | null {
+/** Cross-reference targets and attribute names of the parsed document. */
+export function referenceSource(context: CompletionContext): CompletionResult | null {
   const view = parsed(context.state).view;
   if (!view) return null;
   const xref = context.matchBefore(/(?:<<|xref:)[\w.:-]*$/);
@@ -37,6 +43,7 @@ function complete(context: CompletionContext): CompletionResult | null {
   return null;
 }
 
-export function completion(): Extension {
-  return [parsedField, autocompletion({ override: [complete] })];
+/** Completion from the parse, with `more` sources (slash menu, values). */
+export function completion(more: readonly CompletionSource[] = []): Extension {
+  return [parsedField, autocompletion({ override: [...more, referenceSource] })];
 }

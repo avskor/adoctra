@@ -3298,3 +3298,51 @@ not applied. Frontend: `editor/` npm workspace; `wasm-pack` is not needed
 and Vue). Module sizes without `wasm-opt`: 4.4 MB (gzip 1.8 MB) and 7.3 MB
 (gzip 2.6 MB); `docs/performance.adoc` still quotes the older 1.5 MB figure
 for `adoctra-wasm`, which was not re-measured here.
+
+**Editor authoring aids** (2026-11-22, user decision: slash menu, toolbar,
+block menu and hover help, each switchable). Frontend only
+(`editor/packages/editor-core/src/assist/`); no Rust or WASM contract change.
+One registry (`AssistCommand`, `catalog.ts`) feeds every surface. Commands
+take a `CommandTarget` (`{state, dispatch}`), not a view, so they run on a
+bare `EditorState` in tests. `edit.ts`: `toggleMark` (a placeholder snippet
+without a selection), `toggleLinePrefix`, `insertInline`, `insertBlock`
+(blank-line separation; a selection is consumed only by a template with an
+`@` field; insertion goes after the whole table or list, see
+`blockToInsertAfter`); `fillTemplate` writes a selection the snippet syntax
+cannot hold (braces, `$`, `#`, backslash, newline) without fields.
+`transform.ts` edits an existing block from `meta_start`/`start`: `setStyle`
+rewrites the first positional of the `[…]` line keeping `#id.role%option`
+and named attributes, `setAdmonition` prefers the `NOTE:` label form on a
+bare paragraph. `blocks.ts::actionBlock` picks the container instead of the
+paragraph that is its whole content (same end offset; a delimited container
+ends after its fence). `blockStartingIn` skips `preamble` and `table-cell`,
+so the gutter labels the visible block. Surfaces live in four
+`Compartment`s (gutter, toolbar, completion, hover) reconfigured by
+`setAssist`; `normalizeAssist` spells out every switch for the declarative
+Vue/React `assist` prop. Menus (`popup.ts`) close on a real scroll only
+(over 4px): a late scroll event used to close a menu just opened.
+`test/assist.test.ts` loads `packages/wasm/pkg` and requires every inserting
+command to parse as its element with no diagnostics (it caught empty `**`
+marks, selections swallowed by field-less templates, multi-line field
+defaults and block insertion inside a table). Not done: the full Rouge
+language list after `[source,`, keyboard navigation inside the toolbar and
+block menus.
+
+**Editor list levels** (2026-11-22; the user could not tell how to nest a
+list). `assist/lists.ts`: `listLine` takes an item line apart (a marker needs
+a space after it, so `.Title`, `....` and `--` are not items);
+`changeListLevel` lengthens or shortens the marker of each selected item
+(`-` deepens to `**`, at most 5 signs) and returns `false` when no selected
+line is an item or the line is verbatim, so Tab falls through to
+`indentWithTab`; `continueList` (Enter at an item's end) starts the next
+item, lifts an empty item a level and at level 1 replaces it with a blank
+line — without the blank line the next text stays in the last item;
+`nestOtherList` uses the other marker one sign longer than the item's,
+because a marker equal to an enclosing list's returns to that list.
+`listKeymap` sits before `defaultKeymap` in its own compartment
+(`assist.listKeys`); snippet fields and the completion list keep Tab/Enter
+through their higher precedence. `blockStartingIn` now returns a list's
+first item instead of the list, and `blockLabel(block, ancestors)` shows the
+level (`••`, `1.1`); `blockAncestors` finds them by identity in the flat
+list. Checked on the real parser (item depth grows by 2 per level) and in
+Chrome for core, React and Vue.

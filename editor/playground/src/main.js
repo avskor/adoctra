@@ -1,12 +1,26 @@
 // The editor without a framework.
 import { createAdoctraEditor, mountPreview } from "@adoctra/editor-core";
-import { engine, sample } from "./shared.js";
+import { engine, initialAssist, sample, switches } from "./shared.js";
 
 const editor = createAdoctraEditor({
   parent: document.querySelector("#editor"),
   engine: await engine(),
   value: sample,
+  assist: initialAssist,
 });
+
+// Each aid switches off and on without rebuilding the editor.
+const controls = document.querySelector("#controls");
+for (const [key, title] of switches) {
+  const label = document.createElement("label");
+  const box = document.createElement("input");
+  box.type = "checkbox";
+  box.checked = true;
+  box.id = `toggle-${key}`;
+  box.onchange = () => editor.setAssist({ [key]: box.checked });
+  label.append(box, title);
+  controls.append(label);
+}
 mountPreview(document.querySelector("#preview"), editor);
 
 const outline = document.querySelector("#outline");

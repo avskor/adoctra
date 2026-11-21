@@ -3,6 +3,7 @@
 import {
   createAdoctraEditor,
   mountPreview,
+  normalizeAssist,
   type AdoctraEditor as Editor,
   type AdoctraEditorOptions,
   type AdoctraSnapshot,
@@ -26,9 +27,9 @@ export type { Editor as AdoctraEditorHandle, AdoctraSnapshot, Engine };
 type Options = Omit<AdoctraEditorOptions, "parent" | "engine">;
 
 /**
- * Mount an editor in the returned `ref` once `engine` is there. `value` is
- * followed (a controlled component passes what `onChange` gave it); the
- * other options are read at mount.
+ * Mount an editor in the returned `ref` once `engine` is there. `value` and
+ * `assist` are followed (a controlled component passes what `onChange` gave
+ * it); the other options are read at mount.
  */
 export function useAdoctraEditor(
   engine: Engine | null | undefined,
@@ -55,6 +56,14 @@ export function useAdoctraEditor(
   useEffect(() => {
     if (editor && options.value !== undefined) editor.setValue(options.value);
   }, [editor, options.value]);
+  // The authoring aids follow the `assist` option (its switches and
+  // language; the command set is read at mount).
+  const assist = JSON.stringify(options.assist, (_key, value) =>
+    typeof value === "function" ? "function" : value,
+  );
+  useEffect(() => {
+    editor?.setAssist(normalizeAssist(latest.current.assist));
+  }, [editor, assist]);
   return { ref, editor };
 }
 
@@ -66,6 +75,7 @@ const NONE: AdoctraSnapshot = {
   diagnostics: [],
   path: [],
   html: null,
+  active: [],
 };
 const noSubscription = () => () => {};
 

@@ -1,42 +1,27 @@
-// Formatting commands: wrap the selection in constrained marks.
-import { EditorSelection, type Extension } from "@codemirror/state";
+// The formatting keymap, on the assist commands' mark toggles.
+import type { Extension } from "@codemirror/state";
 import { keymap, type Command } from "@codemirror/view";
+import { toggleMark } from "../assist/edit.js";
+import { changeListLevel, continueList } from "../assist/lists.js";
 
-/** Toggle `mark` (`*`, `_`, `` ` ``, `#`) around each selection range. */
-export function toggleMark(mark: string): Command {
-  return (view) => {
-    const { state } = view;
-    view.dispatch(
-      state.changeByRange((range) => {
-        const size = mark.length;
-        const before = state.sliceDoc(range.from - size, range.from);
-        const after = state.sliceDoc(range.to, range.to + size);
-        if (before === mark && after === mark) {
-          return {
-            changes: [
-              { from: range.from - size, to: range.from },
-              { from: range.to, to: range.to + size },
-            ],
-            range: EditorSelection.range(range.from - size, range.to - size),
-          };
-        }
-        return {
-          changes: [
-            { from: range.from, insert: mark },
-            { from: range.to, insert: mark },
-          ],
-          range: EditorSelection.range(range.from + size, range.to + size),
-        };
-      }),
-      { scrollIntoView: true, userEvent: "input" },
-    );
-    return true;
-  };
+export { toggleMark };
+
+export const toggleStrong: Command = toggleMark("*");
+export const toggleEmphasis: Command = toggleMark("_");
+export const toggleMonospace: Command = toggleMark("`");
+
+/**
+ * List levels on the keys authors expect: Tab and Shift-Tab change the
+ * level of the list items on the selected lines, Enter continues the list.
+ * Outside a list the keys fall through.
+ */
+export function listKeymap(): Extension {
+  return keymap.of([
+    { key: "Tab", run: changeListLevel(1) },
+    { key: "Shift-Tab", run: changeListLevel(-1) },
+    { key: "Enter", run: continueList },
+  ]);
 }
-
-export const toggleStrong = toggleMark("*");
-export const toggleEmphasis = toggleMark("_");
-export const toggleMonospace = toggleMark("`");
 
 export function formattingKeymap(): Extension {
   return keymap.of([

@@ -3,6 +3,8 @@
 import {
   createAdoctraEditor,
   mountPreview,
+  normalizeAssist,
+  type AssistOptions,
   type AdoctraEditor as Editor,
   type AdoctraEditorOptions,
   type AdoctraSnapshot,
@@ -34,6 +36,7 @@ const NONE: AdoctraSnapshot = {
   diagnostics: [],
   path: [],
   html: null,
+  active: [],
 };
 
 /**
@@ -83,6 +86,8 @@ export const AdoctraEditor = defineComponent({
     readOnly: { type: Boolean, default: false },
     gutter: { type: Boolean, default: true },
     breadcrumbs: { type: Boolean, default: true },
+    /** The authoring aids: `false` for none, or which ones and their language. */
+    assist: { type: [Boolean, Object] as PropType<boolean | AssistOptions>, default: true },
   },
   emits: {
     "update:modelValue": (_value: string) => true,
@@ -97,6 +102,7 @@ export const AdoctraEditor = defineComponent({
       readOnly: props.readOnly,
       gutter: props.gutter,
       breadcrumbs: props.breadcrumbs,
+      assist: props.assist === true ? {} : props.assist,
       onChange: (value) => emit("update:modelValue", value),
     });
     watch(editor, (value) => emit("ready", value));
@@ -104,6 +110,11 @@ export const AdoctraEditor = defineComponent({
     watch(
       () => props.modelValue,
       (value) => editor.value?.setValue(value),
+    );
+    watch(
+      () => props.assist,
+      (value) => editor.value?.setAssist(normalizeAssist(value === true ? {} : value)),
+      { deep: true },
     );
     return () => h("div", { ref: element });
   },

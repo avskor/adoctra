@@ -41,3 +41,13 @@ ____
 Цитата в блоке.
 ____
 `;
+
+// The switches of the authoring aids every page shows.
+export const switches = [
+  ["toolbar", "Тулбар"],
+  ["slashMenu", "Меню «/»"],
+  ["blockMenu", "Меню блока"],
+  ["hover", "Подсказки"],
+  ["listKeys", "Tab в списках"],
+];
+export const initialAssist = { toolbar: true, slashMenu: true, blockMenu: true, hover: true, listKeys: true, locale: "ru" };
